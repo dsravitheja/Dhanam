@@ -439,6 +439,22 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .depr-table td { padding:6px 12px; border-bottom:1px solid #1c1c1c; font-family:'DM Mono',monospace; }
 .depr-table td:first-child { color:var(--text-dim); font-family:'Inter','Segoe UI',system-ui,sans-serif; }
 .depr-table tr:last-child td { border-bottom:none; }
+
+/* ── LOAN DISBURSEMENT TAB ────────────────── */
+.disb-tr-row { display:flex; align-items:flex-end; gap:10px; margin-bottom:10px; }
+.disb-tr-field { display:flex; flex-direction:column; gap:5px; flex:1; }
+.disb-tr-field label { font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.07em; font-weight:500; }
+.disb-tr-field input { font-family:'DM Mono',monospace; font-size:14px; color:var(--text); background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:9px 10px; outline:none; width:100%; }
+.disb-tr-field input:focus { border-color:var(--accent); }
+.disb-tr-remove { flex-shrink:0; width:34px; height:34px; border-radius:6px; background:rgba(224,112,112,.1); border:1px solid rgba(224,112,112,.3); color:var(--red); font-size:14px; cursor:pointer; transition:all .15s; }
+.disb-tr-remove:hover { background:rgba(224,112,112,.2); }
+.disb-tr-remove:disabled { opacity:.3; cursor:not-allowed; }
+.disb-warn { display:none; font-size:12px; color:var(--red); background:rgba(224,112,112,.08); border:1px solid rgba(224,112,112,.3); border-radius:8px; padding:8px 12px; margin-top:10px; }
+.disb-schedule-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:4px; }
+.disb-schedule-table th { text-align:left; padding:6px 12px; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); border-bottom:1px solid var(--border); }
+.disb-schedule-table td { padding:6px 12px; border-bottom:1px solid #1c1c1c; font-family:'DM Mono',monospace; }
+.disb-schedule-table td:first-child { color:var(--text-dim); font-family:'Inter','Segoe UI',system-ui,sans-serif; }
+.disb-schedule-table tr:last-child td { border-bottom:none; }
 </style>
 </head>
 <body>
@@ -460,6 +476,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <button class="hub-tab" id="ht-apartment" onclick="switchHub('apartment')">🏠 Dhanam Home</button>
     <button class="hub-tab" id="ht-car" onclick="switchHub('car')">🚗 Dhanam Car</button>
     <button class="hub-tab" id="ht-sip" onclick="switchHub('sip')">📈 Dhanam Grow</button>
+    <button class="hub-tab" id="ht-disb" onclick="switchHub('disb')">💸 Dhanam Loan</button>
     <button class="hub-tab" disabled>💰 Dhanam Worth <small style="font-size:9px;font-weight:400;opacity:.7">soon</small></button>
   </div>
 </nav>
@@ -491,6 +508,11 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <span class="tile-icon">📈</span>
     <span class="tile-title">Dhanam Grow</span>
     <span class="tile-desc">SIP planner — monthly, step-up & lumpsum investment growth.</span>
+  </button>
+  <button class="tile" onclick="switchHub('disb')">
+    <span class="tile-icon">💸</span>
+    <span class="tile-title">Loan Disbursement</span>
+    <span class="tile-desc">Pre-EMI interest across a staged, under-construction disbursement schedule.</span>
   </button>
   <button class="tile disabled" disabled title="Coming soon">
     <span class="tile-icon">💰</span>
@@ -1210,6 +1232,76 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   </div>
 </div><!-- /hub-sip -->
 
+<!-- ===== LOAN DISBURSEMENT HUB ===== -->
+<div class="hub-content" id="hub-disb">
+<div class="main">
+
+<div class="section-title">💸 Loan Disbursement — Pre-EMI Calculator</div>
+
+<div class="panel-card">
+  <div class="panel-card-header"><span>🏗️</span><span class="pch-title">Loan &amp; Tenure</span><span class="pch-tag">Live</span></div>
+  <div class="panel-card-body">
+    <div class="grid-3">
+      <div class="field">
+        <label>Sanctioned Loan Amount (₹)</label>
+        <input type="number" id="disb-amount" value="5000000" min="0" oninput="renderLoanDisb()">
+      </div>
+      <div class="field">
+        <label>Interest Rate (% p.a.)</label>
+        <input type="number" id="disb-rate" value="9" step="0.05" min="0" oninput="renderLoanDisb()">
+      </div>
+      <div class="field">
+        <label>Tenure (years, post full disbursement)</label>
+        <input type="number" id="disb-tenure" value="20" min="1" max="35" oninput="renderLoanDisb()">
+      </div>
+    </div>
+    <div style="margin-top:14px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
+      <div class="ts-wrap" style="margin-left:0;">
+        <label class="ts-switch">
+          <input type="checkbox" id="disb-full-emi" onchange="renderLoanDisb()">
+          <span class="ts-slider"></span>
+        </label>
+        <span>Pay full EMI from day 1 (skip pre-EMI phase)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel-card">
+  <div class="panel-card-header"><span>📅</span><span class="pch-title">Disbursement Tranches</span><span class="pch-tag">Live</span></div>
+  <div class="panel-card-body">
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">
+      Add each stage the builder/bank releases funds — as a % of the sanctioned loan, and the month it's disbursed. During this phase, pre-EMI interest is charged only on the amount disbursed so far.
+    </p>
+    <div id="disb-tranche-rows"></div>
+    <button class="btn btn-blue" onclick="disbAddTranche()">➕ Add Tranche</button>
+    <div class="disb-warn" id="disb-warn"></div>
+  </div>
+</div>
+
+<div class="panel-card">
+  <div class="panel-card-header"><span>📊</span><span class="pch-title">Disbursement Schedule</span><span class="pch-tag">Live</span></div>
+  <div class="panel-card-body">
+    <table class="disb-schedule-table">
+      <thead><tr><th>Stage</th><th>Cumulative Disbursed</th><th>Pre-EMI Interest / mo</th></tr></thead>
+      <tbody id="disb-tranche-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel-card">
+  <div class="panel-card-header"><span>💰</span><span class="pch-title">Summary</span><span class="pch-tag">Live</span></div>
+  <div class="panel-card-body">
+    <div class="loan-stat"><span class="ls-lbl">Total Pre-EMI Interest Paid</span><span class="ls-val red" id="disb-total-preemi">—</span></div>
+    <div class="loan-stat"><span class="ls-lbl">EMI after Final Disbursement</span><span class="ls-val big" id="disb-emi">—</span></div>
+    <div class="loan-stat"><span class="ls-lbl">Total Interest (Pre-EMI + Amortization)</span><span class="ls-val red" id="disb-total-interest">—</span></div>
+    <div class="loan-stat"><span class="ls-lbl">Total Cost of Loan</span><span class="ls-val" id="disb-total-cost">—</span></div>
+  </div>
+</div>
+
+</div>
+</div><!-- /hub-disb -->
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1256,6 +1348,7 @@ let LD = {};   // Loan data (set by renderLoans)
 let loanTotalLocked = false;  // true if user manually set l-total
 let detailOpened = false;
 let loanOpened = false;
+let disbTranches = [ { pct: 50, month: 0 }, { pct: 50, month: 12 } ];
 
 // Modes for amenities / corpus / infra (sqft or lump)
 const MODES = { amenities: 'sqft', corpus: 'sqft', infra: 'sqft' };
@@ -2241,6 +2334,7 @@ function switchHub(tab) {
   if (btn) btn.classList.add('active');
   if (tab === 'sip') { updateSIPPlanner(); updateStepupSIP(); updateLumpsum(); }
   if (tab === 'car') { renderCarCalc(); renderCarLoan(); }
+  if (tab === 'disb') { renderLoanDisb(); }
 }
 
 function openLoanCalc() {
@@ -2251,6 +2345,105 @@ function openLoanCalc() {
     renderLoans();
   }
   el('section-loan').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// =====================================================================
+// LOAN DISBURSEMENT (pre-EMI / tranche calculator)
+// =====================================================================
+function disbTrancheRowHtml(t, i) {
+  return `
+    <div class="disb-tr-row">
+      <div class="disb-tr-field">
+        <label>Tranche ${i + 1} — % of Loan</label>
+        <input type="number" value="${t.pct}" min="0" max="100" step="1"
+          oninput="disbTranches[${i}].pct = parseFloat(this.value) || 0; renderLoanDisb();">
+      </div>
+      <div class="disb-tr-field">
+        <label>Disbursed at Month</label>
+        <input type="number" value="${t.month}" min="0" step="1"
+          oninput="disbTranches[${i}].month = parseInt(this.value) || 0; renderLoanDisb();">
+      </div>
+      <button class="disb-tr-remove" onclick="disbRemoveTranche(${i})" ${disbTranches.length <= 1 ? 'disabled' : ''} title="Remove tranche">✕</button>
+    </div>`;
+}
+
+function renderDisbTranches() {
+  el('disb-tranche-rows').innerHTML = disbTranches.map(disbTrancheRowHtml).join('');
+}
+
+function disbAddTranche() {
+  const last = disbTranches[disbTranches.length - 1];
+  disbTranches.push({ pct: 0, month: (last ? last.month : 0) + 6 });
+  renderDisbTranches();
+  renderLoanDisb();
+}
+
+function disbRemoveTranche(i) {
+  if (disbTranches.length <= 1) return;
+  disbTranches.splice(i, 1);
+  renderDisbTranches();
+  renderLoanDisb();
+}
+
+function renderLoanDisb() {
+  renderDisbTranches();
+
+  const P = v('disb-amount');
+  const rate = parseFloat(el('disb-rate').value) || 0;
+  const tenure = v('disb-tenure');
+  const fullEmiMode = chk('disb-full-emi');
+
+  const pctSum = disbTranches.reduce((s, t) => s + (t.pct || 0), 0);
+  const warn = el('disb-warn');
+  if (Math.abs(pctSum - 100) > 0.5) {
+    warn.textContent = `⚠️ Tranches sum to ${pctSum.toFixed(1)}% of the loan, not 100%. Adjust the schedule for accurate figures.`;
+    warn.style.display = 'block';
+  } else {
+    warn.style.display = 'none';
+  }
+
+  if (!(P > 0) || !(tenure > 0)) {
+    el('disb-tranche-table').innerHTML = '<tr><td colspan="3" class="note-text">Enter loan amount and tenure above to calculate.</td></tr>';
+    set('disb-total-preemi', '—');
+    set('disb-emi', '—');
+    set('disb-total-interest', '—');
+    set('disb-total-cost', '—');
+    return;
+  }
+
+  const sorted = [...disbTranches].sort((a, b) => a.month - b.month);
+  const finalMonth = sorted.reduce((m, t) => Math.max(m, t.month || 0), 0);
+  const r = rate / 12 / 100;
+
+  let totalPreEmi = 0;
+  if (!fullEmiMode) {
+    for (let m = 0; m < finalMonth; m++) {
+      const disbursedPct = sorted.filter(t => t.month <= m).reduce((s, t) => s + (t.pct || 0), 0);
+      totalPreEmi += (P * disbursedPct / 100) * r;
+    }
+  }
+
+  el('disb-tranche-table').innerHTML = sorted.map(t => {
+    const cumPct = sorted.filter(x => x.month <= t.month).reduce((s, x) => s + (x.pct || 0), 0);
+    const cumAmt = P * cumPct / 100;
+    const monthlyInterest = cumAmt * r;
+    return `<tr>
+      <td>Month ${t.month} (+${t.pct}%)</td>
+      <td>${fmt(cumAmt)}</td>
+      <td>${fullEmiMode ? '— (full EMI mode)' : fmt(monthlyInterest) + '/mo'}</td>
+    </tr>`;
+  }).join('');
+
+  const emi = calcEMI(P, rate, tenure);
+  const amortTotalPaid = emi * tenure * 12;
+  const amortInterest = amortTotalPaid - P;
+  const totalInterest = totalPreEmi + amortInterest;
+  const totalCost = P + totalInterest;
+
+  set('disb-total-preemi', fmt(totalPreEmi));
+  set('disb-emi', fmt(emi));
+  set('disb-total-interest', inCr(totalInterest));
+  set('disb-total-cost', inCr(totalCost));
 }
 
 // =====================================================================
