@@ -1,4 +1,4 @@
-const CACHE = 'apt-cost-v3';
+const CACHE = 'apt-cost-v4';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
