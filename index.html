@@ -28,7 +28,7 @@
   --blue: #6fa3d6;
   --purple: #9b7fd4;
   --text: #ede8df;
-  --text-dim: #7a8a7e;
+  --text-dim: #8a9a8e;
   --text-mid: #aab8ae;
   --hl-bg: rgba(201,168,76,0.08);
   --hl-border: rgba(201,168,76,0.35);
@@ -159,7 +159,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 /* ── FIELDS ──────────────────────────────── */
 .field { display:flex; flex-direction:column; gap:5px; }
 .field label { font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.07em; font-weight:500; }
-.field-hint { font-size:10px; color:#555; margin-top:-3px; }
+.field-hint { font-size:10px; color:var(--text-dim); margin-top:-3px; }
 .field input, .field select {
   background:var(--surface); border:1px solid var(--border); border-radius:7px;
   padding:9px 12px; color:var(--text); font-family:'DM Mono',monospace; font-size:14px; outline:none; width:100%;
@@ -231,7 +231,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .br-row { display:flex; justify-content:space-between; align-items:baseline; padding:5px 0; border-bottom:1px solid #1e1e1e; gap:12px; flex-wrap:wrap; }
 .br-row:last-child { border-bottom:none; }
 .br-label { font-size:12px; color:var(--text-dim); flex:1; min-width:130px; }
-.br-calc { font-size:11px; color:#555; flex:1; text-align:center; min-width:70px; }
+.br-calc { font-size:11px; color:var(--text-dim); flex:1; text-align:center; min-width:70px; }
 .br-val { font-family:'DM Mono',monospace; font-size:13px; color:var(--text); text-align:right; font-weight:500; min-width:85px; }
 .br-row.total-row { background:rgba(201,168,76,.06); border-radius:5px; padding:7px 10px; margin-top:6px; border-bottom:none; }
 .br-row.total-row .br-label { color:var(--accent); font-weight:600; font-size:13px; }
@@ -321,7 +321,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 /* ── MISC ────────────────────────────────── */
 .toast { position:fixed; bottom:24px; right:24px; background:#2a2a2a; border:1px solid var(--accent); border-radius:8px; padding:12px 20px; font-size:13px; color:var(--text); transform:translateY(80px); opacity:0; transition:all .3s; z-index:9999; pointer-events:none; max-width:300px; }
 .toast.show { transform:translateY(0); opacity:1; }
-.note-text { font-size:11px; color:#555; padding:4px 0; }
+.note-text { font-size:11px; color:var(--text-dim); padding:4px 0; }
 .divider { height:1px; background:var(--border); margin:14px 0; }
 .mono { font-family:'DM Mono',monospace; }
 
@@ -331,6 +331,14 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   .collapse-body { padding:12px; }
   .total-card { padding:18px 14px; }
   .panel-card-body { padding:14px; }
+}
+
+/* iOS Safari auto-zooms on focusing any input under 16px; force 16px on touch widths */
+@media(max-width:600px){
+  .qf input, .field input, .field select, .cf-input,
+  .loan-field input, .cy-input, .sip-inline-input, .disb-tr-field input {
+    font-size:16px;
+  }
 }
 
 /* ── HUB NAVIGATION ──────────────────────── */
@@ -360,6 +368,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .tile:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 .tile-icon { font-size:26px; line-height:1; }
 .tile-title { font-family:'Playfair Display',serif; font-size:21px; font-weight:700; color:var(--accent2); }
+.tile-tool { font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); }
 .tile-desc { font-size:12.5px; color:var(--text-dim); line-height:1.5; }
 .tile.disabled { cursor:not-allowed; opacity:.4; }
 .tile.disabled:hover { transform:none; border-color:var(--border); box-shadow:none; }
@@ -476,7 +485,6 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <button class="hub-tab" id="ht-apartment" onclick="switchHub('apartment')">🏠 Dhanam Home</button>
     <button class="hub-tab" id="ht-car" onclick="switchHub('car')">🚗 Dhanam Car</button>
     <button class="hub-tab" id="ht-sip" onclick="switchHub('sip')">📈 Dhanam Grow</button>
-    <button class="hub-tab" id="ht-disb" onclick="switchHub('disb')">💸 Dhanam Loan</button>
     <button class="hub-tab" disabled>💰 Dhanam Worth <small style="font-size:9px;font-weight:400;opacity:.7">soon</small></button>
   </div>
 </nav>
@@ -486,38 +494,44 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="main">
 
 <div class="section-title">⌂ Welcome to Dhanam</div>
-<p class="landing-intro">Pick a calculator to get started — everything updates live as you type, nothing is saved or sent anywhere.</p>
+<p class="landing-intro">What do you want to do? Everything updates live as you type, nothing is saved or sent anywhere.</p>
 
 <div class="tile-grid">
+  <button class="tile" onclick="switchHub('sip')">
+    <span class="tile-icon">📈</span>
+    <span class="tile-title">Grow My Money</span>
+    <span class="tile-tool">Dhanam Grow</span>
+    <span class="tile-desc">SIP planner — monthly, step-up & lumpsum investment growth.</span>
+  </button>
+  <button class="tile disabled" disabled title="Coming soon">
+    <span class="tile-icon">💰</span>
+    <span class="tile-title">Know My Net Worth <span class="tile-badge">Soon</span></span>
+    <span class="tile-tool">Dhanam Worth</span>
+    <span class="tile-desc">Track assets, loans & investments in one place.</span>
+  </button>
   <button class="tile" onclick="switchHub('apartment')">
     <span class="tile-icon">🏠</span>
-    <span class="tile-title">Dhanam Home</span>
+    <span class="tile-title">Plan a Home Purchase</span>
+    <span class="tile-tool">Dhanam Home</span>
     <span class="tile-desc">Property cost breakdown, stamp duty, registration & GST estimator.</span>
   </button>
   <button class="tile" onclick="openLoanCalc()">
     <span class="tile-icon">🏦</span>
-    <span class="tile-title">Home Loan</span>
+    <span class="tile-title">Finance My Home</span>
+    <span class="tile-tool">Dhanam Home · Loan Analysis</span>
     <span class="tile-desc">EMI scenarios, prepayment projections & Buy-vs-SIP comparison.</span>
+  </button>
+  <button class="tile" onclick="openDisbCalc()">
+    <span class="tile-icon">💸</span>
+    <span class="tile-title">Buying Under Construction?</span>
+    <span class="tile-tool">Dhanam Home · Pre-EMI Calculator</span>
+    <span class="tile-desc">Pre-EMI interest across a staged disbursement schedule.</span>
   </button>
   <button class="tile" onclick="switchHub('car')">
     <span class="tile-icon">🚗</span>
-    <span class="tile-title">Dhanam Car</span>
+    <span class="tile-title">Optimize My Company Car</span>
+    <span class="tile-tool">Dhanam Car</span>
     <span class="tile-desc">Company car lease tax perquisite, plus car loan & resale value.</span>
-  </button>
-  <button class="tile" onclick="switchHub('sip')">
-    <span class="tile-icon">📈</span>
-    <span class="tile-title">Dhanam Grow</span>
-    <span class="tile-desc">SIP planner — monthly, step-up & lumpsum investment growth.</span>
-  </button>
-  <button class="tile" onclick="switchHub('disb')">
-    <span class="tile-icon">💸</span>
-    <span class="tile-title">Loan Disbursement</span>
-    <span class="tile-desc">Pre-EMI interest across a staged, under-construction disbursement schedule.</span>
-  </button>
-  <button class="tile disabled" disabled title="Coming soon">
-    <span class="tile-icon">💰</span>
-    <span class="tile-title">Dhanam Worth <span class="tile-badge">Soon</span></span>
-    <span class="tile-desc">Track net worth across assets, loans & investments in one place.</span>
   </button>
 </div>
 
@@ -590,6 +604,11 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <button class="action-btn" id="btn-loan" onclick="toggleSection('loan')">
     <span class="ab-icon">🏦</span>
     <span class="ab-label">Loan Analysis</span>
+    <span class="ab-arrow">▼</span>
+  </button>
+  <button class="action-btn" id="btn-disb" onclick="toggleSection('disb')">
+    <span class="ab-icon">🏗️</span>
+    <span class="ab-label">Loan Disbursement (Pre-EMI)</span>
     <span class="ab-arrow">▼</span>
   </button>
   <div class="action-utils">
@@ -966,7 +985,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
           <label>Duration (yrs)</label>
           <input type="number" class="sip-inline-input" id="sip-years" value="20" min="1" max="50" oninput="renderSIPComparison()">
         </div>
-        <span style="font-size:10px;color:#555;">Equity MFs ≈12% · Index ≈11% · Balanced ≈9%</span>
+        <span style="font-size:10px;color:var(--text-dim);">Equity MFs ≈12% · Index ≈11% · Balanced ≈9%</span>
       </div>
       <div class="sip-custom-grid" id="sip-custom-cards"></div>
     </div>
@@ -977,6 +996,72 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <button class="btn btn-blue" id="btn-combined-from-loan" onclick="exportCombinedExcel()" style="display:none;">📋 Export Combined</button>
   </div>
 </div><!-- /section-loan -->
+
+<!-- ===== LOAN DISBURSEMENT (PRE-EMI) SECTION ===== -->
+<div class="section-panel" id="section-disb">
+
+  <div class="panel-card">
+    <div class="panel-card-header"><span>🏗️</span><span class="pch-title">Loan &amp; Tenure</span><span class="pch-tag">Live</span></div>
+    <div class="panel-card-body">
+      <div class="grid-3">
+        <div class="field">
+          <label>Sanctioned Loan Amount (₹)</label>
+          <input type="number" id="disb-amount" value="5000000" min="0" oninput="renderLoanDisb()">
+        </div>
+        <div class="field">
+          <label>Interest Rate (% p.a.)</label>
+          <input type="number" id="disb-rate" value="9" step="0.05" min="0" oninput="renderLoanDisb()">
+        </div>
+        <div class="field">
+          <label>Tenure (years, post full disbursement)</label>
+          <input type="number" id="disb-tenure" value="20" min="1" max="35" oninput="renderLoanDisb()">
+        </div>
+      </div>
+      <div style="margin-top:14px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
+        <div class="ts-wrap" style="margin-left:0;">
+          <label class="ts-switch">
+            <input type="checkbox" id="disb-full-emi" onchange="renderLoanDisb()">
+            <span class="ts-slider"></span>
+          </label>
+          <span>Pay full EMI from day 1 (skip pre-EMI phase)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-card">
+    <div class="panel-card-header"><span>📅</span><span class="pch-title">Disbursement Tranches</span><span class="pch-tag">Live</span></div>
+    <div class="panel-card-body">
+      <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">
+        Add each stage the builder/bank releases funds — as a % of the sanctioned loan, and the month it's disbursed. During this phase, pre-EMI interest is charged only on the amount disbursed so far.
+      </p>
+      <div id="disb-tranche-rows"></div>
+      <button class="btn btn-blue" onclick="disbAddTranche()">➕ Add Tranche</button>
+      <div class="disb-warn" id="disb-warn"></div>
+    </div>
+  </div>
+
+  <div class="panel-card">
+    <div class="panel-card-header"><span>📊</span><span class="pch-title">Disbursement Schedule</span><span class="pch-tag">Live</span></div>
+    <div class="panel-card-body">
+      <table class="disb-schedule-table">
+        <thead><tr><th>Stage</th><th>Cumulative Disbursed</th><th>Pre-EMI Interest / mo</th></tr></thead>
+        <tbody id="disb-tranche-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel-card">
+    <div class="panel-card-header"><span>💰</span><span class="pch-title">Summary</span><span class="pch-tag">Live</span></div>
+    <div class="panel-card-body">
+      <div class="loan-stat"><span class="ls-lbl">Total Pre-EMI Interest Paid</span><span class="ls-val red" id="disb-total-preemi">—</span></div>
+      <div class="loan-stat"><span class="ls-lbl">EMI after Final Disbursement</span><span class="ls-val big" id="disb-emi">—</span></div>
+      <div class="loan-stat"><span class="ls-lbl">Total Interest (Pre-EMI + Amortization)</span><span class="ls-val red" id="disb-total-interest">—</span></div>
+      <div class="loan-stat"><span class="ls-lbl">Total Cost of Loan</span><span class="ls-val" id="disb-total-cost">—</span></div>
+    </div>
+  </div>
+
+</div><!-- /section-disb -->
 
 </div><!-- /main -->
 </div><!-- /hub-apartment -->
@@ -1232,78 +1317,9 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   </div>
 </div><!-- /hub-sip -->
 
-<!-- ===== LOAN DISBURSEMENT HUB ===== -->
-<div class="hub-content" id="hub-disb">
-<div class="main">
-
-<div class="section-title">💸 Loan Disbursement — Pre-EMI Calculator</div>
-
-<div class="panel-card">
-  <div class="panel-card-header"><span>🏗️</span><span class="pch-title">Loan &amp; Tenure</span><span class="pch-tag">Live</span></div>
-  <div class="panel-card-body">
-    <div class="grid-3">
-      <div class="field">
-        <label>Sanctioned Loan Amount (₹)</label>
-        <input type="number" id="disb-amount" value="5000000" min="0" oninput="renderLoanDisb()">
-      </div>
-      <div class="field">
-        <label>Interest Rate (% p.a.)</label>
-        <input type="number" id="disb-rate" value="9" step="0.05" min="0" oninput="renderLoanDisb()">
-      </div>
-      <div class="field">
-        <label>Tenure (years, post full disbursement)</label>
-        <input type="number" id="disb-tenure" value="20" min="1" max="35" oninput="renderLoanDisb()">
-      </div>
-    </div>
-    <div style="margin-top:14px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
-      <div class="ts-wrap" style="margin-left:0;">
-        <label class="ts-switch">
-          <input type="checkbox" id="disb-full-emi" onchange="renderLoanDisb()">
-          <span class="ts-slider"></span>
-        </label>
-        <span>Pay full EMI from day 1 (skip pre-EMI phase)</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="panel-card">
-  <div class="panel-card-header"><span>📅</span><span class="pch-title">Disbursement Tranches</span><span class="pch-tag">Live</span></div>
-  <div class="panel-card-body">
-    <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">
-      Add each stage the builder/bank releases funds — as a % of the sanctioned loan, and the month it's disbursed. During this phase, pre-EMI interest is charged only on the amount disbursed so far.
-    </p>
-    <div id="disb-tranche-rows"></div>
-    <button class="btn btn-blue" onclick="disbAddTranche()">➕ Add Tranche</button>
-    <div class="disb-warn" id="disb-warn"></div>
-  </div>
-</div>
-
-<div class="panel-card">
-  <div class="panel-card-header"><span>📊</span><span class="pch-title">Disbursement Schedule</span><span class="pch-tag">Live</span></div>
-  <div class="panel-card-body">
-    <table class="disb-schedule-table">
-      <thead><tr><th>Stage</th><th>Cumulative Disbursed</th><th>Pre-EMI Interest / mo</th></tr></thead>
-      <tbody id="disb-tranche-table"></tbody>
-    </table>
-  </div>
-</div>
-
-<div class="panel-card">
-  <div class="panel-card-header"><span>💰</span><span class="pch-title">Summary</span><span class="pch-tag">Live</span></div>
-  <div class="panel-card-body">
-    <div class="loan-stat"><span class="ls-lbl">Total Pre-EMI Interest Paid</span><span class="ls-val red" id="disb-total-preemi">—</span></div>
-    <div class="loan-stat"><span class="ls-lbl">EMI after Final Disbursement</span><span class="ls-val big" id="disb-emi">—</span></div>
-    <div class="loan-stat"><span class="ls-lbl">Total Interest (Pre-EMI + Amortization)</span><span class="ls-val red" id="disb-total-interest">—</span></div>
-    <div class="loan-stat"><span class="ls-lbl">Total Cost of Loan</span><span class="ls-val" id="disb-total-cost">—</span></div>
-  </div>
-</div>
-
-</div>
-</div><!-- /hub-disb -->
-
 <div class="toast" id="toast"></div>
 
+<script src="calc.js"></script>
 <script>
 // =====================================================================
 // UTILITIES
@@ -1348,6 +1364,7 @@ let LD = {};   // Loan data (set by renderLoans)
 let loanTotalLocked = false;  // true if user manually set l-total
 let detailOpened = false;
 let loanOpened = false;
+let disbOpened = false;
 let disbTranches = [ { pct: 50, month: 0 }, { pct: 50, month: 12 } ];
 
 // Modes for amenities / corpus / infra (sqft or lump)
@@ -1384,6 +1401,11 @@ function toggleSection(id) {
       el('l-sqft-info') && (el('l-sqft-info').textContent = '');
       syncLoanTotal();
       renderLoans();
+    }
+    if (id === 'disb' && !disbOpened) {
+      disbOpened = true;
+      renderDisbTranches();
+      renderLoanDisb();
     }
 
     // Show combined button if both sections have been used
@@ -1683,75 +1705,8 @@ function brRowTotal(label, val) {
 // =====================================================================
 // LOAN CALC
 // =====================================================================
-function calcEMI(P, annualRate, years) {
-  const r = annualRate / 12 / 100;
-  const n = years * 12;
-  if (r === 0) return P / n;
-  return P * r * Math.pow(1+r, n) / (Math.pow(1+r, n) - 1);
-}
-
-function loanAtYear(P, annualRate, totalYears, checkYear) {
-  const r = annualRate / 12 / 100;
-  const n = totalYears * 12;
-  const k = Math.min(checkYear * 12, n);
-  const emi = calcEMI(P, annualRate, totalYears);
-  let balance;
-  if (r === 0) {
-    balance = P - (P / n) * k;
-  } else {
-    balance = P * (Math.pow(1+r, n) - Math.pow(1+r, k)) / (Math.pow(1+r, n) - 1);
-  }
-  balance = Math.max(0, balance);
-  const principalPaid = P - balance;
-  const interestPaid = emi * k - principalPaid;
-  return { balance, principalPaid, interestPaid: Math.max(0, interestPaid), totalPaid: emi * k };
-}
-
-function simulateLoan(P, annualRate, totalYears, extraEmiPerYear, extraLumpsumPerYear) {
-  const r = annualRate / 12 / 100;
-  const n = totalYears * 12;
-  const emi = calcEMI(P, annualRate, totalYears);
-  let balance = P;
-  let month = 0;
-  let totalInterest = 0;
-  let y5Principal = 0, y5Interest = 0, y5Captured = false;
-  const safetyLimit = n * 3;
-
-  while (balance > 0.01 && month < safetyLimit) {
-    month++;
-    const interest = balance * r;
-    const principal = Math.min(emi - interest, balance);
-    balance = Math.max(0, balance - principal);
-    totalInterest += interest;
-
-    // Extra at end of each year
-    if (month % 12 === 0 && balance > 0) {
-      const extra = Math.min(extraEmiPerYear * emi + extraLumpsumPerYear, balance);
-      balance = Math.max(0, balance - extra);
-    }
-
-    if (month === 60 && !y5Captured) {
-      y5Principal = P - balance;
-      y5Interest = totalInterest;
-      y5Captured = true;
-    }
-    if (balance <= 0.01) break;
-  }
-
-  if (!y5Captured) { y5Principal = P; y5Interest = totalInterest; }
-
-  return {
-    actualMonths: month,
-    actualYears: (month / 12).toFixed(1),
-    totalInterest: Math.max(0, totalInterest),
-    totalPaid: P + Math.max(0, totalInterest),
-    y5Principal,
-    y5Interest: Math.max(0, y5Interest),
-    monthsSaved: Math.max(0, n - month),
-    yearsSaved: Math.max(0, (n - month) / 12).toFixed(1),
-  };
-}
-
+// calcEMI / loanAtYear / simulateLoan now live in calc.js (loaded above)
+// so they're covered by tests.js — see CLAUDE.md's Testing section.
 function renderLoans() {
   const total = v('l-total');
   const ownInput = v('l-own');
@@ -1984,7 +1939,7 @@ function exportSnapshot(src) {
 
   y += 10;
   ctx.fillStyle = '#333'; ctx.fillRect(pad, 780, W-pad*2, 1);
-  ctx.fillStyle = '#444'; ctx.font = '10px Arial';
+  ctx.fillStyle = '#8a9a8e'; ctx.font = '10px Arial';
   ctx.fillText('Apartment Cost Analyzer · ' + new Date().toLocaleString('en-IN'), pad, 796);
   ctx.textAlign = 'right';
   ctx.fillText('All charges approximate · Prices in INR', W-pad, 796);
@@ -2313,11 +2268,19 @@ function resetAll() {
   el('sip-years').value = 20;
   loanTotalLocked = false;
 
+  // Loan Disbursement (Pre-EMI)
+  el('disb-amount').value = 5000000;
+  el('disb-rate').value = 9;
+  el('disb-tenure').value = 20;
+  el('disb-full-emi').checked = false;
+  disbTranches = [ { pct: 50, month: 0 }, { pct: 50, month: 12 } ];
+
   // Re-run all calcs
   QD = {}; DD = {}; LD = {};
   updateQuick();
   if (detailOpened) { syncUCToDetail(); calcDetail(); }
   if (loanOpened) { syncLoanTotal(); renderLoans(); }
+  if (disbOpened) { renderDisbTranches(); renderLoanDisb(); }
 
   showToast('Reset to defaults');
 }
@@ -2334,7 +2297,6 @@ function switchHub(tab) {
   if (btn) btn.classList.add('active');
   if (tab === 'sip') { updateSIPPlanner(); updateStepupSIP(); updateLumpsum(); }
   if (tab === 'car') { renderCarCalc(); renderCarLoan(); }
-  if (tab === 'disb') { renderLoanDisb(); }
 }
 
 function openLoanCalc() {
@@ -2345,6 +2307,16 @@ function openLoanCalc() {
     renderLoans();
   }
   el('section-loan').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function openDisbCalc() {
+  switchHub('apartment');
+  if (!el('section-disb').classList.contains('open')) {
+    toggleSection('disb');
+  } else {
+    renderLoanDisb();
+  }
+  el('section-disb').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // =====================================================================
@@ -2386,8 +2358,9 @@ function disbRemoveTranche(i) {
 }
 
 function renderLoanDisb() {
-  renderDisbTranches();
-
+  // NOTE: do not call renderDisbTranches() here — it rebuilds the tranche row
+  // inputs' innerHTML and would drop keyboard focus after every keystroke.
+  // Row markup is only rebuilt on add/remove/first-open (see those call sites).
   const P = v('disb-amount');
   const rate = parseFloat(el('disb-rate').value) || 0;
   const tenure = v('disb-tenure');
@@ -2455,13 +2428,7 @@ function toggleSIP() {
   if (s.classList.contains('open')) renderSIPComparison();
 }
 
-function calcSIP(monthly, annualCagr, years) {
-  const r = annualCagr / 12 / 100;
-  const n = years * 12;
-  if (r === 0) return monthly * n;
-  return monthly * ((Math.pow(1 + r, n) - 1) / r) * (1 + r);
-}
-
+// calcSIP now lives in calc.js (loaded above) — see CLAUDE.md's Testing section.
 function renderSIPComparison() {
   const loan = LD.loan || 0;
   const rate = LD.rate || 8.75;
@@ -2594,19 +2561,7 @@ function updateSIPPlanner() {
   }).join('');
 }
 
-function calcStepupSIP(startMonthly, annualStepupPct, annualCagr, years) {
-  const r = annualCagr / 12 / 100;
-  let balance = 0, totalInvested = 0, currentSIP = startMonthly;
-  for (let yr = 1; yr <= years; yr++) {
-    for (let mo = 0; mo < 12; mo++) {
-      balance = balance * (1 + r) + currentSIP;
-      totalInvested += currentSIP;
-    }
-    currentSIP *= (1 + annualStepupPct / 100);
-  }
-  return { corpus: balance, totalInvested, finalSIP: currentSIP / (1 + annualStepupPct / 100) };
-}
-
+// calcStepupSIP now lives in calc.js (loaded above) — see CLAUDE.md's Testing section.
 function updateStepupSIP() {
   const monthly = v('su-monthly');
   const stepup = parseFloat(el('su-stepup').value) || 10;
@@ -2678,37 +2633,8 @@ updateQuick();
 // =====================================================================
 // DHANAM CAR — TAX & LEASE CALCULATOR
 // =====================================================================
-function calcIncomeTax(annualTaxable, regime) {
-  if (annualTaxable <= 0) return 0;
-  let tax = 0;
-  if (regime === 'new') {
-    const slabs = [[400000,0],[400000,.05],[400000,.10],[400000,.15],[400000,.20],[400000,.25],[Infinity,.30]];
-    let remaining = annualTaxable;
-    for (const [size, rate] of slabs) {
-      if (remaining <= 0) break;
-      const chunk = Math.min(remaining, size);
-      tax += chunk * rate;
-      remaining -= chunk;
-    }
-    if (annualTaxable <= 1200000) tax = 0; // 87A rebate new regime
-  } else {
-    const slabs = [[250000,0],[250000,.05],[500000,.20],[Infinity,.30]];
-    let remaining = annualTaxable;
-    for (const [size, rate] of slabs) {
-      if (remaining <= 0) break;
-      const chunk = Math.min(remaining, size);
-      tax += chunk * rate;
-      remaining -= chunk;
-    }
-    if (annualTaxable <= 500000) tax = 0; // 87A rebate old regime
-  }
-  return tax * 1.04; // 4% cess
-}
-
-function calcPerquisite(bigEngine, hasDriver) {
-  return (bigEngine ? 2400 : 1800) + (hasDriver ? 900 : 0);
-}
-
+// calcIncomeTax / calcPerquisite now live in calc.js (loaded above) —
+// see CLAUDE.md's Testing section.
 function renderCarCalc() {
   const basic = +v('car-basic') || 0;
   const bonus = +v('car-bonus') || 0;
@@ -2823,12 +2749,7 @@ function renderCarCalc() {
 // =====================================================================
 // DHANAM CAR — CAR BUYING LOAN ANALYSIS
 // =====================================================================
-function calcCarDepreciation(price, years) {
-  let val = price * 0.80; // 20% drop year 1
-  for (let y = 1; y < years; y++) val *= 0.85; // 15%/yr thereafter
-  return val;
-}
-
+// calcCarDepreciation now lives in calc.js (loaded above) — see CLAUDE.md's Testing section.
 function renderCarLoan() {
   const price = +v('cb-price') || 0;
   const down = +v('cb-down') || 0;

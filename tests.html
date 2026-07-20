@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dhanam — Calculation Tests</title>
+<style>
+  body { background:#04140d; color:#ede8df; font-family:'DM Mono',monospace; font-size:13px; padding:24px; line-height:1.6; }
+  h1 { font-family:Georgia,serif; color:#c9a84c; font-size:20px; margin-bottom:4px; }
+  .sub { color:#8a9a8e; font-size:12px; margin-bottom:20px; }
+  .summary { font-size:15px; font-weight:bold; margin:16px 0; padding:10px 14px; border-radius:8px; }
+  .summary.pass { background:rgba(92,184,138,.15); color:#6db87a; border:1px solid rgba(92,184,138,.4); }
+  .summary.fail { background:rgba(224,112,112,.12); color:#e07070; border:1px solid rgba(224,112,112,.4); }
+  .row { padding:5px 0; border-bottom:1px solid #1c1c1c; }
+  .row.ok { color:#6db87a; }
+  .row.bad { color:#e07070; }
+  .row .detail { color:#8a9a8e; font-size:11px; margin-left:20px; }
+  .finding { color:#c9a84c; font-size:11px; padding:4px 0 4px 20px; }
+</style>
+</head>
+<body>
+<h1>Dhanam — Calculation Test Results</h1>
+<div class="sub">Runs the same assertions as <code>tests.js</code>, in-browser, against the same <code>calc.js</code> the app loads. See TASK-TEST-HARNESS.md.</div>
+<div id="summary" class="summary">Running…</div>
+<div id="results"></div>
+
+<script src="calc.js"></script>
+<script>
+let pass = 0, fail = 0;
+const rows = [];
+
+function ok(name, condition, detail) {
+  if (condition) pass++; else fail++;
+  rows.push({ name, condition, detail });
+}
+function approxEqual(a, b, tolerance) { return Math.abs(a - b) <= tolerance; }
+
+function referenceEMIByBisection(P, annualRate, years) {
+  const r = annualRate / 12 / 100;
+  const n = years * 12;
+  if (r === 0) return P / n;
+  function balanceAfter(emi) {
+    let bal = P;
+    for (let i = 0; i < n; i++) bal = bal + bal * r - emi;
+    return bal;
+  }
+  let lo = P / n, hi = P;
+  for (let iter = 0; iter < 200; iter++) {
+    const mid = (lo + hi) / 2;
+    if (balanceAfter(mid) > 0) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+// calcEMI
+ok('calcEMI: zero-rate branch is exact', calcEMI(1200000, 0, 10) === 1200000 / 120, `got ${calcEMI(1200000, 0, 10)}`);
+{
+  const emi = calcEMI(1000000, 10, 1);
+  const reference = referenceEMIByBisection(1000000, 10, 1);
+  ok('calcEMI: matches independent bisection oracle (P=10L, 10%, 1yr)', approxEqual(emi, reference, 1), `calcEMI=${emi.toFixed(2)} vs oracle=${reference.toFixed(2)}`);
+}
+{
+  const emi = calcEMI(5000000, 8.75, 20);
+  const reference = referenceEMIByBisection(5000000, 8.75, 20);
+  ok('calcEMI: matches independent bisection oracle (P=50L, 8.75%, 20yr)', approxEqual(emi, reference, 1), `calcEMI=${emi.toFixed(2)} vs oracle=${reference.toFixed(2)}`);
+}
+ok('calcEMI: monotonically decreasing as tenure increases',
+  calcEMI(5000000, 9, 15) > calcEMI(5000000, 9, 20) && calcEMI(5000000, 9, 20) > calcEMI(5000000, 9, 30));
+
+// loanAtYear
+{
+  const P = 5000000, rate = 8.75, years = 20;
+  const atEnd = loanAtYear(P, rate, years, years);
+  ok('loanAtYear: balance ~0 at full tenure', approxEqual(atEnd.balance, 0, 1), `balance=${atEnd.balance.toFixed(2)}`);
+  ok('loanAtYear: principalPaid ~P at full tenure', approxEqual(atEnd.principalPaid, P, 1));
+  const atStart = loanAtYear(P, rate, years, 0);
+  ok('loanAtYear: balance ~P at year 0', approxEqual(atStart.balance, P, 1));
+  ok('loanAtYear: principalPaid ~0 at year 0', approxEqual(atStart.principalPaid, 0, 1));
+  ok('loanAtYear: interestPaid ~0 at year 0', approxEqual(atStart.interestPaid, 0, 1));
+  const atMid = loanAtYear(P, rate, years, 10);
+  ok('loanAtYear: principalPaid + balance == P at year 10', approxEqual(atMid.principalPaid + atMid.balance, P, 0.01));
+}
+
+// simulateLoan
+{
+  const P = 5000000, rate = 8.75, years = 20;
+  const normal = simulateLoan(P, rate, years, 0, 0);
+  ok('simulateLoan: no-extra case runs full tenure', approxEqual(normal.actualMonths, years * 12, 0));
+  ok('simulateLoan: no-extra monthsSaved is 0', normal.monthsSaved === 0);
+  const expectedInterest = calcEMI(P, rate, years) * years * 12 - P;
+  ok('simulateLoan: no-extra totalInterest matches calcEMI*n - P', approxEqual(normal.totalInterest, expectedInterest, 1));
+  const withExtra = simulateLoan(P, rate, years, 1, 0);
+  ok('simulateLoan: extra EMI/year reduces tenure', withExtra.actualMonths < normal.actualMonths);
+  ok('simulateLoan: extra EMI/year reduces total interest', withExtra.totalInterest < normal.totalInterest);
+  const bigLumpsum = simulateLoan(P, rate, years, 0, P);
+  ok('simulateLoan: lumpsum == P pays off within ~2 years', bigLumpsum.actualMonths <= 24);
+}
+
+// calcSIP
+ok('calcSIP: zero-rate branch is exact', calcSIP(10000, 0, 10) === 10000 * 120);
+ok('calcSIP: zero contribution gives zero corpus', calcSIP(0, 12, 20) === 0);
+ok('calcSIP: monotonically increasing in years', calcSIP(10000, 12, 10) < calcSIP(10000, 12, 20));
+ok('calcSIP: monotonically increasing in cagr', calcSIP(10000, 9, 20) < calcSIP(10000, 15, 20));
+
+// calcStepupSIP cross-check (see tests.js for the full explanation of this finding)
+{
+  const flat = calcSIP(10000, 12, 20);
+  const stepupAtZero = calcStepupSIP(10000, 0, 12, 20).corpus;
+  const diffPct = ((flat - stepupAtZero) / flat) * 100;
+  ok(`calcStepupSIP @ 0% step-up vs calcSIP: differ by ${diffPct.toFixed(2)}% (annuity-due vs ordinary-annuity timing — known finding, not a gross bug)`, Math.abs(diffPct) < 5, `flat=${flat.toFixed(0)} stepupAt0=${stepupAtZero.toFixed(0)}`);
+}
+ok('calcStepupSIP: 0% step-up final SIP equals starting SIP', approxEqual(calcStepupSIP(10000, 0, 12, 20).finalSIP, 10000, 0.01));
+ok('calcStepupSIP: step-up produces more corpus than flat at same inputs', calcStepupSIP(10000, 10, 12, 20).corpus > calcStepupSIP(10000, 0, 12, 20).corpus);
+
+// calcIncomeTax
+ok('calcIncomeTax: zero income -> zero tax (new)', calcIncomeTax(0, 'new') === 0);
+ok('calcIncomeTax: negative income -> zero tax (new)', calcIncomeTax(-100000, 'new') === 0);
+ok('calcIncomeTax: new regime, taxable=15L -> exact 109200', approxEqual(calcIncomeTax(1500000, 'new'), 109200, 0.01), `got ${calcIncomeTax(1500000,'new')}`);
+ok('calcIncomeTax: old regime, taxable=10L -> exact 117000', approxEqual(calcIncomeTax(1000000, 'old'), 117000, 0.01), `got ${calcIncomeTax(1000000,'old')}`);
+ok('calcIncomeTax: new regime 87A cliff at 12L -> 0', calcIncomeTax(1200000, 'new') === 0);
+ok('calcIncomeTax: new regime just above 87A cliff -> tax > 0', calcIncomeTax(1200001, 'new') > 0);
+ok('calcIncomeTax: old regime 87A cliff at 5L -> 0', calcIncomeTax(500000, 'old') === 0);
+ok('calcIncomeTax: old regime just above 87A cliff -> tax > 0', calcIncomeTax(500001, 'old') > 0);
+
+// calcPerquisite
+ok('calcPerquisite: small engine, no driver -> 1800', calcPerquisite(false, false) === 1800);
+ok('calcPerquisite: big engine, no driver -> 2400', calcPerquisite(true, false) === 2400);
+ok('calcPerquisite: small engine, with driver -> 2700', calcPerquisite(false, true) === 2700);
+ok('calcPerquisite: big engine, with driver -> 3300', calcPerquisite(true, true) === 3300);
+
+// calcCarDepreciation
+ok('calcCarDepreciation: year 1 is exactly 80% of price', calcCarDepreciation(1000000, 1) === 1000000 * 0.80);
+ok('calcCarDepreciation: year 2 is exactly 80%*85% of price', approxEqual(calcCarDepreciation(1000000, 2), 1000000 * 0.80 * 0.85, 0.0001));
+ok('calcCarDepreciation: monotonically decreasing in years', calcCarDepreciation(1000000, 1) > calcCarDepreciation(1000000, 3) && calcCarDepreciation(1000000, 3) > calcCarDepreciation(1000000, 5));
+ok('calcCarDepreciation: zero price -> zero resale', calcCarDepreciation(0, 5) === 0);
+
+// Render
+const summaryEl = document.getElementById('summary');
+const resultsEl = document.getElementById('results');
+summaryEl.textContent = `${pass} passed, ${fail} failed (${pass + fail} total)`;
+summaryEl.className = 'summary ' + (fail === 0 ? 'pass' : 'fail');
+resultsEl.innerHTML = rows.map(r =>
+  `<div class="row ${r.condition ? 'ok' : 'bad'}">${r.condition ? '✓' : '✗'} ${r.name}${r.detail ? `<div class="detail">${r.detail}</div>` : ''}</div>`
+).join('');
+</script>
+</body>
+</html>
