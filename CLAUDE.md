@@ -110,4 +110,11 @@ No DOM-level test framework exists (see **Testing** above for the automated cove
 
 ### Styling
 
-All CSS is inline in `index.html`, using custom properties defined on `:root` (forest green/gold theme — `--bg`, `--surface`, `--accent`, etc.). Fonts are Google Fonts (`Inter` for body, `Playfair Display` for headings/large numbers, `DM Mono` for numeric values) loaded via `@import`. Reuse existing custom properties and utility classes (`.panel-card`, `.collapse-card`, `.section-title`, etc.) rather than introducing new color values or one-off components.
+All CSS is inline in `index.html`, using custom properties defined on `:root` — a "Quiet Luxury / Private Bank" theme: a true-neutral near-black base (`--bg`, `--surface`, `--surface2`, `--surface3`, `--border`) with gold as the sole hero accent (`--accent`, `--accent2`) and disciplined green/red status colors (`--green`, `--red`) for real financial deltas. Fonts are Google Fonts (`Inter` for body, `Playfair Display` for headings/large numbers, `DM Mono` for numeric values) loaded via `@import`. Reuse existing custom properties and utility classes (`.panel-card`, `.collapse-card`, `.section-title`, etc.) rather than introducing new color values or one-off components.
+
+**Color rules (see `COLOR-PALETTE-ANALYSIS.md` for the full rationale):**
+1. Exactly three chromatic hues exist in the app: gold, green, red. Everything else is neutral (the true-black scale + warm-cream text). No fourth hue gets added without revisiting that document first.
+2. Gold is the one hero/emphasis color — the primary highlighted answer in any card, active/selected states, focus rings. Not used for section identity or decoration.
+3. Green is a real, positive financial delta only — never "this is a big/important number" alone, and never UI chrome unless the action itself represents a gain.
+4. Red is a real cost or negative financial delta only — same rule as green, mirrored.
+5. Color is never the only signal — colored values keep an adjacent text label; comparison verdicts keep their emoji/text framing.
