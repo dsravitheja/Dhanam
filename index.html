@@ -1303,7 +1303,16 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <div id="cb-cards" class="loan-grid" style="margin-bottom:14px;"></div>
     <div id="cb-depreciation" class="panel-card" style="margin-bottom:28px;display:none;">
       <div class="panel-card-header"><span>📉</span><span class="pch-title">Estimated Resale Value (IRDAI Depreciation)</span></div>
-      <div class="panel-card-body" id="cb-depr-body"></div>
+      <div class="panel-card-body">
+        <!-- Static sibling of cb-depr-body, not inside its innerHTML (R20,
+             Phase 3c): cb-depr-body's table is rebuilt on every keystroke,
+             which was destroying and recreating this chart's host node each
+             time and forcing renderChart()'s node-identity check to tear
+             down and rebuild a ResizeObserver per character typed. -->
+        <div id="cb-depr-chart"></div>
+        <div class="chart-caption"><span>Year 1</span><span>Year 7</span></div>
+        <div id="cb-depr-body"></div>
+      </div>
     </div>
 
   </div>
@@ -1412,6 +1421,18 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="panel-card">
+        <div class="panel-card-header"><span>📈</span><span class="pch-title">Corpus Growth Curve</span></div>
+        <div class="panel-card-body">
+          <div class="chart-legend">
+            <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Step-up corpus</span>
+            <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--text-mid)"></span>Flat-SIP corpus</span>
+            <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--text-dim)"></span>Invested</span>
+          </div>
+          <div id="su-growth-chart"></div>
+          <div class="chart-caption"><span>Year 1</span><span id="su-growth-end">Year 20</span></div>
+        </div>
+      </div>
+      <div class="panel-card">
         <div class="panel-card-header"><span>📅</span><span class="pch-title">Year-by-year Milestones</span></div>
         <div class="panel-card-body" style="padding:0;">
           <table class="milestone-table">
@@ -1451,6 +1472,17 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
           <div class="total-sub-item"><div class="ts-lbl">Principal</div><div class="ts-val mono" id="ls-principal">—</div></div>
           <div class="total-sub-item"><div class="ts-lbl">Wealth Gained</div><div class="ts-val mono" style="color:var(--green)" id="ls-gain">—</div></div>
           <div class="total-sub-item"><div class="ts-lbl">Multiplier</div><div class="ts-val mono" style="color:var(--green)" id="ls-mult">—</div></div>
+        </div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-card-header"><span>📈</span><span class="pch-title">Growth Curve</span></div>
+        <div class="panel-card-body">
+          <div class="chart-legend">
+            <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Value</span>
+            <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--text-dim)"></span>Principal</span>
+          </div>
+          <div id="ls-growth-chart"></div>
+          <div class="chart-caption"><span>Year 1</span><span id="ls-growth-end">Year 20</span></div>
         </div>
       </div>
       <div class="panel-card">
@@ -1663,19 +1695,63 @@ function chartSvg(series, opts) {
 }
 
 // Measure the host, then draw at 1:1 so nothing is distorted. A hidden host
-// (collapsed card, inactive hub) measures 0 — fall back to 600 and re-render
-// when it becomes visible, which is what toggleChartCard() below is for.
+// (collapsed card, inactive hub/tab) measures 0 — fall back to 600 for that
+// initial (wrong) draw, remember what was asked for, and let the
+// ResizeObserver below redraw at the real width the moment the host becomes
+// visible or changes size (tab switch, hub switch, accordion reopen, window
+// resize/orientation change). This is the single redraw mechanism for every
+// reveal path in the app — see CLAUDE.md's Charts section for the full list
+// of call sites and why a per-caller redraw() was rejected in favour of it.
+const chartCache = new Map();     // targetId -> { series, opts }
+const chartObservers = new Map(); // targetId -> { ro, node } — node lets us
+                                   // detect a host that got recreated by an
+                                   // innerHTML rewrite of its parent (e.g.
+                                   // cb-depr-body), which would otherwise
+                                   // leave the observer watching a detached
+                                   // element forever.
 function renderChart(targetId, series, opts) {
   const host = el(targetId);
   if (!host) return;
+  chartCache.set(targetId, { series, opts });
   host.innerHTML = chartSvg(series, Object.assign({}, opts, { width: host.clientWidth || 600 }));
+  const existing = chartObservers.get(targetId);
+  if (existing && existing.node !== host) {
+    existing.ro.disconnect();
+    chartObservers.delete(targetId);
+  }
+  if (!chartObservers.has(targetId) && typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver(() => {
+      const w = host.clientWidth;
+      if (!w) return; // still hidden — nothing to draw yet, wait for the next resize
+      const cached = chartCache.get(targetId);
+      if (!cached) return;
+      host.innerHTML = chartSvg(cached.series, Object.assign({}, cached.opts, { width: w }));
+    });
+    ro.observe(host);
+    chartObservers.set(targetId, { ro, node: host });
+  }
 }
 
-// Collapse card containing a chart: expand first, then draw, so the chart is
-// measured against a container that actually has a width.
+// Empty a chart host and forget its cached series (R15, Phase 3c). A bare
+// `el(id).innerHTML = ''` looks equivalent but isn't: the ResizeObserver
+// above keeps firing on every subsequent size change and, finding a stale
+// chartCache entry still sitting there, redraws the deleted data right back
+// onto the screen the next time the host's size changes away from 0 (e.g.
+// expanding a collapsed card, or a window resize). Any code that wants a
+// chart host visibly empty — because the underlying data was erased, not
+// just hidden — must go through this, not a direct innerHTML write.
+function clearChart(targetId) {
+  const host = el(targetId);
+  if (host) host.innerHTML = '';
+  chartCache.delete(targetId);
+}
+
+// Collapse card containing a chart: the ResizeObserver above now handles the
+// redraw once the host is visible, so this only needs to (a) toggle the card
+// and (b) compute the chart data the first time, if it hasn't been yet.
 function toggleChartCard(cardId, redraw) {
   toggleCard(cardId);
-  if (el(cardId).classList.contains('open')) redraw();
+  if (el(cardId).classList.contains('open') && redraw) redraw();
 }
 
 // =====================================================================
@@ -1843,6 +1919,13 @@ function hydrateLoanInputs() {
 // =====================================================================
 // SECTION TOGGLE
 // =====================================================================
+// The three section-panels (detail/loan/disb) are an exclusive accordion —
+// opening one closes any other that's open (R14, owner-requested 2026-07-25:
+// one destination at a time, since the newly-opened panel otherwise lands
+// below whatever was already open and can land off-screen). This does NOT
+// extend to nested .collapse-cards (loan/advanced/SIP compare grids) — those
+// are drill-downs within one task, not a second destination.
+const SECTION_IDS = ['detail', 'loan', 'disb'];
 function toggleSection(id) {
   const panel = el('section-' + id);
   const btn = el('btn-' + id);
@@ -1852,6 +1935,19 @@ function toggleSection(id) {
     panel.classList.remove('open');
     btn.classList.remove('active');
   } else {
+    // Collapse any other open panel first. CSS class change only — the
+    // detailOpened/loanOpened/disbOpened latches and every input stay
+    // untouched, so reopening never re-runs the lazy-init/prefill branches
+    // below and never discards what the user typed.
+    SECTION_IDS.forEach(other => {
+      if (other === id) return;
+      const otherPanel = el('section-' + other);
+      if (otherPanel.classList.contains('open')) {
+        otherPanel.classList.remove('open');
+        el('btn-' + other).classList.remove('active');
+      }
+    });
+
     panel.classList.add('open');
     btn.classList.add('active');
 
@@ -3149,10 +3245,10 @@ function renderWorthProjection(anyInput, assets, liabs, aVals) {
 // ── Trend chart, collapsed by default (2d / R3) ─────────────────────────
 function renderWorthTrend() {
   const h = (DS && DS.history) || [];
-  if (!h.length) { hide('w-trend-card'); return; }
+  if (!h.length) { hide('w-trend-card'); clearChart('w-trend-chart'); return; }
   show('w-trend-card');
   if (h.length === 1) {
-    el('w-trend-chart').innerHTML = '';
+    clearChart('w-trend-chart');
     el('w-trend-range').textContent = 'Not enough history yet — check back after your next update.';
     return;
   }
@@ -3478,6 +3574,23 @@ function renderSIPComparison() {
 // =====================================================================
 // SIP PLANNER (standalone hub)
 // =====================================================================
+// Clamp a "years" input to its own min/max markup attributes and write the
+// clamped value back (R18, Phase 3c). Without this, typing e.g. 500 into
+// su-years fed straight into calcStepupSIP's O(n^2) month-by-month loop —
+// harmless on the closed-form monthly/lumpsum tabs, but a per-keystroke
+// freeze on step-up. Clamping in the DOM (not just internally) keeps what's
+// displayed in sync with what every chart/table below actually computed from.
+function clampYearsInput(id, fallback) {
+  const input = el(id);
+  const min = parseInt(input.min) || 1;
+  const max = parseInt(input.max) || 50;
+  let n = parseInt(input.value);
+  if (isNaN(n)) return fallback;
+  n = Math.min(max, Math.max(min, n));
+  if (n !== parseInt(input.value)) input.value = n;
+  return n;
+}
+
 function switchSIPPlannerTab(tab) {
   ['monthly', 'stepup', 'lumpsum'].forEach(t => {
     const content = el('spt-content-' + t);
@@ -3496,7 +3609,7 @@ function sipMilestones(maxYears) {
 function updateSIPPlanner() {
   const monthly = v('sp-monthly');
   const cagr = parseFloat(el('sp-cagr').value) || 12;
-  const years = parseInt(el('sp-years').value) || 20;
+  const years = clampYearsInput('sp-years', 20);
 
   const corpus = calcSIP(monthly, cagr, years);
   const invested = monthly * years * 12;
@@ -3537,18 +3650,53 @@ function updateSIPPlanner() {
 // calcStepupSIP now lives in calc.js (loaded above) — see CLAUDE.md's Testing section.
 function updateStepupSIP() {
   const monthly = v('su-monthly');
-  const stepup = parseFloat(el('su-stepup').value) || 10;
+  // `|| 10` treats an explicit 0 the same as empty, silently forcing 10% back
+  // in — found while verifying R16's "0% step-up ⇒ su-vs-flat reads ₹0" bar,
+  // which is unreachable through the UI without this (Phase 3c). NaN (empty
+  // field) still falls back to the 10% default; a real 0 is now respected.
+  const stepupRaw = parseFloat(el('su-stepup').value);
+  const stepup = isNaN(stepupRaw) ? 10 : stepupRaw;
   const cagr = parseFloat(el('su-cagr').value) || 12;
-  const years = parseInt(el('su-years').value) || 20;
+  const years = clampYearsInput('su-years', 20);
 
   const { corpus, totalInvested, finalSIP } = calcStepupSIP(monthly, stepup, cagr, years);
-  const flatCorpus = calcSIP(monthly, cagr, years);
+  // Flat-SIP baseline (R16, Phase 3c): compare against calcStepupSIP at 0%
+  // step-up, not calcSIP. calcSIP is a closed-form annuity-due formula while
+  // calcStepupSIP simulates month-by-month as an ordinary annuity — the two
+  // disagree by ~1% even at 0% step-up (documented gap, tests.js/B6). Mixing
+  // them here isn't just a footnote once it's drawn as two lines on one
+  // chart: at this tab's own default (10% step-up) it made the step-up line
+  // start *below* the flat line in year 1 and cross above it in year 2, when
+  // a step-up SIP is by definition identical to a flat one for all of year 1
+  // (the first step only applies from year 2). Comparing within the same
+  // function keeps the two lines apples-to-apples and exactly equal at 0%
+  // step-up, without touching calc.js or the B6 decision itself.
+  const flatCorpus = calcStepupSIP(monthly, 0, cagr, years).corpus;
 
   set('su-corpus', inCr(corpus));
   set('su-corpus-exact', fmt(corpus));
   set('su-invested', inCr(totalInvested));
   set('su-vs-flat', (corpus > flatCorpus ? '+' : '') + inCr(corpus - flatCorpus) + ' vs flat');
   set('su-final-sip', fmt(finalSIP) + '/mo');
+
+  // Corpus growth curve (R12) — the whole point of this tab is the divergence
+  // from a flat SIP, which su-vs-flat states as one number and a table can't
+  // show as a shape. Reuse calcStepupSIP per year, same as the milestone
+  // table already does; one call per year (not two — R20, Phase 3c) since
+  // .corpus and .totalInvested come from the same simulation.
+  const stepupSeries = [], flatSeries = [], investedSeries = [];
+  for (let y = 1; y <= years; y++) {
+    const { corpus: c, totalInvested: inv } = calcStepupSIP(monthly, stepup, cagr, y);
+    stepupSeries.push(c);
+    flatSeries.push(calcStepupSIP(monthly, 0, cagr, y).corpus);
+    investedSeries.push(inv);
+  }
+  renderChart('su-growth-chart', [
+    { values: stepupSeries, color: 'var(--accent)', area: true },
+    { values: flatSeries, color: 'var(--text-mid)', area: false },
+    { values: investedSeries, color: 'var(--text-dim)', area: false },
+  ], { ariaLabel: 'Step-up SIP corpus versus a flat SIP and amount invested over time' });
+  set('su-growth-end', `Year ${years}`);
 
   el('su-milestones').innerHTML = sipMilestones(years).map(y => {
     const { corpus: c, totalInvested: inv } = calcStepupSIP(monthly, stepup, cagr, y);
@@ -3565,7 +3713,7 @@ function updateStepupSIP() {
 function updateLumpsum() {
   const amount = v('ls-amount');
   const cagr = parseFloat(el('ls-cagr').value) || 12;
-  const years = parseInt(el('ls-years').value) || 20;
+  const years = clampYearsInput('ls-years', 20);
 
   const fv = amount * Math.pow(1 + cagr / 100, years);
   const gain = fv - amount;
@@ -3578,13 +3726,29 @@ function updateLumpsum() {
   set('ls-gain', inCr(gain));
   set('ls-mult', mult.toFixed(2) + '×');
 
+  // Growth curve (R12) — same compounding curve already used for the hero
+  // and milestone table, just plotted year by year against the flat principal.
+  const valueSeries = [], principalSeries = [];
+  for (let y = 1; y <= years; y++) {
+    valueSeries.push(amount * Math.pow(1 + cagr / 100, y));
+    principalSeries.push(amount);
+  }
+  renderChart('ls-growth-chart', [
+    { values: valueSeries, color: 'var(--accent)', area: true },
+    { values: principalSeries, color: 'var(--text-dim)', area: false },
+  ], { ariaLabel: 'Lumpsum investment value versus principal over time' });
+  set('ls-growth-end', `Year ${years}`);
+
   el('ls-milestones').innerHTML = sipMilestones(years).map(y => {
     const val = amount * Math.pow(1 + cagr / 100, y);
+    // R18, Phase 3c: amount === 0 made this NaN× (0/0) — ls-mult above this
+    // table was already guarded the same way, the table just wasn't.
+    const mult = amount > 0 ? (val / amount).toFixed(2) + '×' : '—';
     return `<tr>
       <td>${y} yr</td>
       <td style="color:var(--green)">${inCr(val)}</td>
       <td>${inCr(val - amount)}</td>
-      <td>${(val / amount).toFixed(2)}×</td>
+      <td>${mult}</td>
     </tr>`;
   }).join('');
 }
@@ -3744,36 +3908,42 @@ function renderCarLoan() {
     <div class="cb-derived-item"><div class="cb-derived-lbl">On-Road Price</div><div class="cb-derived-val">${fmt(price)}</div></div>
   `;
 
-  if (!loan || !rate) { el('cb-cards').innerHTML = ''; return; }
+  // Loan-scenario cards need an actual loan; depreciation only needs a price,
+  // so it must not sit behind this early return (a 100%-down-payment car has
+  // loan === 0 but still has a resale curve worth showing).
+  if (!loan || !rate) {
+    el('cb-cards').innerHTML = '';
+  } else {
+    const tenures = [3, 5, 7];
+    const r = rate / 12 / 100;
 
-  const tenures = [3, 5, 7];
-  const r = rate / 12 / 100;
-
-  el('cb-cards').innerHTML = tenures.map(yr => {
-    const n = yr * 12;
-    const emi = loan * r * Math.pow(1+r, n) / (Math.pow(1+r, n) - 1);
-    const total = emi * n;
-    const interest = total - loan;
-    const intPct = (interest / loan * 100).toFixed(1);
-    return `<div class="car-card">
-      <div class="car-card-title">${yr}-Year Loan</div>
-      <div class="car-stat"><span class="car-stat-lbl">Loan Amount</span><span class="car-stat-val">${fmt(loan)}</span></div>
-      <div class="car-stat"><span class="car-stat-lbl">Interest Rate</span><span class="car-stat-val">${rate}% p.a.</span></div>
-      <div class="car-stat"><span class="car-stat-lbl">Monthly EMI</span><span class="car-stat-val big">${fmt(emi)}</span></div>
-      <div class="car-stat"><span class="car-stat-lbl">Total Paid (${n} EMIs)</span><span class="car-stat-val">${fmt(total)}</span></div>
-      <div class="car-stat"><span class="car-stat-lbl">Total Interest</span><span class="car-stat-val red">${fmt(interest)}</span></div>
-      <div class="car-stat"><span class="car-stat-lbl">Interest % of Loan</span><span class="car-stat-val red">${intPct}%</span></div>
-    </div>`;
-  }).join('');
+    el('cb-cards').innerHTML = tenures.map(yr => {
+      const n = yr * 12;
+      const emi = loan * r * Math.pow(1+r, n) / (Math.pow(1+r, n) - 1);
+      const total = emi * n;
+      const interest = total - loan;
+      const intPct = (interest / loan * 100).toFixed(1);
+      return `<div class="car-card">
+        <div class="car-card-title">${yr}-Year Loan</div>
+        <div class="car-stat"><span class="car-stat-lbl">Loan Amount</span><span class="car-stat-val">${fmt(loan)}</span></div>
+        <div class="car-stat"><span class="car-stat-lbl">Interest Rate</span><span class="car-stat-val">${rate}% p.a.</span></div>
+        <div class="car-stat"><span class="car-stat-lbl">Monthly EMI</span><span class="car-stat-val big">${fmt(emi)}</span></div>
+        <div class="car-stat"><span class="car-stat-lbl">Total Paid (${n} EMIs)</span><span class="car-stat-val">${fmt(total)}</span></div>
+        <div class="car-stat"><span class="car-stat-lbl">Total Interest</span><span class="car-stat-val red">${fmt(interest)}</span></div>
+        <div class="car-stat"><span class="car-stat-lbl">Interest % of Loan</span><span class="car-stat-val red">${intPct}%</span></div>
+      </div>`;
+    }).join('');
+  }
 
   const deprEl = el('cb-depreciation');
   const deprBody = el('cb-depr-body');
   if (price > 0) {
     deprEl.style.display = '';
+    const tableYears = [1, 2, 3, 5, 7];
     deprBody.innerHTML = `<table class="depr-table">
       <thead><tr><th>Year</th><th>Est. Resale Value</th><th>Depreciation from New</th><th>Value Lost</th></tr></thead>
       <tbody>
-        ${[1,2,3,5,7].map(y => {
+        ${tableYears.map(y => {
           const resale = calcCarDepreciation(price, y);
           const lost = price - resale;
           const pct = (lost/price*100).toFixed(1);
@@ -3782,8 +3952,19 @@ function renderCarLoan() {
       </tbody>
     </table>
     <p style="font-size:11px;color:var(--text-dim);margin-top:8px;">Based on IRDAI schedule: 20% year 1, 15%/yr thereafter. Actual resale varies by brand, condition, and market.</p>`;
+    // Resale curve (R13, x-axis fixed under R17) — chartSvg spaces points by
+    // index, not by value, so plotting the table's [1,2,3,5,7] years directly
+    // drew the flat years 1-2 as wide as the steep two-year gap from 5 to 7 —
+    // the inverse of the "cliff in years 1-3" shape this chart exists to
+    // show. Plotting every year 1-7 makes index spacing equal to time
+    // spacing; the table's five rows are still exact points on the curve.
+    const chartYears = [1, 2, 3, 4, 5, 6, 7];
+    renderChart('cb-depr-chart', [
+      { values: chartYears.map(y => calcCarDepreciation(price, y)), color: 'var(--accent)', area: true },
+    ], { ariaLabel: 'Estimated resale value by year' });
   } else {
     deprEl.style.display = 'none';
+    clearChart('cb-depr-chart');
   }
 }
 </script>
