@@ -1,4 +1,4 @@
-const CACHE = 'apt-cost-v6';
+const CACHE = 'apt-cost-v7';
 // calc.js must be precached — index.html loads it via <script src>, so without
 // it here the whole app breaks offline, not just degrades. (The rest of D9 —
 // logo, fonts, cache-put for other assets — is still Phase 4.)
