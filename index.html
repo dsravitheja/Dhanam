@@ -30,6 +30,13 @@
   --text-mid: #c9c3b6;
   --hl-bg: rgba(201,168,76,0.08);
   --hl-border: rgba(201,168,76,0.35);
+  /* Neutral-scale extensions — no new hues, neutrals only (D1 sweep) */
+  --border-subtle: #1c1c1c;   /* in-card row dividers; lighter weight than --border */
+  --hero-grad-1: #1c1a11;     /* gold-tinted hero surface: .total-card, .sp-result-card */
+  --hero-grad-2: #1a1a1a;
+  --on-accent: #0a0a0a;       /* ink on gold fills (primary buttons, active pills) */
+  --header-grad-mid: #141414; /* header sheen */
+  --header-grad-end: #181818;
   --radius: 10px;
 }
 
@@ -38,7 +45,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', 'Segoe U
 
 /* ── HEADER ─────────────────────────────── */
 .header {
-  background: linear-gradient(135deg, #0a0a0a 0%, #141414 50%, #181818 100%);
+  background: linear-gradient(135deg, var(--bg) 0%, var(--header-grad-mid) 50%, var(--header-grad-end) 100%);
   border-bottom: 1px solid var(--border);
   padding: 20px 24px 18px;
   position: relative; overflow: hidden;
@@ -73,8 +80,8 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', 'Segoe U
 .ts-wrap span { font-size:12px; color:var(--text-mid); font-weight:500; text-transform:none; letter-spacing:0; white-space:nowrap; }
 .ts-switch { position:relative; display:inline-block; width:38px; height:22px; flex-shrink:0; }
 .ts-switch input { opacity:0; width:0; height:0; }
-.ts-slider { position:absolute; cursor:pointer; inset:0; background:#333; border-radius:22px; transition:.2s; }
-.ts-slider::before { position:absolute; content:""; height:16px; width:16px; left:3px; top:3px; background:#555; border-radius:50%; transition:.2s; }
+.ts-slider { position:absolute; cursor:pointer; inset:0; background:var(--border); border-radius:22px; transition:.2s; }
+.ts-slider::before { position:absolute; content:""; height:16px; width:16px; left:3px; top:3px; background:var(--text-dim); border-radius:50%; transition:.2s; }
 input:checked + .ts-slider { background:rgba(201,168,76,.4); }
 input:checked + .ts-slider::before { background:var(--accent); transform:translateX(16px); }
 
@@ -119,7 +126,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   font-family:'Inter','Segoe UI',system-ui,sans-serif; font-size:13px; font-weight:600;
   transition:all .2s; text-align:left;
 }
-.action-btn:hover { border-color:#555; color:var(--text); }
+.action-btn:hover { border-color:var(--hl-border); color:var(--text); }
 .action-btn.active { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
 .ab-icon { font-size:17px; }
 .ab-label { flex:1; }
@@ -193,11 +200,11 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 /* ── MODE TOGGLE (₹/sft vs lump) ────────── */
 .mode-toggle { display:inline-flex; background:var(--surface); border:1px solid var(--border); border-radius:6px; overflow:hidden; flex-shrink:0; }
 .mode-btn { padding:3px 8px; font-size:10px; font-weight:600; letter-spacing:.03em; color:var(--text-dim); background:transparent; border:none; cursor:pointer; transition:all .15s; font-family:'Inter','Segoe UI',system-ui,sans-serif; text-transform:uppercase; }
-.mode-btn.active { background:var(--accent); color:#0f0f0f; }
+.mode-btn.active { background:var(--accent); color:var(--on-accent); }
 
 /* ── TOTAL CARD ──────────────────────────── */
 .total-card {
-  background:linear-gradient(135deg,#1c1a11 0%,#1a1a1a 100%);
+  background:linear-gradient(135deg,var(--hero-grad-1) 0%,var(--hero-grad-2) 100%);
   border:1px solid var(--accent); border-radius:14px;
   padding:22px 18px; text-align:center; margin:18px 0 8px; position:relative; overflow:hidden;
 }
@@ -215,7 +222,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 /* ── COLLAPSIBLE CARDS ───────────────────── */
 .collapse-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:8px; overflow:hidden; }
-.collapse-card:hover { border-color:#444; }
+.collapse-card:hover { border-color:var(--hl-border); }
 .collapse-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; cursor:pointer; user-select:none; gap:12px; }
 .collapse-header:hover { background:rgba(255,255,255,.02); }
 .collapse-title { font-size:13px; font-weight:600; color:var(--text); flex:1; }
@@ -226,7 +233,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .collapse-card.open .collapse-body { display:block; }
 
 /* ── BREAKDOWN ROWS ──────────────────────── */
-.br-row { display:flex; justify-content:space-between; align-items:baseline; padding:5px 0; border-bottom:1px solid #1e1e1e; gap:12px; flex-wrap:wrap; }
+.br-row { display:flex; justify-content:space-between; align-items:baseline; padding:5px 0; border-bottom:1px solid var(--border-subtle); gap:12px; flex-wrap:wrap; }
 .br-row:last-child { border-bottom:none; }
 .br-label { font-size:12px; color:var(--text-dim); flex:1; min-width:130px; }
 .br-calc { font-size:11px; color:var(--text-dim); flex:1; text-align:center; min-width:70px; }
@@ -259,7 +266,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 @media(max-width:640px){ .loan-grid { grid-template-columns:1fr; } }
 .loan-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:16px 14px; }
 .lc-title { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.1em; color:var(--text-mid); margin-bottom:12px; }
-.loan-stat { display:flex; justify-content:space-between; align-items:baseline; padding:5px 0; border-bottom:1px solid #1c1c1c; }
+.loan-stat { display:flex; justify-content:space-between; align-items:baseline; padding:5px 0; border-bottom:1px solid var(--border-subtle); }
 .loan-stat:last-child { border-bottom:none; }
 .ls-lbl { font-size:11px; color:var(--text-dim); }
 .ls-val { font-family:'DM Mono',monospace; font-size:13px; font-weight:500; color:var(--text); }
@@ -298,7 +305,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 /* Payment schedule */
 .pay-table { width:100%; border-collapse:collapse; font-size:12px; }
 .pay-table th { text-align:left; padding:6px 10px; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); border-bottom:1px solid var(--border); }
-.pay-table td { padding:6px 10px; border-bottom:1px solid #1c1c1c; font-family:'DM Mono',monospace; }
+.pay-table td { padding:6px 10px; border-bottom:1px solid var(--border-subtle); font-family:'DM Mono',monospace; }
 .pay-table td:last-child { text-align:right; color:var(--accent2); }
 .pay-table td:first-child { color:var(--text-dim); font-family:'Inter','Segoe UI',system-ui,sans-serif; }
 .pay-table tr:last-child td { border-bottom:none; font-weight:600; color:var(--accent); }
@@ -306,13 +313,13 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 /* ── BUTTONS ─────────────────────────────── */
 .btn-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
 .btn { display:flex; align-items:center; gap:7px; padding:10px 18px; border-radius:8px; font-family:'Inter','Segoe UI',system-ui,sans-serif; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all .15s; letter-spacing:.02em; }
-.btn-primary { background:var(--accent); color:#0f0f0f; }
+.btn-primary { background:var(--accent); color:var(--on-accent); }
 .btn-primary:hover { background:var(--accent2); transform:translateY(-1px); }
 .btn-secondary { background:transparent; border:1px solid var(--border); color:var(--text-mid); }
 .btn-secondary:hover { border-color:var(--accent); color:var(--accent); }
 
 /* ── MISC ────────────────────────────────── */
-.toast { position:fixed; bottom:24px; right:24px; background:#2a2a2a; border:1px solid var(--accent); border-radius:8px; padding:12px 20px; font-size:13px; color:var(--text); transform:translateY(80px); opacity:0; transition:all .3s; z-index:9999; pointer-events:none; max-width:300px; }
+.toast { position:fixed; bottom:24px; right:24px; background:var(--surface2); border:1px solid var(--accent); border-radius:8px; padding:12px 20px; font-size:13px; color:var(--text); transform:translateY(80px); opacity:0; transition:all .3s; z-index:9999; pointer-events:none; max-width:300px; }
 .toast.show { transform:translateY(0); opacity:1; }
 .note-text { font-size:11px; color:var(--text-dim); padding:4px 0; }
 .divider { height:1px; background:var(--border); margin:14px 0; }
@@ -398,16 +405,16 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 /* ── STANDALONE SIP PLANNER ──────────────── */
 .sip-planner-tabs { display:flex; gap:0; background:var(--surface2); border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:18px; }
 .sip-planner-tab { flex:1; padding:10px 12px; font-family:'Inter','Segoe UI',system-ui,sans-serif; font-size:13px; font-weight:600; color:var(--text-dim); background:transparent; border:none; cursor:pointer; transition:all .15s; text-align:center; }
-.sip-planner-tab.active { background:var(--accent); color:#0f0f0f; }
+.sip-planner-tab.active { background:var(--accent); color:var(--on-accent); }
 .sip-planner-tab:hover:not(.active) { color:var(--text); }
-.sp-result-card { background:linear-gradient(135deg,#1c1a11 0%,#1a1a1a 100%); border:1px solid var(--accent); border-radius:14px; padding:22px 18px; text-align:center; margin-bottom:14px; position:relative; overflow:hidden; }
+.sp-result-card { background:linear-gradient(135deg,var(--hero-grad-1) 0%,var(--hero-grad-2) 100%); border:1px solid var(--accent); border-radius:14px; padding:22px 18px; text-align:center; margin-bottom:14px; position:relative; overflow:hidden; }
 .sp-result-card::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:200px; height:1px; background:linear-gradient(90deg,transparent,var(--accent),transparent); }
 .sp-result-label { font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-dim); margin-bottom:6px; }
 .sp-result-value { font-family:'Playfair Display',serif; font-size:clamp(26px,6vw,42px); font-weight:900; color:var(--green); line-height:1; }
 .sp-result-sub { font-size:13px; color:var(--text-dim); margin-top:5px; }
 .milestone-table { width:100%; border-collapse:collapse; font-size:12px; }
 .milestone-table th { text-align:left; padding:6px 12px; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); border-bottom:1px solid var(--border); }
-.milestone-table td { padding:6px 12px; border-bottom:1px solid #1c1c1c; font-family:'DM Mono',monospace; }
+.milestone-table td { padding:6px 12px; border-bottom:1px solid var(--border-subtle); font-family:'DM Mono',monospace; }
 .milestone-table td:first-child { color:var(--text-dim); font-family:'Inter','Segoe UI',system-ui,sans-serif; }
 .milestone-table tr:last-child td { border-bottom:none; }
 /* ── CAR TAB ─────────────────────────────── */
@@ -417,7 +424,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .car-badge.baseline { background:rgba(255,255,255,.08); color:var(--text-mid); }
 .car-badge.carveout { background:rgba(92,184,138,.15); color:var(--green); }
 .car-badge.additive { background:rgba(201,168,76,.12); color:var(--accent); }
-.car-stat { display:flex; justify-content:space-between; align-items:baseline; padding:5px 0; border-bottom:1px solid #1c1c1c; }
+.car-stat { display:flex; justify-content:space-between; align-items:baseline; padding:5px 0; border-bottom:1px solid var(--border-subtle); }
 .car-stat:last-child { border-bottom:none; }
 .car-stat-lbl { font-size:11px; color:var(--text-dim); }
 .car-stat-val { font-family:'DM Mono',monospace; font-size:13px; font-weight:500; color:var(--text); }
@@ -427,7 +434,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .car-divider { margin:8px 0; border-top:1px dashed var(--border); padding-top:8px; }
 .car-section-lbl { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); margin-bottom:6px; }
 .car-summary-box { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; margin-bottom:14px; }
-.car-summary-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #1c1c1c; flex-wrap:wrap; gap:8px; }
+.car-summary-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border-subtle); flex-wrap:wrap; gap:8px; }
 .car-summary-row:last-child { border-bottom:none; }
 .car-summary-lbl { font-size:12px; color:var(--text-dim); }
 .car-summary-val { font-family:'DM Mono',monospace; font-size:13px; }
@@ -437,7 +444,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .cb-derived-val { font-family:'DM Mono',monospace; font-size:15px; color:var(--accent2); font-weight:600; }
 .depr-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:8px; }
 .depr-table th { text-align:left; padding:6px 12px; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); border-bottom:1px solid var(--border); }
-.depr-table td { padding:6px 12px; border-bottom:1px solid #1c1c1c; font-family:'DM Mono',monospace; }
+.depr-table td { padding:6px 12px; border-bottom:1px solid var(--border-subtle); font-family:'DM Mono',monospace; }
 .depr-table td:first-child { color:var(--text-dim); font-family:'Inter','Segoe UI',system-ui,sans-serif; }
 .depr-table tr:last-child td { border-bottom:none; }
 
@@ -453,7 +460,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .disb-warn { display:none; font-size:12px; color:var(--red); background:rgba(224,112,112,.08); border:1px solid rgba(224,112,112,.3); border-radius:8px; padding:8px 12px; margin-top:10px; }
 .disb-schedule-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:4px; }
 .disb-schedule-table th { text-align:left; padding:6px 12px; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); border-bottom:1px solid var(--border); }
-.disb-schedule-table td { padding:6px 12px; border-bottom:1px solid #1c1c1c; font-family:'DM Mono',monospace; }
+.disb-schedule-table td { padding:6px 12px; border-bottom:1px solid var(--border-subtle); font-family:'DM Mono',monospace; }
 .disb-schedule-table td:first-child { color:var(--text-dim); font-family:'Inter','Segoe UI',system-ui,sans-serif; }
 .disb-schedule-table tr:last-child td { border-bottom:none; }
 </style>
@@ -1839,6 +1846,17 @@ function renderAdvLoan() {
 // =====================================================================
 // EXPORT — SNAPSHOT (Canvas PNG)
 // =====================================================================
+// Canvas can't read CSS custom properties directly, so pull them off :root once
+// per export. Single source of truth — the PNG can't drift from the app palette.
+function palette() {
+  const s = getComputedStyle(document.documentElement);
+  const g = n => s.getPropertyValue(n).trim();
+  return {
+    bg: g('--bg'), border: g('--border'), borderSubtle: g('--border-subtle'),
+    accent: g('--accent'), text: g('--text'), textMid: g('--text-mid'), textDim: g('--text-dim'),
+  };
+}
+
 function exportSnapshot(src) {
   const d = src === 'detail' ? DD : null;
   const sqft = d ? d.sqft : (QD.sqft || 0);
@@ -1853,40 +1871,41 @@ function exportSnapshot(src) {
   canvas.width = 760 * scale;
   canvas.height = 800 * scale;
   const ctx = canvas.getContext('2d');
+  const P = palette();
   ctx.scale(scale, scale);
 
   const W = 760, pad = 36;
-  ctx.fillStyle = '#0f0f0f';
+  ctx.fillStyle = P.bg;
   ctx.fillRect(0, 0, W, 800);
-  ctx.fillStyle = '#c9a84c';
+  ctx.fillStyle = P.accent;
   ctx.fillRect(0, 0, W, 4);
 
   // Header
-  ctx.fillStyle = '#c9a84c';
+  ctx.fillStyle = P.accent;
   ctx.font = 'bold 26px Georgia, serif';
   ctx.fillText('Apartment Cost Analysis', pad, 50);
-  ctx.fillStyle = '#666';
+  ctx.fillStyle = P.textDim;
   ctx.font = '12px Arial';
   ctx.fillText('Hyderabad · ' + new Date().toLocaleDateString('en-IN'), pad, 70);
-  if (uc) { ctx.fillStyle = '#c9a84c'; ctx.fillText('Under Construction Property', W - pad - 180, 70); }
+  if (uc) { ctx.fillStyle = P.accent; ctx.fillText('Under Construction Property', W - pad - 180, 70); }
 
-  ctx.fillStyle = '#2a2a2a';
+  ctx.fillStyle = P.border;
   ctx.fillRect(pad, 84, W - pad*2, 1);
 
   // Total
-  ctx.fillStyle = '#888';
+  ctx.fillStyle = P.textDim;
   ctx.font = '11px Arial';
   ctx.textAlign = 'center';
   ctx.fillText('TOTAL COST TO PURCHASE', W/2, 116);
-  ctx.fillStyle = '#c9a84c';
+  ctx.fillStyle = P.accent;
   ctx.font = 'bold 44px Georgia, serif';
   ctx.fillText(fmt(total || sqft*rate), W/2, 166);
-  ctx.fillStyle = '#666';
+  ctx.fillStyle = P.textDim;
   ctx.font = '14px Arial';
   ctx.fillText(fmtCr(total || sqft*rate), W/2, 188);
   ctx.textAlign = 'left';
 
-  ctx.fillStyle = '#2a2a2a';
+  ctx.fillStyle = P.border;
   ctx.fillRect(pad, 202, W - pad*2, 1);
 
   const rows = d ? [
@@ -1908,30 +1927,30 @@ function exportSnapshot(src) {
 
   let y = 230;
   ctx.font = '10px Arial';
-  ctx.fillStyle = '#555';
+  ctx.fillStyle = P.textDim;
   ctx.fillText('COMPONENT', pad, y);
   ctx.fillText('AMOUNT', 360, y);
   ctx.fillText('EXACT', 560, y);
   y += 8;
-  ctx.fillStyle = '#2a2a2a'; ctx.fillRect(pad, y, W-pad*2, 1); y += 16;
+  ctx.fillStyle = P.border; ctx.fillRect(pad, y, W-pad*2, 1); y += 16;
 
   rows.forEach((row, i) => {
     const isLast = i === rows.length - 1;
-    ctx.fillStyle = isLast ? '#c9a84c' : (i%2===0 ? '#bbb' : '#888');
+    ctx.fillStyle = isLast ? P.accent : (i%2===0 ? P.textMid : P.textDim);
     ctx.font = isLast ? 'bold 13px Arial' : '12px Arial';
     ctx.fillText(row[0], pad, y);
-    ctx.fillStyle = isLast ? '#c9a84c' : '#ddd';
+    ctx.fillStyle = isLast ? P.accent : P.text;
     ctx.font = '12px monospace';
     ctx.fillText(row[1], 360, y);
-    ctx.fillStyle = '#666';
+    ctx.fillStyle = P.textDim;
     ctx.fillText(row[2], 560, y);
     y += 22;
-    if (!isLast) { ctx.fillStyle = '#1c1c1c'; ctx.fillRect(pad, y-6, W-pad*2, 1); }
+    if (!isLast) { ctx.fillStyle = P.borderSubtle; ctx.fillRect(pad, y-6, W-pad*2, 1); }
   });
 
   y += 10;
-  ctx.fillStyle = '#333'; ctx.fillRect(pad, 780, W-pad*2, 1);
-  ctx.fillStyle = '#8a9a8e'; ctx.font = '10px Arial';
+  ctx.fillStyle = P.border; ctx.fillRect(pad, 780, W-pad*2, 1);
+  ctx.fillStyle = P.textDim; ctx.font = '10px Arial';
   ctx.fillText('Apartment Cost Analyzer · ' + new Date().toLocaleString('en-IN'), pad, 796);
   ctx.textAlign = 'right';
   ctx.fillText('All charges approximate · Prices in INR', W-pad, 796);
