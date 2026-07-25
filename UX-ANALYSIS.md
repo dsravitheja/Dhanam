@@ -67,7 +67,103 @@ This is how Dhanam graduates from toolbox to app: **Worth is the noun; the calcu
 | **B. localStorage persistence** *(recommended)* | Same worksheet, saved to `localStorage` on the device. Update the promise to "saved only on this device, never sent anywhere" — which is still a *stronger* privacy story than any fintech app. Add export/erase controls. | One new primitive (a small `saveState`/`loadState` layer). Also unlocks remembering inputs across *all* hubs — fixing the "no memory" gap app-wide. |
 | **C. File-based snapshots** | Export/import a JSON "Dhanam file" the user owns. | Maximum privacy purity, but import friction kills habitual use. Better as a backup feature on top of B. |
 
-**Recommendation: B**, with the Worth hub structured as: (1) editable balance-sheet with Indian asset categories, (2) hero net-worth number in the existing `total-card` style, (3) a "projected worth" section that *reuses* `calcSIP`/`loanAtYear` to draw the future from today's snapshot — the bridge between Worth and Grow that no standalone calculator can offer.
+**Recommendation: B**, with the Worth hub structured as: (1) editable balance-sheet with Indian asset categories, (2) hero net-worth number in the existing `total-card` style, (3) a **change-since-last-visit tile** (see §2.4), (4) a net-worth trend chart behind an expanded view, and (5) a "projected worth" section that *reuses* `calcSIP`/`loanAtYear` to draw the future from today's snapshot — the bridge between Worth and Grow that no standalone calculator can offer.
+
+**Decision (2026-07-25): Option B approved**, scoped per §2.1, with Option C shipped alongside it as a backup mechanism rather than deferred. The sections below expand what that commits to.
+
+---
+
+## §2.1 What gets persisted — the decision that matters most
+
+"Save the inputs" is under-specified, and getting it wrong is the most likely way this feature starts producing *wrong* answers rather than merely annoying ones. Split every input into three tiers:
+
+| Tier | Examples | Persist? |
+|---|---|---|
+| **1 — Facts about you** | Asset/liability balances, salary, loan principal & tenure, monthly SIP amount, property purchase price | **Yes.** This is the entire point. |
+| **2 — Market & statutory assumptions** | 8.75% SBI rate, 4% Telangana stamp duty, FY2025-26 tax slabs, ₹100/sft floor-rise premium, IRDAI depreciation table | **No.** Always reload the app's current maintained default. |
+| **3 — Ephemeral UI state** | Which hub is open, which collapse cards are expanded, active SIP sub-tab | Optional. Low value, low risk — defer. |
+
+Persisting tier 2 is a quiet trap: save 8.75% today and in 2028 the app confidently computes an EMI at a rate that has been wrong for three years, with no indication the number came from a stale session rather than the app's maintained default. Same failure mode for tax slabs and stamp duty. Mixing "what I own" with "what the market does" into one blob also makes every future default update a silent no-op for existing users.
+
+**Rule:** the persisted blob contains only tier 1. Tier 2 values live in code, are re-read on every load, and are covered by the "Assumptions as of <date>" line from D11.
+
+---
+
+## §2.2 Why persistence is a gate, not a convenience
+
+Worth without persistence isn't harder — it's pointless. The second-order effect is the larger prize: once yesterday's number is on disk you get **deltas and a trend**, which is the actual motivating feature of any net-worth tracker and the natural home for the chart work in D5. Without stored history there is nothing to plot and nothing to compare against.
+
+**Worked example.**
+
+*Without persistence*, checking your net worth on 25 July means typing 7 asset rows (savings ₹4.5L, FD ₹8L, MF ₹18L, EPF ₹12L, stocks ₹6L, gold ₹5L, property ₹95L) and 2 liabilities (home loan ₹52L, car loan ₹6L) — **9 fields, ~2 minutes**, mostly re-entering numbers you looked up last month. Result: **₹90.5L**. Is that good? Unknowable; June's figure lives in your head or nowhere. Next month you repeat all 9. Realistically you check once and never return.
+
+*With persistence*, the same visit opens on ₹90.5L from 12 June. Your MF balance is now ₹19.4L and one EMI has taken the home loan to ₹51.4L. You edit **2 fields** and it reads:
+
+> **₹92.5L** · ▲ ₹2.0L (+2.2%) since 12 June
+
+**~15 seconds**, and for the first time the app says something no calculator can: the direction you're moving. The projection bridge then runs on your real balance sheet (₹43.4L investable, ₹25k/mo SIP, ₹51.4L amortizing) instead of a hypothetical.
+
+That gap — 9 fields and no memory versus 2 fields and a delta — is the whole argument. Everything below is risk management around it.
+
+---
+
+## §2.3 Risks and required mitigations
+
+Each of these is a condition of shipping B, not an optional nicety.
+
+**R1. Safari silently deletes `localStorage` after 7 days.** Safari's tracking prevention wipes script-writable storage for origins with no user interaction in 7 days. Home-screen-installed PWAs are exempt, but a desktop-Safari or in-browser iPhone user who checks monthly finds the app **empty every single time** — and empty-after-being-promised-persistence is worse than never having promised it. *This is the heaviest risk.*
+- **M1a.** Ship Option C (one-click JSON export / import of a "Dhanam file") in the same phase, not later — it's the honest answer to eviction *and* to cross-device.
+- **M1b.** Store and display a `lastSaved` date on the Worth hub so a wipe is visible and explicable rather than mysterious.
+- **M1c.** If a previously-populated state is found missing (a `dhanam.seen` marker exists but the state key is gone), show a one-line non-alarming notice: "Your saved data was cleared by your browser. Import a backup or start fresh." Never a silent blank form.
+- **M1d.** Nudge PWA installation from the Worth hub specifically, since installation is what actually buys durable storage on iOS.
+
+**R2. This is the first bug class that can brick the app on load.** Today every bug is recoverable by reloading, because state dies with the tab. A malformed or half-written blob parsed at init throws *before* first paint, and reloading won't fix it — the user must clear site data, which they will not know how to do.
+- **M2a.** `loadState()` wraps everything in `try/catch` and treats any unreadable or version-mismatched state as absent, never as fatal.
+- **M2b.** `loadState()` is off the critical path of first paint: render the app from defaults, then hydrate.
+- **M2c.** `saveState()` also `try/catch`-wrapped (quota / private-mode `SecurityError` must not break typing).
+- **M2d.** Add corrupt-state and wrong-version cases to the manual checklist in `CLAUDE.md` — `tests.js` covers only pure `calc.js` functions, so this class is manual-verification territory.
+
+**R3. Shared-device exposure.** A household laptop now shows a full balance sheet to whoever opens the browser next; without a backend there is no meaningful lock.
+- **M3a.** A "hide amounts" blur toggle on the Worth hub (state itself may be tier 3 / not persisted).
+- **M3b.** Never surface net worth on the landing page or in the nav — it stays inside the hub.
+- **M3c.** Prominent, clearly-labelled "Erase my data" control with a confirm step.
+
+**R4. It creates a sync expectation the architecture can't meet.** Once the data is trusted, "why isn't this on my phone too?" follows immediately. Cross-device access requires a backend — no static-file trick avoids it (see `ARCHITECTURE-ANALYSIS.md`, "no backend" section).
+- **M4a.** Copy is explicit that storage is per-device: "saved only on this device — never sent anywhere."
+- **M4b.** JSON export/import (M1a) is the sanctioned manual bridge between devices.
+- **M4c.** See §2.5 for the accounts/backend question, which is deliberately out of scope for this redesign.
+
+**R5. Ordinary browser hygiene wipes it** — "clear browsing data", private windows, cleanup extensions. Unavoidable; covered by M1a–M1c.
+
+**R6. Schema churn.** Every new Worth field is a migration decision. Bumping `dhanam.v1` → `v2` and discarding v1 is safe but silently destroys the user's data, which for a net-worth tracker *is* the asset.
+- **M6a.** Keep the persisted shape flat and additive so new fields are absent-not-invalid; unknown keys are ignored, missing keys fall back to defaults.
+- **M6b.** Only bump the version for genuinely breaking shape changes, and write a real migration when you do — never a silent discard.
+- **M6c.** The exported JSON carries the same version field so imports can be validated and migrated identically.
+
+---
+
+## §2.4 The net-worth change tile
+
+Once state persists, the delta becomes the most valuable pixel in the hub — it's the only place in Dhanam where a colour genuinely encodes a real financial change over time.
+
+- **Its own tile**, sibling to (not inside) the hero net-worth `total-card`: current net worth stays the gold hero figure; the change gets a dedicated card so it reads as a distinct fact rather than a footnote.
+- **Contents:** direction arrow (▲/▼), absolute change (`inCr()`-formatted), percentage change, and the comparison basis — "since 12 June" — because a delta without a date is meaningless.
+- **Colour:** `--green` for an increase, `--red` for a decrease. This is a textbook legitimate use under the palette rules — a real positive/negative financial delta, not decoration or emphasis.
+- **Never colour-only** (palette rule 5): the arrow glyph *and* a text label ("up ₹2.0L since 12 June") carry the meaning independently, so the tile is fully readable with red-green colour vision deficiency or in greyscale.
+- **Neutral states matter:** first-ever visit → no tile at all (nothing to compare); zero change → neutral `--text-dim` with "no change since <date>", not green; missing/evicted history → the M1c notice, not a fabricated ₹0 delta.
+
+**Trend chart — behind an expanded view.** A net-worth-over-time line/area chart lives inside a `.collapse-card`, **closed by default**, consistent with D4's hero-answer-first principle: the tile answers "am I up or down?"; the chart answers "what has the shape been?" for whoever wants to dig. Same inline-SVG, dependency-free approach as the D5 charts, same theme colours. Requires keeping a small append-only history of `{ date, netWorth }` snapshots (one per save-day, capped) rather than only the latest value — worth designing into the v1 schema now even if the chart ships after the tile, because history can't be reconstructed retroactively.
+
+---
+
+## §2.5 Future: accounts and a backend (explicitly out of scope)
+
+Owner's intent, noted here so it isn't rediscovered later: user accounts are a plausible future direction, and it is understood that they require a real backend. Recording the boundary:
+
+- **Everything in this document is achievable with zero backend.** localStorage + JSON export/import covers "remember my data on this device" and "move it myself", which is most of the value.
+- **Accounts are a different product**, not a bigger version of this one. They bring authentication, a server-side store of highly sensitive financial data, breach exposure, DPDP Act obligations as a data fiduciary, hosting cost and uptime duty — and they forfeit the "never sent anywhere" promise that is currently one of Dhanam's genuine differentiators.
+- **Sequencing:** ship B + C, see whether the net-worth habit actually forms and whether cross-device demand is real (from real use, not speculation). If it is, the JSON schema from §2.1 becomes the natural sync payload, and the tier-1/tier-2 split already drawn here is exactly the boundary a server would store versus compute. Nothing in the local design has to be undone to move later — which is the point of doing it in this order.
+- **Do not half-build it.** No analytics, no "optional cloud backup", no telemetry as a stepping stone; those forfeit the privacy claim without delivering accounts.
 
 ---
 
@@ -123,7 +219,7 @@ Excel and PNG exports are titled "APARTMENT COST ANALYZER — HYDERABAD" — the
 | # | Item | Type | Severity | Effort |
 |---|---|---|---|---|
 | 1 | Landing reorder + naming coherence (Strategic #1) | Structure | High | Low |
-| 2 | Worth hub w/ localStorage + projection bridge (Strategic #2) | Structure | High | High |
+| 2 | Worth hub w/ localStorage + change tile + projection bridge (Strategic #2, §2.1–§2.4) | Structure | High | High |
 | 3 | D6 tranche focus-loss bug | Bug | High | Low |
 | 4 | D2 contrast failures | A11y | High | Low |
 | 5 | D4 hero-answer-first density reduction | UX | High | Medium |
@@ -140,7 +236,7 @@ Excel and PNG exports are titled "APARTMENT COST ANALYZER — HYDERABAD" — the
 ## Open questions for you (decisions that shape the redesign)
 
 1. **Landing model:** reorder the existing tool tiles, or reframe as goal-based language ("Grow my money" / "Plan a home purchase")? Goal-based is the bigger swing and the more Apple-like one.
-2. **Persistence:** are you willing to amend "nothing is saved" to "saved only on your device"? This is the gate for Net Worth (Option B) and for remembering inputs everywhere. If no — Worth ships as a session worksheet + Excel export only (Option A).
+2. ~~**Persistence:** are you willing to amend "nothing is saved" to "saved only on your device"?~~ **Answered 2026-07-25: yes.** Option B approved, scoped to tier-1 inputs only (§2.1), with Option C JSON export/import shipping alongside it and all mitigations in §2.3 treated as ship conditions. Net-worth change tile and collapsed trend chart per §2.4. Accounts/backend acknowledged as a future direction and explicitly out of scope (§2.5).
 3. **Loan Disbursement:** okay to demote it into Dhanam Home (keeping a deep-link tile if you want), or does it stay top-level for your own workflow?
 4. **Audience:** is Dhanam primarily *your* personal tool (keep Hyderabad/Telangana defaults front and center) or heading toward general Indian users (defaults become an editable "assumptions" layer)? This decides how much D11 matters.
 5. **Logo file:** is there a source/vector version of `dhanamlogo.png`? 5.2 MB → ~20 KB needs a re-export, ideally to SVG or a small PNG set that can also become the manifest icon.
