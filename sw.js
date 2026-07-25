@@ -1,5 +1,8 @@
-const CACHE = 'apt-cost-v5';
-const ASSETS = ['./', './index.html', './manifest.json'];
+const CACHE = 'apt-cost-v6';
+// calc.js must be precached — index.html loads it via <script src>, so without
+// it here the whole app breaks offline, not just degrades. (The rest of D9 —
+// logo, fonts, cache-put for other assets — is still Phase 4.)
+const ASSETS = ['./', './index.html', './calc.js', './manifest.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
