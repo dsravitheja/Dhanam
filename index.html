@@ -322,6 +322,8 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .toast { position:fixed; bottom:24px; right:24px; background:var(--surface2); border:1px solid var(--accent); border-radius:8px; padding:12px 20px; font-size:13px; color:var(--text); transform:translateY(80px); opacity:0; transition:all .3s; z-index:9999; pointer-events:none; max-width:300px; }
 .toast.show { transform:translateY(0); opacity:1; }
 .note-text { font-size:11px; color:var(--text-dim); padding:4px 0; }
+.remember-row { display:flex; align-items:center; gap:11px; margin-top:14px; padding-top:13px; border-top:1px solid var(--border-subtle); flex-wrap:wrap; }
+.remember-lbl { font-size:12px; color:var(--text-mid); font-weight:500; }
 .divider { height:1px; background:var(--border); margin:14px 0; }
 .mono { font-family:'DM Mono',monospace; }
 
@@ -493,7 +495,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="main">
 
 <div class="section-title">⌂ Welcome to Dhanam</div>
-<p class="landing-intro">What do you want to do? Everything updates live as you type, nothing is saved or sent anywhere.</p>
+<p class="landing-intro">What do you want to do? Everything updates live as you type. Nothing is ever sent anywhere — anything you choose to save stays on this device.</p>
 
 <div class="tile-grid">
   <button class="tile" onclick="switchHub('sip')">
@@ -917,6 +919,16 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <div class="ld-lbl">Own Contribution</div>
         <div class="ld-val" id="l-own-val">—</div>
         <div class="ld-sub" id="l-own-sub"></div>
+      </div>
+    </div>
+    <div class="remember-row">
+      <label class="ts-switch">
+        <input type="checkbox" id="l-remember" onchange="toggleRememberInputs()">
+        <span class="ts-slider"></span>
+      </label>
+      <div>
+        <div class="remember-lbl">Remember my inputs on this device</div>
+        <div class="field-hint" id="l-remember-hint">Off — nothing is stored</div>
       </div>
     </div>
   </div>
@@ -1370,6 +1382,151 @@ let disbTranches = [ { pct: 50, month: 0 }, { pct: 50, month: 12 } ];
 const MODES = { amenities: 'sqft', corpus: 'sqft', infra: 'sqft' };
 
 // =====================================================================
+// PERSISTENCE — dhanam.v1, localStorage, this device only
+// =====================================================================
+// Only tier-1 data is stored: facts about *you* (balances, your loan's
+// numbers). Tier-2 market and statutory assumptions — the SBI rate
+// default, stamp duty %, tax slabs, IRDAI depreciation — are deliberately
+// NOT stored, so a stale saved value can never quietly outlive reality.
+// See UX-ANALYSIS.md §2.1.
+//
+// Every read and write is failure-tolerant by design (§2.3 R2): a corrupt,
+// foreign, or wrong-version blob degrades to "nothing saved" and must
+// never break the app on load, because a reload can't rescue the user from
+// a throw at init — they'd have to clear site data by hand.
+const STORE_KEY = 'dhanam.v1';
+const SEEN_KEY = 'dhanam.seen';
+const STORE_VER = 1;
+const DEFAULT_RATE = 8.75;   // must match #l-rate's markup default
+
+let DS = null;                 // in-memory mirror of the persisted blob; null = nothing stored
+let storageEvicted = false;    // seen-marker present but state gone -> the browser cleared it
+let storageUnreadable = false; // state present but corrupt/foreign-version -> say so, don't pretend it was never there
+let storageFailed = false;     // a write was rejected (quota / private mode) -> never claim it saved
+
+function blankState() {
+  return { v: STORE_VER, lastSaved: null, rememberInputs: false, loan: null, worth: null, history: [] };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) {
+      if (localStorage.getItem(SEEN_KEY)) storageEvicted = true;   // M1c
+      return null;
+    }
+    const s = JSON.parse(raw);
+    if (!s || typeof s !== 'object' || s.v !== STORE_VER) {   // M2a / M6b
+      storageUnreadable = true;
+      return null;
+    }
+    return Object.assign(blankState(), s);   // missing keys fall back to defaults (M6a)
+  } catch (e) {
+    storageUnreadable = true;
+    return null;   // unreadable is "absent", never fatal
+  }
+}
+
+function saveState() {
+  if (!DS) return false;
+  DS.lastSaved = new Date().toISOString();
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(DS));
+    localStorage.setItem(SEEN_KEY, '1');
+    storageFailed = false;
+    return true;
+  } catch (e) {
+    // Quota exceeded or private mode. Must never interrupt typing (M2c) —
+    // but must never claim the data is safe either, so flag it for the UI.
+    storageFailed = true;
+    return false;
+  }
+}
+
+function eraseState() {
+  try {
+    localStorage.removeItem(STORE_KEY);
+    localStorage.removeItem(SEEN_KEY);
+  } catch (e) {}
+  DS = null;
+  storageEvicted = false;
+  storageUnreadable = false;
+  storageFailed = false;
+}
+
+function savedAtLabel() {
+  if (!DS || !DS.lastSaved) return '';
+  const d = new Date(DS.lastSaved);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+}
+
+// ── Loan panel opt-in: "Remember my inputs on this device" ────────────
+function rememberingInputs() { return !!(DS && DS.rememberInputs); }
+
+function persistLoanInputs() {
+  if (!rememberingInputs()) return;
+  const rate = parseFloat(el('l-rate').value);
+  DS.loan = {
+    total: v('l-total') || null,
+    own: v('l-own') || null,
+    // The 8.75% *default* is a tier-2 assumption; only a rate you actually
+    // changed is a fact about your loan. An untouched field stays unstored
+    // so it keeps tracking the app's maintained default.
+    rate: (rate && Math.abs(rate - DEFAULT_RATE) > 1e-9) ? rate : null,
+  };
+  saveState();
+  updateRememberHint();
+}
+
+function toggleRememberInputs() {
+  const on = chk('l-remember');
+  if (on) {
+    if (!DS) DS = blankState();
+    DS.rememberInputs = true;
+    persistLoanInputs();
+  } else if (DS) {
+    DS.rememberInputs = false;
+    DS.loan = null;
+    // Nothing left worth keeping -> drop the key entirely rather than
+    // leaving an empty blob behind.
+    if (!DS.worth && !(DS.history && DS.history.length)) eraseState();
+    else saveState();
+  }
+  updateRememberHint();
+  showToast(on ? 'Inputs will be remembered on this device' : 'Saved inputs cleared from this device');
+}
+
+function updateRememberHint() {
+  const hint = el('l-remember-hint');
+  if (!hint) return;
+  if (storageFailed) {
+    hint.textContent = "Couldn't save — storage is full or blocked in this browser";
+  } else if (rememberingInputs()) {
+    const at = savedAtLabel();
+    hint.textContent = at ? `Saved on this device · ${at}` : 'Saved on this device';
+  } else if (storageUnreadable) {
+    hint.textContent = "Saved data couldn't be read — switch on to start fresh";
+  } else if (storageEvicted) {
+    hint.textContent = 'Your browser cleared previously saved data';
+  } else {
+    hint.textContent = 'Off — nothing is stored';
+  }
+}
+
+function hydrateLoanInputs() {
+  if (!rememberingInputs() || !DS.loan) return;
+  const L = DS.loan;
+  if (L.total) {
+    el('l-total').value = Math.round(L.total);
+    loanTotalLocked = true;   // don't let the quick estimate overwrite a remembered figure
+    set('l-total-hint', 'Remembered on this device');
+  }
+  if (L.own) el('l-own').value = Math.round(L.own);
+  if (L.rate) el('l-rate').value = L.rate;
+}
+
+// =====================================================================
 // SECTION TOGGLE
 // =====================================================================
 function toggleSection(id) {
@@ -1783,6 +1940,9 @@ function renderLoans() {
   if (el('adv-section').classList.contains('open')) renderAdvLoan();
   // Re-render SIP comparison if open
   if (el('sip-section').classList.contains('open')) renderSIPComparison();
+
+  // Single save path for this panel — no-op unless the user opted in.
+  persistLoanInputs();
 }
 
 // =====================================================================
@@ -2640,6 +2800,15 @@ if ('serviceWorker' in navigator) {
 // INIT
 // =====================================================================
 updateQuick();
+
+// Hydrate persisted state *after* the first render, never before — a bad
+// blob must not be able to block first paint (§2.3 M2b).
+DS = loadState();
+if (rememberingInputs()) {
+  el('l-remember').checked = true;
+  hydrateLoanInputs();
+}
+updateRememberHint();
 
 // =====================================================================
 // DHANAM CAR — TAX & LEASE CALCULATOR

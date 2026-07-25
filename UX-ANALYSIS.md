@@ -87,6 +87,8 @@ Persisting tier 2 is a quiet trap: save 8.75% today and in 2028 the app confiden
 
 **Rule:** the persisted blob contains only tier 1. Tier 2 values live in code, are re-read on every load, and are covered by the "Assumptions as of <date>" line from D11.
 
+**Refinement found while implementing 2a (2026-07-25):** a few fields straddle the two tiers. The interest rate is the clearest case — 8.75% as the *app default* is tier 2, but "my loan is at 8.4%" is tier 1. Resolution: **persist such a field only when its value differs from the app default.** An untouched field stays unstored and keeps tracking the maintained default; a deliberately changed one is remembered as the user's own fact. The trade-off is that someone who explicitly types today's default gets the future default instead of their typed value — acceptable, and preferable to freezing a stale rate. Applies to `l-rate` today; use the same rule for any future default-bearing input.
+
 ---
 
 ## §2.2 Why persistence is a gate, not a convenience
