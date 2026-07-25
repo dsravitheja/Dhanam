@@ -17,10 +17,10 @@ There is no build system or package manager — this is a dependency-free static
 
 ## Architecture
 
-Most of the app is one file, `index.html` (~2800 lines: inline `<style>` then inline `<script>`), plus a small set of support files:
+Most of the app is one file, `index.html` (~3700 lines: inline `<style>` then inline `<script>`), plus a small set of support files:
 - `calc.js` — the app's pure financial-calculation functions (`calcEMI`, `loanAtYear`, `simulateLoan`, `calcSIP`, `calcStepupSIP`, `calcIncomeTax`, `calcPerquisite`, `calcCarDepreciation`). Loaded by `index.html` via `<script src="calc.js"></script>` before the main inline `<script>`. These functions take plain arguments and return plain values — no DOM access — which is what lets `tests.js`/`tests.html` load the identical file in Node or a browser. See **Testing** below. Any new calculation that doesn't touch the DOM belongs here, not in the inline script; anything DOM-coupled (`render*`, `calc*` that reads `v()`/`chk()`/`el()`) stays in `index.html`.
 - `manifest.json` — PWA metadata (name, theme colors, icon)
-- `sw.js` — service worker: network-first for the HTML shell (so deploys show up immediately), cache-first for everything else. Cache name is versioned (`apt-cost-v4`); bump it when shipping a change that should bust old caches.
+- `sw.js` — service worker: network-first for the HTML shell (so deploys show up immediately), cache-first for everything else. Cache name is versioned (`apt-cost-v7`); bump it when shipping a change that should bust old caches.
 
 ### Hub/tab model
 
@@ -29,7 +29,7 @@ The UI is organized into "hubs" (top-level tabs), toggled via `switchHub(tab)`, 
 - `hub-apartment` → **Dhanam Home** — property cost, home loan, and loan-disbursement (pre-EMI) calculators; the largest and most developed hub
 - `hub-car` → **Dhanam Car** — company car lease tax perquisite analysis, and a separate car-buying loan/depreciation section
 - `hub-sip` → **Dhanam Grow** — SIP planner (monthly / step-up / lumpsum sub-tabs via `switchSIPPlannerTab`)
-- `hub-worth` → **Dhanam Worth** — net worth tracker: editable balance sheet, hero net-worth figure, change-since-last-update tile, and the backup/erase controls. The only hub that persists data — see **Persistence** below. Still missing (deferred, see `TASK-UX-REDESIGN.md` Phase 2d and the projection bridge in 2b): the collapsed net-worth trend chart, the +5/+10/+20-year projection reusing `calcSIP`/`loanAtYear`, and `buildWorthRows()` Excel export.
+- `hub-worth` → **Dhanam Worth** — net worth tracker: editable balance sheet, hero net-worth figure, change-since-last-update tile, a collapsed net-worth trend chart, a +5/+10/+20-year projection reusing `calcSIP`/`loanAtYear`, Excel export, and the backup/erase controls. The only hub that persists data — see **Persistence** below.
 
 Within `hub-apartment`, secondary panels (`section-detail`, `section-loan`, `section-disb`) are shown/hidden via `toggleSection(id)` and `action-btn` toggle buttons, not separate routes or hubs. `toggleSection` lazily initializes each panel the first time it's opened (`detailOpened`/`loanOpened`/`disbOpened` flags) rather than on page load.
 
@@ -52,7 +52,7 @@ Since Phase 2a there *is* a small `localStorage` layer, and the rules around it 
 - **Only tier-1 data is stored** — facts about the user (balances, their loan's numbers). **Never store tier-2 market or statutory assumptions** (the 8.75% rate default, stamp duty %, tax slabs, IRDAI depreciation): they must reload from code every time, or a stale saved value silently outlives reality. A field that has a meaningful app default (like `l-rate`) is persisted *only when the value differs from that default*. Full rationale in `UX-ANALYSIS.md` §2.1.
 - **Reads and writes never throw.** A corrupt, foreign, or wrong-version blob is treated as *absent* (`storageUnreadable`), a failed write sets `storageFailed` so the UI never claims data is safe when it isn't, and hydration runs **after** first render so a bad blob can't block paint. This matters more than usual: it's the only bug class in the app that a reload can't rescue the user from.
 - **The schema is flat and additive** — unknown keys ignored, missing keys defaulted. Only bump `STORE_VER` for genuinely breaking shape changes, and write a real migration when you do; never silently discard a user's balance sheet.
-- **`history` is append-only**, one `{date, netWorth}` entry per save-day (same-day saves overwrite), capped at 120. It exists so the change tile and the future trend chart have something to compare against — history cannot be reconstructed retroactively, so don't drop it.
+- **`history` is append-only**, one `{date, netWorth}` entry per save-day (same-day saves overwrite), capped at 120. It exists so the change tile and the trend chart have something to compare against — history cannot be reconstructed retroactively, so don't drop it.
 - Calculator hubs persist nothing unless the user opts in via the loan panel's "Remember my inputs on this device" toggle (default off; switching it off deletes the stored inputs). `hub-worth` persists by design — a balance sheet you retype every visit is worthless.
 - Users can **download a JSON backup, restore one, and erase everything**. Imports are validated exactly as `loadState()` validates. This is the only way to move data between devices; there is no sync and adding one would require a backend (`UX-ANALYSIS.md` §2.5).
 
@@ -63,7 +63,10 @@ Since Phase 2a there *is* a small `localStorage` layer, and the rules around it 
 - **The change tile** compares against the most recent history entry from a *different* day, so today's own running entry is never its own baseline. It renders nothing at all on a first visit, a neutral "No change" at zero, and `--green`/`--red` only for a real delta — always with an arrow glyph *and* the words "Up"/"Down", so colour is never the only signal (palette rule 5).
 - **Empty state** shows `—`, never `NaN` and never a fabricated ₹0 net worth; nothing is written to storage until at least one field is non-zero, so an empty first visit can't seed a bogus baseline for tomorrow's delta.
 - **Negative net worth** renders with a `−` prefix and turns the hero red (a real negative financial position, palette rule 4).
-- **"Hide amounts"** adds `.amounts-hidden` to `#worth-main`, which blurs every figure. If you add any element that displays a number or a share, add it to that selector too — the per-row `%` shares and the change tile's "was ₹X" basis line both had to be included.
+- **"Hide amounts"** adds `.amounts-hidden` to `#worth-main`, which blurs every figure. If you add any element that displays a number or a share, add it to that selector too — the per-row `%` shares, the change tile's "was ₹X" basis line, the projection card's inputs, and the trend-chart SVG itself all had to be included.
+- **Trend chart** (`renderWorthTrend()`) — a `.collapse-card`, closed by default, rendering `DS.history` through the shared `chartSvg()` helper (see **Charts** below). Hidden entirely with zero history, a friendly "not enough history yet" message with one point, a real line/area chart from two points up.
+- **Projection bridge** (`renderWorthProjection()`) — a "Projected Net Worth" panel-card reusing `calcSIP` (investable-asset growth plus an ongoing monthly-savings input, `w-proj-sip`) and `loanAtYear` (liabilities amortizing from today's outstanding balance over a user-given rate/remaining-years) to project net worth at +5/+10/+20 years. Property is deliberately held flat — this hub has no basis to assume an appreciation rate. The two rate assumptions (`w-proj-cagr`, `w-proj-debt-rate`) follow the same tier-2 "persist only if changed from default" rule as `l-rate`; the monthly-savings figure and years-to-debt-free are tier-1 facts and always persist. Hidden entirely until the balance sheet has at least one non-zero field.
+- **Excel export** (`buildWorthRows()` / `exportWorthExcel()`) follows the `buildDetailRows()`/`buildLoanRows()` pattern — see **Excel export** below.
 
 ### Naming/ID conventions
 
@@ -93,7 +96,7 @@ Each major feature has one `calc*`/`render*` entry point that reads all relevant
 - `calcCarDepreciation` **(calc.js)**, `renderCarLoan()` — car loan + IRDAI depreciation-based resale estimate
 - `updateSIPPlanner`, `calcStepupSIP` **(calc.js)**, `updateStepupSIP`, `updateLumpsum` — Dhanam Grow SIP planner
 - `renderLoanDisb()` — loan disbursement / pre-EMI tranche calculator (`section-disb` inside `hub-apartment`)
-- `renderWorth()` — Dhanam Worth balance sheet, net-worth hero, change tile, and persistence (`hub-worth`)
+- `renderWorth()` — Dhanam Worth balance sheet, net-worth hero, change tile, and persistence (`hub-worth`); calls `renderWorthProjection()` and `renderWorthTrend()` as sub-steps, per the section's single-entry-point convention
 
 ### Testing
 
@@ -107,14 +110,24 @@ One known, deliberately-not-silently-fixed finding lives in these tests: `calcSt
 
 ### Excel export
 
-Exports are hand-built with no library: `buildZip`/`_u16`/`_u32` construct a raw ZIP, `buildExcel`/`rowsToSheetXml` generate minimal SheetXML, and `exportDetailExcel`/`exportLoanExcel`/`exportCombinedExcel`/`exportSnapshot` assemble the rows per report. If you need to add a new export, follow the `buildDetailRows()`/`buildLoanRows()` pattern (return an array of row arrays) and pass it into `buildExcel`.
+Exports are hand-built with no library: `buildZip`/`_u16`/`_u32` construct a raw ZIP, `buildExcel`/`rowsToSheetXml` generate minimal SheetXML, and `exportDetailExcel`/`exportLoanExcel`/`exportCombinedExcel`/`exportSnapshot`/`exportWorthExcel` assemble the rows per report. If you need to add a new export, follow the `buildDetailRows()`/`buildLoanRows()`/`buildWorthRows()` pattern (return an array of row arrays) and pass it into `buildExcel`.
+
+### Charts
+
+One dependency-free inline-SVG line/area chart helper is shared by every chart in the app rather than each hub rolling its own: the Worth trend chart, the SIP corpus growth curve (Dhanam Grow), and the principal-vs-interest chart (loan panel).
+
+- **`renderChart(targetId, series, opts)` is the entry point — always call this, not `chartSvg()` directly.** It measures the host element and draws at a 1:1 scale. This matters: the SVG uses `preserveAspectRatio="none"` so it always fills its container (never causing horizontal scroll at 375px), which means a viewBox that *doesn't* match the container's real pixel width gets non-uniformly stretched — dots render as visible ellipses and stroke width varies by line direction. Measuring is what keeps that from happening.
+- **A hidden host measures 0** (collapsed card, inactive hub) and falls back to a 600px viewBox, which *is* distorted. `toggleChartCard(cardId, redrawFn)` exists for exactly this: it expands the card first, then redraws against a container that has a real width. Use it for any collapse card containing a chart — the Worth trend card does.
+- `chartSvg(series, opts)` takes one or more `{ values, color, area }` series on a shared scale and returns the `<svg>` string. It degenerates gracefully: a single point renders as one dot (no path), and series longer than 24 points draw only the final point's dot to stay legible.
+- **The y-axis is auto-scaled to the data and there are no gridlines or axis labels**, so a 1% wiggle fills the chart exactly like a doubling would. Any chart whose values aren't already readable from an adjacent table or hero figure must print its own value range — the Worth trend chart does this in its caption, since its historical values appear nowhere else.
+- If you add a chart with an amount-bearing legend or caption, remember the `.amounts-hidden` blur rule above — mark those elements `w-amt`.
 
 ### Manual test checklist — landing page, loan disbursement & persistence
 
 No DOM-level test framework exists (see **Testing** above for the automated coverage that does exist, scoped to `calc.js`); re-run this list by hand (`python3 -m http.server`) whenever touching `hub-landing`, `section-disb`, `hub-worth`, the persistence layer, or navigation:
 
 1. **Landing default**: fresh load shows the landing page, not the apartment hub; nav shows `⌂ Home` as the active tab.
-2. **Tile navigation**: each tile opens its destination and marks the matching nav tab active; the Dhanam Worth tile does nothing and looks dimmed. Every tile's `.tile-tool` subline should name a destination that actually exists (no orphaned or renamed hubs/sections).
+2. **Tile navigation**: each tile, including Dhanam Worth, opens its destination and marks the matching nav tab active. Every tile's `.tile-tool` subline should name a destination that actually exists (no orphaned or renamed hubs/sections).
 3. **Loan deep-link**: the "Finance My Home" tile (`openLoanCalc()`) lands on the apartment hub with `section-loan` expanded and scrolled into view, with results already rendered; clicking it a second time (panel already open) must not collapse the panel.
 4. **Disbursement deep-link**: the "Buying Under Construction?" tile (`openDisbCalc()`) lands on the apartment hub with `section-disb` expanded and scrolled into view; clicking it a second time must not collapse the panel. The "Loan Disbursement (Pre-EMI)" action button inside the apartment hub opens the same panel.
 5. **Return paths**: the `⌂ Home` tab and the header logo both return to the landing page from any hub.
@@ -140,6 +153,12 @@ No DOM-level test framework exists (see **Testing** above for the automated cove
 15. **Backup round-trip**: Download backup → Erase my data (form clears, `dhanam.*` keys gone) → Restore backup returns the same balance sheet and history. A non-JSON file and a wrong-version backup are both rejected with a message, not a crash.
 16. **Hide amounts**: every figure blurs — hero, assets/liabilities totals, per-row inputs, per-row `%` shares, and the change tile's "was ₹X" line. Labels stay readable.
 17. **Worth empty/edge states**: an all-empty sheet shows `—` everywhere and writes nothing to storage; liabilities exceeding assets shows a red `−₹X` hero; no `NaN`/`Infinity`/`undefined` anywhere in the hub.
+18. **Worth projection bridge**: hidden with an all-empty sheet; entering any balance shows a "Projected Net Worth" card with a +10-year hero and a +5/+10/+20-year row; changing the monthly-savings/CAGR/debt-rate/years inputs recalculates live; a debt-free-years of 1 and a fully-paid-off (zero liability) sheet both compute without `NaN`/`Infinity`; a projection that goes negative renders with a `−` prefix and red.
+19. **Worth trend chart**: absent with zero history; a friendly "not enough history yet" message with exactly one history point; a real line/area chart with two or more points; stays closed by default and opens via its collapse header; blurred by "Hide amounts" like every other figure.
+20. **Worth Excel export**: `exportWorthExcel()` is a no-op with a toast on an empty sheet, otherwise downloads a workbook with assets, liabilities, net worth, and history sheets/sections that open cleanly.
+21. **Hero-answer-first density (loan panel)**: opening `section-loan` shows a 20-year EMI hero and a principal-vs-interest chart with no interaction; the 15/20/30-year comparison and custom-year grid are reachable only after expanding the "Compare" collapse card, which starts closed. Opening "Advanced: Extra Payments" and "Buy vs. SIP" each show their own hero answer before their comparison grids, which also start collapsed. All three heroes and their nested collapse cards hide cleanly (not just visually empty) when no loan amount is entered yet — **and with the property cost at 0 the panel still shows the "Enter total property cost above" guidance** rather than a blank gap (that message lives in `#l-empty`, not in the now-collapsed card).
+22. **Charts don't overflow or distort**: the trend, SIP-growth, and principal-vs-interest charts all render at 375px width with no horizontal page scroll, and stay legible at both 1 data point and their maximum (120 history points; a 50-year SIP). Check the **dots are circular, not oval** — an ellipse means a chart was drawn against a mismeasured (usually hidden) container. Expanding the Worth trend card must redraw it, not just reveal a stale 600px-viewBox render.
+23. **Projection discloses its cash-flow assumption**: with any liability entered, the projection card states the implied monthly repayment ("assumes about ₹X/mo of repayments … paid from income, which this balance sheet doesn't track"); the figure matches `calcEMI(liabilities, debtRate, debtYears)`, updates with those inputs, disappears when liabilities are 0, and blurs under "Hide amounts".
 
 ### Styling
 

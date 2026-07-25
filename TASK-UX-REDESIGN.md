@@ -1,8 +1,10 @@
 # Task Brief: Dhanam UX Redesign (for a future sub-agent)
 
-> **Status: approved and in progress.** Phases 0, 1 and most of 2 have shipped —
-> see `PHASE-1-REPORT.md` and `PHASE-2-REPORT.md` for what was actually built and
-> verified. Phases 3–5 have not been started. **Start at the Remaining work table
+> **Status: approved and in progress.** Phases 0, 1 and 2 have shipped in full —
+> see `PHASE-1-REPORT.md`, `PHASE-2-REPORT.md`, and `PHASE-3-REPORT.md` (which also
+> covers the Phase 2 items — R1, R3, R6 — completed alongside Phase 3) for what was
+> actually built and verified. Phase 3 has now shipped in full too (R2, R4).
+> Phases 4–5 have not been started. **Start at the Remaining work table
 > below**; the phase sections that follow are the full specs, annotated with what
 > is done and what is left.
 > Issue numbers (D1–D11) refer to `UX-ANALYSIS.md`.
@@ -17,7 +19,7 @@
 
 - **No build system, no dependencies, no framework.** Everything stays in `index.html` + `manifest.json` + `sw.js`. Inline SVG is fine; CDN scripts are not.
 - **Preserve all calculation math.** This is a UX/structure task. Any refactor must keep every existing output numerically identical (spot-check against the checklist in CLAUDE.md, e.g. the 100%-tranche-at-month-0 ≡ plain EMI invariant).
-- **Bump the `sw.js` cache version** with any shipped change (currently `apt-cost-v6`).
+- **Bump the `sw.js` cache version** with any shipped change (currently `apt-cost-v7`).
 - Follow existing CSS custom properties and utility classes; do not invent parallel color systems.
 - Verify by serving locally (`python3 -m http.server`) and walking the manual test checklist in CLAUDE.md, plus the new acceptance checks below.
 
@@ -40,18 +42,18 @@ Two further owner decisions have accumulated and are **still open**:
 
 ## Remaining work (as of 2026-07-25)
 
-Everything still outstanding, most valuable first. Phase numbers link to the full specs below.
+R1–R4 and R6 shipped in this pass (see `PHASE-3-REPORT.md`); what's left is Phase 4/5, most valuable first. Phase numbers link to the full specs below.
 
 | # | Item | Phase | Blocked by | Severity | Effort |
 |---|---|---|---|---|---|
-| R1 | **Projection bridge** — "Projected worth" section reusing `calcSIP` + `loanAtYear` to show net worth at +5/+10/+20 years from the saved balance sheet. The feature that makes Worth the anchor rather than a seventh calculator; the reason not to skip it is in §2.2. | 2b | — | High | Medium |
-| R2 | **Hero-answer-first density pass** (D4) — every dense results area leads with one answer, the 3×N grids collapse. The loan panel currently renders ~100 numbers on one screen; this is now the most visible remaining problem in the app. | 3 | — | High | Medium |
-| R3 | **Net-worth trend chart** (2d) — inline-SVG line/area chart inside a `.collapse-card`, closed by default, rendering from `history`. Data has been accumulating since 2026-07-25. | 2d | — | Medium | Medium |
-| R4 | **Charts for SIP growth and principal-vs-interest** (D5) — same dependency-free approach; do alongside R3 to share one chart helper. | 3 | — | Medium | Medium |
+| ~~R1~~ | ~~Projection bridge~~ — ✅ **SHIPPED.** `renderWorthProjection()` reuses `calcSIP` + `loanAtYear` to show net worth at +5/+10/+20 years from the saved balance sheet. | 2b | — | — | — |
+| ~~R2~~ | ~~Hero-answer-first density pass~~ (D4) — ✅ **SHIPPED.** Loan scenarios, advanced prepayment, and Buy-vs-SIP each lead with a 20-year hero answer; the full 3×N grids now sit behind closed-by-default `.collapse-card`s. | 3 | — | — | — |
+| ~~R3~~ | ~~Net-worth trend chart~~ (2d) — ✅ **SHIPPED.** `renderWorthTrend()`, closed-by-default `.collapse-card`, renders from `history` via the new shared `chartSvg()` helper. | 2d | — | — | — |
+| ~~R4~~ | ~~Charts for SIP growth and principal-vs-interest~~ (D5) — ✅ **SHIPPED**, sharing `chartSvg()` with R3 as planned. | 3 | — | — | — |
 | R5 | **PWA integrity** (D9) — `dhanamlogo.png` is 5.2 MB for a 54px slot; the SW asset branch still never `cache.put`s; Google Fonts is both render-blocking and an outbound request that undercuts the privacy claim; the manifest icon is an emoji data-URI. | 4 | B5 for the logo | Medium | Low–Med |
-| R6 | **`buildWorthRows()` Excel export** for the Worth balance sheet, following the `buildDetailRows()`/`buildLoanRows()` pattern. | 2e | — | Low | Low |
+| ~~R6~~ | ~~`buildWorthRows()` Excel export~~ for the Worth balance sheet — ✅ **SHIPPED**, following the `buildDetailRows()`/`buildLoanRows()` pattern. | 2e | — | — | — |
 | R7 | **Emoji → inline-SVG icon set** (D3) — ~6–10 line icons on `currentColor`. Emoji may stay in body copy. | 4 | — | Medium | Medium |
-| R8 | **Keyboard & ARIA pass** (D8) — clickable `<div>`s become `<button>`s with `aria-expanded`, `role="tablist"`/`aria-selected` on both tab bars, ≥44px touch targets, `:focus-visible` everywhere. | 5 | — | Medium | Medium |
+| R8 | **Keyboard & ARIA pass** (D8) — clickable `<div>`s become `<button>`s with `aria-expanded`, `role="tablist"`/`aria-selected` on both tab bars, ≥44px touch targets, `:focus-visible` everywhere. Phase 3 added more collapse headers (loan/advanced/SIP compare cards) that need this pass too. | 5 | — | Medium | Medium |
 | R9 | **Export rebranding** (D10) — Excel titles and the PNG snapshot still say "Apartment Cost Analyzer" and use Georgia/Arial. The snapshot's *colours* were already brought onto the palette in the D1 sweep; naming and fonts remain. | 4 | — | Low | Low |
 | R10 | **Trust & consistency nicks** (D11) — "Assumptions as of <date>" line, scope the Reset button label, `overflow-x` wrappers on wide tables, nav-tab overflow affordance on phones, and `renderCarLoan()`'s inline EMI formula should call `calcEMI`. | 5 | B4 for the defaults question | Low | Low |
 
@@ -73,10 +75,10 @@ Everything still outstanding, most valuable first. Phase numbers link to the ful
 - If B1 = goal-based: tiles read as goals ("Grow my money", "Plan a home purchase", …) with the tool name as the sub-line.
 - *Acceptance:* CLAUDE.md landing checklist passes; no two entry points with different names reach the same destination; update CLAUDE.md's hub/tab documentation to match.
 
-### Phase 2 — Dhanam Worth — 🟡 MOSTLY SHIPPED (see `PHASE-2-REPORT.md`)
+### Phase 2 — Dhanam Worth — ✅ SHIPPED IN FULL (see `PHASE-2-REPORT.md` and `PHASE-3-REPORT.md`)
 
-> **Status 2026-07-25:** 2a ✅, 2b 🟡 (all but the projection bridge), 2c ✅, 2d ❌ not started, 2e 🟡 (all but Excel export), 2f ✅.
-> Outstanding: **R1** projection bridge, **R3** trend chart, **R6** Excel export. All three are read-layers over data that is already being persisted, which is why deferring them was safe — the `history` array shipped in the v1 schema precisely so the chart would have something to draw.
+> **Status 2026-07-25:** 2a ✅, 2b ✅ (projection bridge shipped), 2c ✅, 2d ✅ (trend chart shipped), 2e ✅ (Excel export shipped), 2f ✅.
+> R1 (projection bridge), R3 (trend chart), and R6 (Excel export) — all deferred from the original Phase 2 pass — shipped in the same session as Phase 3; see `PHASE-3-REPORT.md`. All three turned out to be exactly the read-layers over already-persisted data that deferring them assumed: the `history` array shipped in the v1 schema precisely so the chart would have something to draw.
 
 **2a — Persistence primitive (do this first, and prove it before Worth exists)** — ✅ SHIPPED
 - `saveState()`/`loadState()` on `localStorage` under a single versioned key `dhanam.v1`.
@@ -89,12 +91,12 @@ Everything still outstanding, most valuable first. Phase numbers link to the ful
 - Update the landing privacy line (`index.html:489`) to "saved only on this device — never sent anywhere" (**M4a**).
 - *Acceptance:* loan inputs survive reload with the toggle on and don't with it off; hand-writing garbage into `dhanam.v1` via devtools still loads a working app from defaults; setting `v: 99` is ignored cleanly; private-browsing Safari still calculates normally.
 
-**2b — Worth hub** — 🟡 SHIPPED except the projection bridge (**R1**)
+**2b — Worth hub** — ✅ SHIPPED, including the projection bridge
 - New `hub-worth` with `w-*` ID prefix and a single `renderWorth()` entry point, per conventions.
 - Editable balance sheet with Indian categories — Assets: cash/bank, FD/RD, mutual funds, stocks, EPF/PPF/NPS, property, gold, other. Liabilities: home loan(s), car loan, personal/other. Reuse `.cf-row` checkbox-row and `.total-card` patterns.
 - Hero net-worth figure in the existing `total-card` style; assets − liabilities, `inCr()` formatting, gold (`--accent`) as the hero colour per palette rule 2.
 - **History:** keep an append-only `history: [{ date, netWorth }]` array in the v1 schema — one entry per save-day (same-day saves overwrite), capped (~120 entries). Design this in now even if the chart ships later; history cannot be reconstructed retroactively.
-- ❌ **Projection bridge (R1 — the main outstanding item):** a "Projected worth" section reusing `calcSIP` (investable assets + monthly SIP growth) and `loanAtYear` (declining loan balances) to show net worth at +5/+10/+20 years. This is the feature that connects Worth to the rest of the app — don't skip it. Note it needs one input the balance sheet doesn't collect yet: a monthly SIP/savings figure. Decide whether to add a `w-*` field for it or read the Grow hub's value; a `w-*` field is simpler and keeps `renderWorth()` self-contained.
+- ✅ **Projection bridge (R1) — SHIPPED.** `renderWorthProjection()` reuses `calcSIP` (investable assets — everything but property — plus a new `w-proj-sip` monthly-savings input) and `loanAtYear` (liabilities amortizing from today's outstanding balance at a user-given rate/remaining-years) to show net worth at +5/+10/+20 years. Property is held flat by design (no basis for an appreciation assumption in this hub). Went with the "add a `w-*` field" option flagged here rather than reading the Grow hub's value, keeping `renderWorth()` self-contained as suggested.
 - Enable the Worth tile and nav tab; remove "Soon" badges.
 - *Acceptance:* values survive reload; a 0-asset state shows a sensible empty state, never `NaN`; document the hub, the `w-*` prefix, and the persistence layer in CLAUDE.md.
 
@@ -106,25 +108,25 @@ Everything still outstanding, most valuable first. Phase numbers link to the ful
 - States: first-ever visit → no tile rendered; zero change → `--text-dim` "no change since <date>", not green; evicted/missing history → the M1c notice, never a fabricated ₹0 delta.
 - *Acceptance:* tile absent on a fresh profile; correct sign/colour/label after editing one balance up and one down; readable in greyscale; no tile flash before hydration.
 
-**2d — Trend chart (collapsed by default)** — ❌ NOT STARTED (**R3**)
+**2d — Trend chart (collapsed by default)** — ✅ SHIPPED
 - Net-worth-over-time line/area chart inside a `.collapse-card`, **closed by default**, per D4's hero-answer-first principle — the tile answers "am I up or down?", the chart answers "what shape has it been?".
-- Dependency-free inline SVG, theme colours only, same approach as the Phase 3 charts. Renders from `history`.
-- *Acceptance:* renders at 375px with no horizontal page scroll; sensible with 1, 2, and 120 history points; collapsed on load.
+- Dependency-free inline SVG, theme colours only, same approach as the Phase 3 charts — literally the same helper (`chartSvg()`), written once and shared with R4 as the reuse note below suggested.
+- *Acceptance:* renders at 375px with no horizontal page scroll; sensible with 1 (a "not enough history yet" message, no broken chart), 2, and 120 history points; collapsed on load.
 
-**2e — Backup, erase, export (Option C — ships with this phase, not later)** — 🟡 SHIPPED except Excel export (**R6**)
+**2e — Backup, erase, export (Option C — ships with this phase, not later)** — ✅ SHIPPED IN FULL
 - **JSON export/import** of a "Dhanam file" carrying the same version field as the stored blob (**M1a/M6c**); imports validated and migrated identically to `loadState()`. This is the sanctioned answer to Safari eviction *and* the cross-device question (**M4b**).
 - "Erase my data" control, prominent and clearly labelled, with a confirm step (**M3c**); reverts to a clean default state.
 - **"Hide amounts" blur toggle** on the Worth hub (**M3a**); net worth never appears on the landing page or in nav (**M3b**).
 - Show `lastSaved` on the hub (**M1b**); if `dhanam.seen` exists but the state key is gone, show the one-line "your browser cleared it — import a backup or start fresh" notice (**M1c**).
 - Nudge PWA installation from the Worth hub, since installation is what buys durable storage on iOS (**M1d**).
-- ❌ **R6:** Excel export via the existing `buildExcel`/rows pattern (`buildWorthRows()`).
+- ✅ **R6 — SHIPPED.** `buildWorthRows()`/`exportWorthExcel()` via the existing `buildExcel`/rows pattern.
 - *Acceptance:* export → erase → import round-trips the full balance sheet and history byte-faithfully; erase leaves no `dhanam.*` keys; a hand-edited import with a bad version is rejected with a message, not a crash; Excel export opens cleanly.
 
 **2f — Checklist & docs** — ✅ SHIPPED (CLAUDE.md items 11–17)
 - Add to the CLAUDE.md manual checklist (**M2d**): corrupt-state load, wrong-version load, quota/private-mode save failure, eviction notice, export/import round-trip, erase completeness, change-tile sign/colour/neutral states, hidden-amounts toggle. `tests.js` covers only pure `calc.js` functions, so this class is manual-verification territory.
 - Document in CLAUDE.md that the app now has persistence, what tier-1/tier-2 means, and that tier-2 defaults must never be written to storage.
 
-### Phase 3 — Density & hierarchy (D4, D5) — ❌ NOT STARTED (**R2**, **R4**)
+### Phase 3 — Density & hierarchy (D4, D5) — ✅ SHIPPED (see `PHASE-3-REPORT.md`) (**R2**, **R4**)
 - Each dense results area (loan scenarios, advanced prepayment, Buy-vs-SIP) leads with **one hero answer** (opinionated default: the 20-year scenario) in `total-card`/`sp-result-card` style; the full 3×N comparison grids collapse behind the existing `.collapse-card` pattern, closed by default.
 - Add one dependency-free inline-SVG chart where it explains the most: SIP corpus growth curve (Grow hub) and principal-vs-interest over tenure (loan panel). Keep to theme colors; no libraries.
 - *Acceptance:* first screenful of each results section contains ≤ ~10 numbers; charts render at 375px without horizontal scroll; all previous numbers still reachable.

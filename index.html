@@ -365,10 +365,19 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
    change card's basis line (it quotes the previous total). */
 .amounts-hidden .w-amt,
 .amounts-hidden .w-row input,
+.amounts-hidden #w-proj-card input,
 .amounts-hidden .w-share,
-.amounts-hidden .wc-basis { filter:blur(7px); user-select:none; }
+.amounts-hidden .wc-basis,
+.amounts-hidden .dhanam-chart { filter:blur(7px); user-select:none; }
 .divider { height:1px; background:var(--border); margin:14px 0; }
 .mono { font-family:'DM Mono',monospace; }
+
+/* ── CHARTS — dependency-free inline SVG (Phase 3 / R3+R4) ─────────── */
+.dhanam-chart { width:100%; height:140px; display:block; }
+.chart-caption { font-size:11px; color:var(--text-dim); margin-top:8px; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.chart-legend { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:8px; }
+.chart-legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim); }
+.chart-legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 
 @media(max-width:480px){
   .btn { padding:9px 12px; font-size:12px; }
@@ -979,17 +988,54 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     </div>
   </div>
 
-  <!-- 3 Scenario Cards -->
-  <div class="loan-grid" id="l-cards"></div>
+  <!-- Empty state. The 3-card grid used to carry this message in its own
+       innerHTML; now that the grid lives inside a collapse card that is
+       hidden when there's no loan, the guidance needs its own home. -->
+  <div class="note-text" id="l-empty" style="padding:16px 2px;display:none;">Enter total property cost above to calculate EMI scenarios.</div>
 
-  <!-- Custom Year Analysis -->
-  <div class="custom-year-section">
-    <div class="cy-header">
-      <label>Show loan payoff status at year:</label>
-      <input type="number" class="cy-input" id="l-cy" value="10" min="1" max="35" oninput="renderLoans()">
-      <label>into tenure</label>
+  <!-- Hero answer — opinionated default: the 20-year scenario (R2 density pass).
+       The full 3×N comparison used to render unconditionally here; it now
+       collapses below so the first screenful leads with one number. -->
+  <div class="total-card" id="l-hero" style="display:none;">
+    <div class="total-label">Your 20-Year EMI</div>
+    <div class="total-value" id="l-hero-emi">—</div>
+    <div class="total-cr" id="l-hero-note"></div>
+    <div class="total-sub">
+      <div class="total-sub-item"><div class="ts-lbl">Total Interest</div><div class="ts-val mono" id="l-hero-interest">—</div></div>
+      <div class="total-sub-item"><div class="ts-lbl">Total Paid</div><div class="ts-val mono" id="l-hero-total">—</div></div>
     </div>
-    <div class="cy-grid" id="l-cy-cards"></div>
+  </div>
+
+  <!-- Principal vs. interest over the tenure (R4) -->
+  <div class="panel-card" id="l-chart-card" style="display:none;">
+    <div class="panel-card-header"><span>📊</span><span class="pch-title">Principal vs. Interest — 20-Year Tenure</span></div>
+    <div class="panel-card-body">
+      <div class="chart-legend">
+        <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Cumulative principal paid</span>
+        <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--red)"></span>Cumulative interest paid</span>
+      </div>
+      <div id="l-pvi-chart"></div>
+      <div class="chart-caption"><span>Year 1</span><span>Year 20</span></div>
+    </div>
+  </div>
+
+  <!-- 3 Scenario Cards + Custom Year Analysis — collapsed by default (R2) -->
+  <div class="collapse-card" id="l-compare-card" style="display:none;">
+    <div class="collapse-header" onclick="toggleCard('l-compare-card')">
+      <span class="collapse-title">Compare 15 / 20 / 30-year scenarios &amp; custom year</span>
+      <span class="collapse-arrow">▼</span>
+    </div>
+    <div class="collapse-body">
+      <div class="loan-grid" id="l-cards"></div>
+      <div class="custom-year-section">
+        <div class="cy-header">
+          <label>Show loan payoff status at year:</label>
+          <input type="number" class="cy-input" id="l-cy" value="10" min="1" max="35" oninput="renderLoans()">
+          <label>into tenure</label>
+        </div>
+        <div class="cy-grid" id="l-cy-cards"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Advanced Loan Analysis -->
@@ -1015,7 +1061,25 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
           <span class="field-hint">Annual bonus / savings towards principal</span>
         </div>
       </div>
-      <div class="adv-compare-grid" id="adv-cards"></div>
+      <!-- Hero answer for this section too (R2) -->
+      <div class="total-card" id="adv-hero" style="margin:0 0 12px;">
+        <div class="total-label">Interest Saved — 20-Year Loan</div>
+        <div class="total-value" id="adv-hero-value">—</div>
+        <div class="total-cr" id="adv-hero-sub"></div>
+        <div class="total-sub">
+          <div class="total-sub-item"><div class="ts-lbl">New Tenure</div><div class="ts-val mono" id="adv-hero-tenure">—</div></div>
+          <div class="total-sub-item"><div class="ts-lbl">Extra / Year</div><div class="ts-val mono" id="adv-hero-extra">—</div></div>
+        </div>
+      </div>
+      <div class="collapse-card" id="adv-compare-card">
+        <div class="collapse-header" onclick="toggleCard('adv-compare-card')">
+          <span class="collapse-title">Compare 15 / 20 / 30-year tenures</span>
+          <span class="collapse-arrow">▼</span>
+        </div>
+        <div class="collapse-body">
+          <div class="adv-compare-grid" id="adv-cards"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1031,20 +1095,38 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         If instead of buying, you invested the same EMI amount monthly in a SIP — how much corpus would you accumulate?
         Compare across 3 return scenarios for each loan tenure.
       </p>
-      <div class="sip-grid" id="sip-cards"></div>
-      <div class="sip-custom-inputs">
-        <span class="sip-custom-lbl">Custom scenario:</span>
-        <div class="sip-inline-field">
-          <label>CAGR %</label>
-          <input type="number" class="sip-inline-input" id="sip-cagr" value="12" step="0.5" oninput="renderSIPComparison()">
+      <!-- Hero answer for this section too (R2) -->
+      <div class="total-card" id="sip-hero" style="margin:0 0 12px;">
+        <div class="total-label">SIP vs. Buying — 20 Years @ 12% CAGR</div>
+        <div class="total-value" id="sip-hero-value">—</div>
+        <div class="total-cr" id="sip-hero-sub"></div>
+        <div class="total-sub">
+          <div class="total-sub-item"><div class="ts-lbl">EMI = SIP</div><div class="ts-val mono" id="sip-hero-emi">—</div></div>
+          <div class="total-sub-item"><div class="ts-lbl">SIP Corpus</div><div class="ts-val mono" id="sip-hero-corpus">—</div></div>
         </div>
-        <div class="sip-inline-field">
-          <label>Duration (yrs)</label>
-          <input type="number" class="sip-inline-input" id="sip-years" value="20" min="1" max="50" oninput="renderSIPComparison()">
-        </div>
-        <span style="font-size:10px;color:var(--text-dim);">Equity MFs ≈12% · Index ≈11% · Balanced ≈9%</span>
       </div>
-      <div class="sip-custom-grid" id="sip-custom-cards"></div>
+      <div class="collapse-card" id="sip-compare-card">
+        <div class="collapse-header" onclick="toggleCard('sip-compare-card')">
+          <span class="collapse-title">Compare across CAGR &amp; tenure scenarios</span>
+          <span class="collapse-arrow">▼</span>
+        </div>
+        <div class="collapse-body">
+          <div class="sip-grid" id="sip-cards"></div>
+          <div class="sip-custom-inputs">
+            <span class="sip-custom-lbl">Custom scenario:</span>
+            <div class="sip-inline-field">
+              <label>CAGR %</label>
+              <input type="number" class="sip-inline-input" id="sip-cagr" value="12" step="0.5" oninput="renderSIPComparison()">
+            </div>
+            <div class="sip-inline-field">
+              <label>Duration (yrs)</label>
+              <input type="number" class="sip-inline-input" id="sip-years" value="20" min="1" max="50" oninput="renderSIPComparison()">
+            </div>
+            <span style="font-size:10px;color:var(--text-dim);">Equity MFs ≈12% · Index ≈11% · Balanced ≈9%</span>
+          </div>
+          <div class="sip-custom-grid" id="sip-custom-cards"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1270,6 +1352,17 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="panel-card">
+        <div class="panel-card-header"><span>📈</span><span class="pch-title">Corpus Growth Curve</span></div>
+        <div class="panel-card-body">
+          <div class="chart-legend">
+            <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Corpus</span>
+            <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--text-dim)"></span>Invested</span>
+          </div>
+          <div id="sp-growth-chart"></div>
+          <div class="chart-caption"><span>Year 1</span><span id="sp-growth-end">Year 20</span></div>
+        </div>
+      </div>
+      <div class="panel-card">
         <div class="panel-card-header"><span>📅</span><span class="pch-title">Corpus at Milestones</span></div>
         <div class="panel-card-body" style="padding:0;">
           <table class="milestone-table">
@@ -1402,6 +1495,19 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 <div class="worth-note" id="w-notice" style="display:none;"></div>
 
+<!-- Trend chart — collapsed by default (D4): the tile above answers "am I
+     up or down?", this answers "what shape has it been?" (2d / R3) -->
+<div class="collapse-card" id="w-trend-card" style="display:none;">
+  <div class="collapse-header" onclick="toggleChartCard('w-trend-card', renderWorthTrend)">
+    <span class="collapse-title">📉 Net worth over time</span>
+    <span class="collapse-arrow">▼</span>
+  </div>
+  <div class="collapse-body">
+    <div id="w-trend-chart"></div>
+    <div class="chart-caption" id="w-trend-range"></div>
+  </div>
+</div>
+
 <div class="panel-card">
   <div class="panel-card-header"><span>🪙</span><span class="pch-title">Assets — what you own</span><span class="pch-total mono w-amt" id="w-assets-sub">—</span></div>
   <div class="panel-card-body" style="padding:0;" id="w-assets-rows"></div>
@@ -1412,6 +1518,44 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <div class="panel-card-body" style="padding:0;" id="w-liab-rows"></div>
 </div>
 
+<!-- Projection bridge (2b / R1) — reuses calcSIP + loanAtYear to carry the
+     saved balance sheet forward, so Worth is the app's anchor rather than a
+     seventh calculator. -->
+<div class="panel-card" id="w-proj-card" style="display:none;">
+  <div class="panel-card-header"><span>🔭</span><span class="pch-title">Projected Net Worth</span></div>
+  <div class="panel-card-body">
+    <p class="note-text" style="margin-bottom:12px;">Assumes your investments (all assets except property) grow at the rate below with your monthly savings added in, debts amortize at the rate/years below, and property value stays flat. A projection, not a promise.</p>
+    <div class="grid-2">
+      <div class="field">
+        <label>Monthly savings / SIP added (₹)</label>
+        <input type="number" id="w-proj-sip" min="0" step="1000" placeholder="0" oninput="renderWorth()">
+      </div>
+      <div class="field">
+        <label>Expected investment growth (% p.a.)</label>
+        <input type="number" id="w-proj-cagr" value="10" step="0.5" min="0" oninput="renderWorth()">
+      </div>
+      <div class="field">
+        <label>Debt interest rate (% p.a.)</label>
+        <input type="number" id="w-proj-debt-rate" value="9" step="0.25" min="0" oninput="renderWorth()">
+      </div>
+      <div class="field">
+        <label>Years to become debt-free</label>
+        <input type="number" id="w-proj-debt-years" value="10" min="1" max="35" oninput="renderWorth()">
+      </div>
+    </div>
+    <!-- Clearing the debt in the years above is not free: it implies a monthly
+         repayment on top of the savings figure. Spell it out rather than
+         letting the projection quietly assume cash the user never budgeted. -->
+    <p class="note-text" id="w-proj-debt-note" style="margin-top:10px;display:none;"></p>
+    <div class="total-card" style="margin:16px 0 8px;">
+      <div class="total-label">Projected Net Worth in <span id="w-proj-hero-yrs">10</span> Years</div>
+      <div class="total-value w-amt" id="w-proj-hero-val">—</div>
+      <div class="total-cr w-amt" id="w-proj-hero-sub"></div>
+    </div>
+    <div class="grid-3" id="w-proj-grid"></div>
+  </div>
+</div>
+
 <div class="panel-card">
   <div class="panel-card-header"><span>🔒</span><span class="pch-title">Your data</span></div>
   <div class="panel-card-body">
@@ -1419,6 +1563,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <p class="note-text" id="w-install-nudge" style="display:none;">Tip: install Dhanam to your home screen. Browsers can clear data for sites you haven't opened in a while — installed apps keep theirs.</p>
     <div class="btn-row">
       <button class="btn btn-secondary" onclick="toggleHideAmounts()" id="w-hide-btn">🙈 Hide amounts</button>
+      <button class="btn btn-secondary" onclick="exportWorthExcel()">📊 Export Excel</button>
       <button class="btn btn-secondary" onclick="exportWorthBackup()">⬇️ Download backup</button>
       <button class="btn btn-secondary" onclick="el('w-import-file').click()">⬆️ Restore backup</button>
       <button class="btn btn-secondary" onclick="eraseWorthData()">🗑️ Erase my data</button>
@@ -1470,6 +1615,70 @@ function showToast(msg) {
 function toggleCard(id) { el(id).classList.toggle('open'); }
 
 // =====================================================================
+// CHARTS — dependency-free inline SVG line/area chart
+// =====================================================================
+// One small helper shared by the Worth trend chart (R3) and the Phase 3
+// SIP-growth / principal-vs-interest charts (R4), per the reuse note in
+// TASK-UX-REDESIGN.md. Pure string-building — no canvas, no library.
+// series: [{ values:[...], color:'var(--accent)', area:true }]
+//
+// preserveAspectRatio="none" lets the SVG stretch to fill any container
+// width (so it never causes horizontal scroll at 375px) while the CSS
+// fixes its height via .dhanam-chart. That stretch is also why the viewBox
+// width should match the container's real pixel width: with a fixed 600
+// viewBox in an 890px box, x scales 1.48x and y 1x, which turns every dot
+// into a visible ellipse and thins/thickens the stroke by direction.
+// Callers should go through renderChart(), which measures for them.
+function chartSvg(series, opts) {
+  opts = opts || {};
+  const w = opts.width || 600, h = opts.height || 140;
+  const padX = 4, padT = 8, padB = 8;
+  const allVals = series.reduce((a, s) => a.concat(s.values), []);
+  if (!allVals.length) return '';
+  let min = Math.min(...allVals), max = Math.max(...allVals);
+  if (min === max) { min -= 1; max += 1; }
+  const range = max - min;
+  const n = Math.max(...series.map(s => s.values.length));
+  const stepX = n > 1 ? (w - padX * 2) / (n - 1) : 0;
+  const toXY = (val, i) => [
+    padX + stepX * i,
+    padT + (h - padT - padB) * (1 - (val - min) / range),
+  ];
+  const parts = series.map(s => {
+    const pts = s.values.map((val, i) => toXY(val, i));
+    if (pts.length === 1) {
+      return `<circle cx="${pts[0][0].toFixed(1)}" cy="${pts[0][1].toFixed(1)}" r="3.5" fill="${s.color}"></circle>`;
+    }
+    const d = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+    const area = s.area
+      ? `<path d="${d} L${pts[pts.length - 1][0].toFixed(1)},${h - padB} L${pts[0][0].toFixed(1)},${h - padB} Z" fill="${s.color}" fill-opacity="0.14" stroke="none"></path>`
+      : '';
+    const line = `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" vector-effect="non-scaling-stroke"></path>`;
+    // Dot every point on short series; just the last point on long ones (e.g. 120 history entries) to stay legible.
+    const dotPts = pts.length <= 24 ? pts : [pts[pts.length - 1]];
+    const dots = dotPts.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.5" fill="${s.color}"></circle>`).join('');
+    return area + line + dots;
+  }).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" class="dhanam-chart" role="img" aria-label="${xesc(opts.ariaLabel || '')}">${parts}</svg>`;
+}
+
+// Measure the host, then draw at 1:1 so nothing is distorted. A hidden host
+// (collapsed card, inactive hub) measures 0 — fall back to 600 and re-render
+// when it becomes visible, which is what toggleChartCard() below is for.
+function renderChart(targetId, series, opts) {
+  const host = el(targetId);
+  if (!host) return;
+  host.innerHTML = chartSvg(series, Object.assign({}, opts, { width: host.clientWidth || 600 }));
+}
+
+// Collapse card containing a chart: expand first, then draw, so the chart is
+// measured against a container that actually has a width.
+function toggleChartCard(cardId, redraw) {
+  toggleCard(cardId);
+  if (el(cardId).classList.contains('open')) redraw();
+}
+
+// =====================================================================
 // STATE
 // =====================================================================
 let QD = {};   // Quick calc data
@@ -1501,6 +1710,8 @@ const STORE_KEY = 'dhanam.v1';
 const SEEN_KEY = 'dhanam.seen';
 const STORE_VER = 1;
 const DEFAULT_RATE = 8.75;   // must match #l-rate's markup default
+const PROJ_DEFAULT_CAGR = 10;      // must match #w-proj-cagr's markup default
+const PROJ_DEFAULT_DEBT_RATE = 9;  // must match #w-proj-debt-rate's markup default
 
 let DS = null;                 // in-memory mirror of the persisted blob; null = nothing stored
 let storageEvicted = false;    // seen-marker present but state gone -> the browser cleared it
@@ -1992,10 +2203,48 @@ function renderLoans() {
   container.innerHTML = '';
 
   if (!loan) {
-    container.innerHTML = '<div class="note-text" style="padding:16px 0;">Enter total property cost above to calculate EMI scenarios.</div>';
+    show('l-empty');
+    hide('l-hero');
+    hide('l-chart-card');
+    hide('l-compare-card');
     el('l-cy-cards').innerHTML = '';
+    // These early-returned before reaching the same two calls below, which
+    // left Advanced/SIP showing stale hero numbers if the loan dropped to
+    // zero while either panel was open. Found via testing, not by inspection.
+    if (el('adv-section').classList.contains('open')) renderAdvLoan();
+    if (el('sip-section').classList.contains('open')) renderSIPComparison();
+    persistLoanInputs();
     return;
   }
+  hide('l-empty');
+  show('l-compare-card');
+
+  // Hero — opinionated default: the 20-year scenario (R2 density pass).
+  // The full 15/20/30 comparison below stays intact and reachable; this is
+  // just the one answer most people came here for.
+  const heroYears = 20;
+  const heroEmi = calcEMI(loan, rate, heroYears);
+  const heroTotalPaid = heroEmi * heroYears * 12;
+  const heroInterest = heroTotalPaid - loan;
+  show('l-hero');
+  set('l-hero-emi', fmt(heroEmi) + '/mo');
+  set('l-hero-note', `20-year loan @ ${rate.toFixed(2)}% — compare 15 & 30 years below`);
+  set('l-hero-interest', inCr(heroInterest));
+  set('l-hero-total', inCr(heroTotalPaid + own));
+
+  // Principal vs. interest over the 20-year tenure (R4) — cumulative paid
+  // at each year, reusing the same loanAtYear the scenario cards already use.
+  show('l-chart-card');
+  const principalSeries = [], interestSeries = [];
+  for (let y = 1; y <= heroYears; y++) {
+    const yd = loanAtYear(loan, rate, heroYears, y);
+    principalSeries.push(yd.principalPaid);
+    interestSeries.push(yd.interestPaid);
+  }
+  renderChart('l-pvi-chart', [
+    { values: principalSeries, color: 'var(--accent)', area: true },
+    { values: interestSeries, color: 'var(--red)', area: true },
+  ], { ariaLabel: 'Cumulative principal versus interest paid over 20 years' });
 
   scenarios.forEach(sc => {
     const emi = calcEMI(loan, rate, sc.years);
@@ -2067,9 +2316,25 @@ function renderAdvLoan() {
   container.innerHTML = '';
 
   if (!loan) {
+    hide('adv-hero');
+    hide('adv-compare-card');
     container.innerHTML = '<div class="note-text">Enter loan details above first.</div>';
     return;
   }
+  show('adv-hero');
+  show('adv-compare-card');
+
+  // Hero — opinionated default: the 20-year scenario, same convention as
+  // the loan-scenario hero above (R2 density pass).
+  const heroYears = 20;
+  const heroEmi = calcEMI(loan, rate, heroYears);
+  const heroNormal = simulateLoan(loan, rate, heroYears, 0, 0);
+  const heroAdv = simulateLoan(loan, rate, heroYears, extraEmi, extraLump);
+  const heroExtraAnnual = extraEmi * heroEmi + extraLump;
+  set('adv-hero-value', inCr(Math.max(0, heroNormal.totalInterest - heroAdv.totalInterest)));
+  set('adv-hero-sub', `${heroAdv.yearsSaved} yrs shorter — pays off in ${heroAdv.actualYears} yrs instead of ${heroYears}`);
+  set('adv-hero-tenure', `${heroAdv.actualYears} yrs`);
+  set('adv-hero-extra', fmt(heroExtraAnnual));
 
   const scenarios = [
     { label: '15yr', years: 15 },
@@ -2481,6 +2746,59 @@ function exportCombinedExcel() {
 }
 
 // =====================================================================
+// EXPORT — WORTH EXCEL (R6)
+// =====================================================================
+function buildWorthRows() {
+  if (!DS || !DS.worth) return null;
+  const aVals = DS.worth.a || {}, lVals = DS.worth.l || {};
+  const rows = [];
+  rows.push(['DHANAM WORTH — BALANCE SHEET']);
+  rows.push(['Generated: ' + new Date().toLocaleDateString('en-IN')]);
+  rows.push([]);
+
+  rows.push(['ASSETS']);
+  rows.push(['Category', '', 'Amount (₹)']);
+  let assets = 0;
+  W_ASSETS.forEach(r => {
+    const val = aVals[r.id] || 0;
+    assets += val;
+    if (val) rows.push([r.label, '', val]);
+  });
+  rows.push(['Total Assets', '', assets]);
+  rows.push([]);
+
+  rows.push(['LIABILITIES']);
+  rows.push(['Category', '', 'Amount (₹)']);
+  let liabs = 0;
+  W_LIABS.forEach(r => {
+    const val = lVals[r.id] || 0;
+    liabs += val;
+    if (val) rows.push([r.label, '', val]);
+  });
+  rows.push(['Total Liabilities', '', liabs]);
+  rows.push([]);
+
+  rows.push(['NET WORTH', '', assets - liabs]);
+  rows.push([]);
+
+  if (DS.history && DS.history.length) {
+    rows.push(['HISTORY (one entry per save-day)']);
+    rows.push(['Date', '', 'Net Worth (₹)']);
+    DS.history.forEach(pt => rows.push([pt.date, '', pt.netWorth]));
+  }
+
+  return rows;
+}
+
+function exportWorthExcel() {
+  const rows = buildWorthRows();
+  if (!rows) { showToast('Enter a balance sheet first'); return; }
+  const buf = buildExcel([{ name: 'Net Worth', rows }]);
+  downloadExcel(buf, `dhanam_networth_${todayKey()}.xlsx`);
+  showToast('Net Worth Excel downloaded!');
+}
+
+// =====================================================================
 // RESET
 // =====================================================================
 function resetAll() {
@@ -2655,6 +2973,13 @@ function hydrateWorth() {
   if (!DS || !DS.worth) return;
   W_ASSETS.forEach(r => { const val = DS.worth.a && DS.worth.a[r.id]; if (val) el('w-a-' + r.id).value = val; });
   W_LIABS.forEach(r => { const val = DS.worth.l && DS.worth.l[r.id]; if (val) el('w-l-' + r.id).value = val; });
+  const p = DS.worth.proj;
+  if (p) {
+    if (p.sip) el('w-proj-sip').value = p.sip;
+    if (p.cagr) el('w-proj-cagr').value = p.cagr;
+    if (p.debtRate) el('w-proj-debt-rate').value = p.debtRate;
+    if (p.debtYears) el('w-proj-debt-years').value = p.debtYears;
+  }
 }
 
 // The delta compares against the most recent entry from a *different* day —
@@ -2741,15 +3066,108 @@ function renderWorth() {
     }
   }
 
+  const projData = renderWorthProjection(anyInput, assets, liabs, aVals);
+
   // Persist. Only once there's something real to store, so a first visit
   // to an empty form doesn't seed a bogus ₹0 baseline for tomorrow's delta.
   if (anyInput) {
     if (!DS) DS = blankState();
-    DS.worth = { a: aVals, l: lVals };
+    DS.worth = { a: aVals, l: lVals, proj: projData };
     recordWorthHistory(net);
     saveState();
   }
   updateWorthStatus();
+  renderWorthTrend();
+}
+
+// ── Projection bridge (2b / R1) ─────────────────────────────────────────
+// Reuses calcSIP (investable-asset growth + ongoing contributions) and
+// loanAtYear (debt amortizing from today's outstanding balance) so Worth
+// carries the saved balance sheet forward instead of being a static
+// snapshot. Property is deliberately held flat — assuming an appreciation
+// rate is a tier-2-style guess this hub has no basis to make on its own.
+function renderWorthProjection(anyInput, assets, liabs, aVals) {
+  if (!anyInput) { hide('w-proj-card'); return null; }
+  show('w-proj-card');
+
+  const monthlySip = v('w-proj-sip');
+  const cagr = parseFloat(el('w-proj-cagr').value) || 0;
+  const debtRate = parseFloat(el('w-proj-debt-rate').value) || 0;
+  const debtYears = Math.max(1, parseInt(el('w-proj-debt-years').value) || 1);
+  const propertyVal = aVals.property || 0;
+  const investable = Math.max(0, assets - propertyVal);
+
+  const projectedNet = years => {
+    const grownInvestable = investable * Math.pow(1 + cagr / 100, years) + calcSIP(monthlySip, cagr, years);
+    const remainingDebt = loanAtYear(liabs, debtRate, debtYears, years).balance;
+    return grownInvestable + propertyVal - remainingDebt;
+  };
+  const signed = n => (n < 0 ? '−' + inCr(Math.abs(n)) : inCr(n));
+
+  // Clearing `liabs` over `debtYears` implies this EMI. It comes out of income
+  // the balance sheet doesn't model, and it is *on top of* the monthly savings
+  // above — so state it instead of letting the projection assume it silently.
+  const noteEl = el('w-proj-debt-note');
+  if (liabs > 0) {
+    const impliedEmi = calcEMI(liabs, debtRate, debtYears);
+    noteEl.style.display = '';
+    noteEl.innerHTML = `Clearing <span class="w-amt">${inCr(liabs)}</span> of debt in ${debtYears} year${debtYears === 1 ? '' : 's'} assumes about ` +
+      `<strong class="w-amt">${fmt(impliedEmi)}/mo</strong> of repayments` +
+      (monthlySip ? `, on top of the <span class="w-amt">${fmt(monthlySip)}/mo</span> you're saving` : '') +
+      ` — paid from income, which this balance sheet doesn't track.`;
+  } else {
+    noteEl.style.display = 'none';
+  }
+
+  const heroYears = 10;
+  const heroNet = projectedNet(heroYears);
+  set('w-proj-hero-yrs', heroYears);
+  set('w-proj-hero-val', signed(heroNet));
+  el('w-proj-hero-val').classList.toggle('negative', heroNet < 0);
+  set('w-proj-hero-sub', `vs. ${signed(assets - liabs)} today`);
+
+  el('w-proj-grid').innerHTML = [5, 10, 20].map(y => {
+    const net = projectedNet(y);
+    return `<div class="loan-card">
+      <div class="lc-title">+${y} Years</div>
+      <div class="loan-stat"><span class="ls-lbl">Projected Net Worth</span><span class="ls-val big w-amt${net < 0 ? ' red' : ''}">${signed(net)}</span></div>
+    </div>`;
+  }).join('');
+
+  // Tier split: the monthly figure and "years to debt-free" are facts about
+  // the user, always kept. The two rates are tier-2-style assumptions, so —
+  // same rule as the loan panel's #l-rate — only stored when changed from
+  // the app's maintained default.
+  return {
+    sip: monthlySip || null,
+    cagr: Math.abs(cagr - PROJ_DEFAULT_CAGR) > 1e-9 ? cagr : null,
+    debtRate: Math.abs(debtRate - PROJ_DEFAULT_DEBT_RATE) > 1e-9 ? debtRate : null,
+    debtYears: debtYears || null,
+  };
+}
+
+// ── Trend chart, collapsed by default (2d / R3) ─────────────────────────
+function renderWorthTrend() {
+  const h = (DS && DS.history) || [];
+  if (!h.length) { hide('w-trend-card'); return; }
+  show('w-trend-card');
+  if (h.length === 1) {
+    el('w-trend-chart').innerHTML = '';
+    el('w-trend-range').textContent = 'Not enough history yet — check back after your next update.';
+    return;
+  }
+  const vals = h.map(pt => pt.netWorth);
+  renderChart('w-trend-chart', [{ values: vals, color: 'var(--accent)', area: true }],
+    { ariaLabel: 'Net worth trend over time' });
+  // The y-axis is auto-scaled to the data, so without the range printed a 1%
+  // wiggle looks identical to a doubling. Print it — and mark it `w-amt` so
+  // "Hide amounts" blurs it like every other figure.
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const scale = lo === hi ? inCr(lo) : `${inCr(lo)} – ${inCr(hi)}`;
+  el('w-trend-range').innerHTML =
+    `<span>${prettyDate(h[0].date)}</span>` +
+    `<span class="w-amt">${scale}</span>` +
+    `<span>${prettyDate(h[h.length - 1].date)}</span>`;
 }
 
 function updateWorthStatus() {
@@ -2814,6 +3232,7 @@ function importWorthBackup(file) {
     saveState();
     W_ASSETS.forEach(r => { el('w-a-' + r.id).value = ''; });
     W_LIABS.forEach(r => { el('w-l-' + r.id).value = ''; });
+    clearWorthProjFields();
     hydrateWorth();
     if (rememberingInputs()) { el('l-remember').checked = true; hydrateLoanInputs(); }
     updateRememberHint();
@@ -2825,11 +3244,19 @@ function importWorthBackup(file) {
   el('w-import-file').value = '';   // allow re-picking the same file
 }
 
+function clearWorthProjFields() {
+  el('w-proj-sip').value = '';
+  el('w-proj-cagr').value = PROJ_DEFAULT_CAGR;
+  el('w-proj-debt-rate').value = PROJ_DEFAULT_DEBT_RATE;
+  el('w-proj-debt-years').value = 10;
+}
+
 function eraseWorthData() {
   if (!confirm('Erase everything Dhanam has saved on this device? This includes your balance sheet, its history, and any remembered calculator inputs. It cannot be undone.')) return;
   eraseState();
   W_ASSETS.forEach(r => { el('w-a-' + r.id).value = ''; });
   W_LIABS.forEach(r => { el('w-l-' + r.id).value = ''; });
+  clearWorthProjFields();
   el('l-remember').checked = false;
   updateRememberHint();
   renderWorth();
@@ -2953,10 +3380,26 @@ function renderSIPComparison() {
   const customContainer = el('sip-custom-cards');
 
   if (!loan) {
+    hide('sip-hero');
+    hide('sip-compare-card');
     container.innerHTML = '<div class="note-text" style="padding:12px 0;">Enter loan details above first.</div>';
     customContainer.innerHTML = '';
     return;
   }
+  show('sip-hero');
+  show('sip-compare-card');
+
+  // Hero — opinionated default: 20-year tenure at the "Moderate" 12% CAGR
+  // used elsewhere in this panel (R2 density pass).
+  const heroYears = 20, heroCagr = 12;
+  const heroEmi = calcEMI(loan, rate, heroYears);
+  const heroTotalPaid = heroEmi * heroYears * 12;
+  const heroCorpus = calcSIP(heroEmi, heroCagr, heroYears);
+  const heroAdvantage = heroCorpus - heroTotalPaid;
+  set('sip-hero-value', (heroAdvantage >= 0 ? '+' : '−') + inCr(Math.abs(heroAdvantage)));
+  set('sip-hero-sub', heroAdvantage >= 0 ? 'SIP would end up ahead of buying' : 'Buying would end up ahead of the SIP');
+  set('sip-hero-emi', fmt(heroEmi) + '/mo');
+  set('sip-hero-corpus', inCr(heroCorpus));
 
   const cagrs = [
     { label: 'Conservative', cagr: 9 },
@@ -3065,6 +3508,19 @@ function updateSIPPlanner() {
   set('sp-invested', inCr(invested));
   set('sp-gain', inCr(gain));
   set('sp-gainpct', invested > 0 ? (gain / invested * 100).toFixed(0) + '%' : '—');
+
+  // Corpus growth curve (R4) — year-by-year corpus vs. invested, reusing
+  // the same calcSIP the hero and milestone table already call.
+  const corpusSeries = [], investedSeries = [];
+  for (let y = 1; y <= years; y++) {
+    corpusSeries.push(calcSIP(monthly, cagr, y));
+    investedSeries.push(monthly * y * 12);
+  }
+  renderChart('sp-growth-chart', [
+    { values: corpusSeries, color: 'var(--accent)', area: true },
+    { values: investedSeries, color: 'var(--text-dim)', area: false },
+  ], { ariaLabel: 'SIP corpus growth versus amount invested over time' });
+  set('sp-growth-end', `Year ${years}`);
 
   el('sp-milestones').innerHTML = sipMilestones(years).map(y => {
     const c = calcSIP(monthly, cagr, y);
