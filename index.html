@@ -324,6 +324,49 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .note-text { font-size:11px; color:var(--text-dim); padding:4px 0; }
 .remember-row { display:flex; align-items:center; gap:11px; margin-top:14px; padding-top:13px; border-top:1px solid var(--border-subtle); flex-wrap:wrap; }
 .remember-lbl { font-size:12px; color:var(--text-mid); font-weight:500; }
+
+/* ── DHANAM WORTH ────────────────────────── */
+.pch-total { margin-left:auto; font-size:13px; font-weight:500; color:var(--text-mid); }
+.total-value.negative { color:var(--red); }
+.w-row { display:flex; align-items:center; gap:10px; padding:9px 14px; border-bottom:1px solid var(--border-subtle); flex-wrap:wrap; }
+.w-row:last-child { border-bottom:none; }
+.w-row label { font-size:13px; color:var(--text-mid); flex:1; min-width:130px; }
+.w-row input {
+  font-family:'DM Mono',monospace; font-size:13px; color:var(--text); width:150px;
+  background:var(--surface3); border:1px solid var(--border); border-radius:6px;
+  padding:7px 10px; outline:none; text-align:right;
+}
+.w-row input:focus { border-color:var(--accent); background:var(--surface2); }
+.w-row .w-share { font-size:11px; color:var(--text-dim); font-family:'DM Mono',monospace; min-width:42px; text-align:right; }
+/* Change-since-last-update card. Colour is a real financial delta (palette
+   rules 3/4) and is never the only signal — the arrow and the wording carry
+   it too, so this reads correctly in greyscale or with CVD (rule 5). */
+.worth-change {
+  display:flex; align-items:center; gap:13px; margin:0 0 14px;
+  background:var(--surface); border:1px solid var(--border);
+  border-left:3px solid var(--border); border-radius:var(--radius); padding:14px 16px;
+}
+.worth-change.up { border-left-color:var(--green); }
+.worth-change.down { border-left-color:var(--red); }
+.wc-arrow { font-size:19px; line-height:1; color:var(--text-dim); }
+.worth-change.up .wc-arrow { color:var(--green); }
+.worth-change.down .wc-arrow { color:var(--red); }
+.wc-text { flex:1; }
+.wc-amount { font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--text-mid); }
+.worth-change.up .wc-amount { color:var(--green); }
+.worth-change.down .wc-amount { color:var(--red); }
+.wc-basis { font-size:11px; color:var(--text-dim); margin-top:3px; }
+.worth-note {
+  background:var(--hl-bg); border:1px solid var(--hl-border); border-radius:var(--radius);
+  padding:11px 14px; font-size:12px; color:var(--text-mid); margin-bottom:14px;
+}
+/* Shared-device privacy (M3a): blur every figure, keep the layout intact.
+   Includes the per-row shares (they leak portfolio composition) and the
+   change card's basis line (it quotes the previous total). */
+.amounts-hidden .w-amt,
+.amounts-hidden .w-row input,
+.amounts-hidden .w-share,
+.amounts-hidden .wc-basis { filter:blur(7px); user-select:none; }
 .divider { height:1px; background:var(--border); margin:14px 0; }
 .mono { font-family:'DM Mono',monospace; }
 
@@ -337,8 +380,11 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 /* iOS Safari auto-zooms on focusing any input under 16px; force 16px on touch widths */
 @media(max-width:600px){
+  /* Mobile Safari auto-zooms any focused input under 16px (D7). Every new
+     input class must be added here too. */
   .qf input, .field input, .field select, .cf-input,
-  .loan-field input, .cy-input, .sip-inline-input, .disb-tr-field input {
+  .loan-field input, .cy-input, .sip-inline-input, .disb-tr-field input,
+  .w-row input {
     font-size:16px;
   }
 }
@@ -486,7 +532,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <button class="hub-tab" id="ht-apartment" onclick="switchHub('apartment')">🏠 Dhanam Home</button>
     <button class="hub-tab" id="ht-car" onclick="switchHub('car')">🚗 Dhanam Car</button>
     <button class="hub-tab" id="ht-sip" onclick="switchHub('sip')">📈 Dhanam Grow</button>
-    <button class="hub-tab" disabled>💰 Dhanam Worth <small style="font-size:9px;font-weight:400;opacity:.7">soon</small></button>
+    <button class="hub-tab" id="ht-worth" onclick="switchHub('worth')">💰 Dhanam Worth</button>
   </div>
 </nav>
 
@@ -504,11 +550,11 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <span class="tile-tool">Dhanam Grow</span>
     <span class="tile-desc">SIP planner — monthly, step-up & lumpsum investment growth.</span>
   </button>
-  <button class="tile disabled" disabled title="Coming soon">
+  <button class="tile" onclick="switchHub('worth')">
     <span class="tile-icon">💰</span>
-    <span class="tile-title">Know My Net Worth <span class="tile-badge">Soon</span></span>
+    <span class="tile-title">Know My Net Worth</span>
     <span class="tile-tool">Dhanam Worth</span>
-    <span class="tile-desc">Track assets, loans & investments in one place.</span>
+    <span class="tile-desc">Track assets, loans & investments in one place — saved on this device.</span>
   </button>
   <button class="tile" onclick="switchHub('apartment')">
     <span class="tile-icon">🏠</span>
@@ -1327,6 +1373,63 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
   </div>
 </div><!-- /hub-sip -->
+
+<!-- ===== DHANAM WORTH (net worth tracker) ===== -->
+<div class="hub-content" id="hub-worth">
+<div class="main" id="worth-main">
+
+<div class="section-title">💰 Dhanam Worth</div>
+<p class="landing-intro">What you own, minus what you owe. Saved only on this device — never sent anywhere.</p>
+
+<div class="total-card">
+  <div class="total-label">Net Worth</div>
+  <div class="total-value w-amt" id="w-net">—</div>
+  <div class="total-cr w-amt" id="w-net-exact"></div>
+  <div class="total-sub">
+    <div class="total-sub-item"><div class="ts-lbl">Assets</div><div class="ts-val mono w-amt" id="w-assets-total">—</div></div>
+    <div class="total-sub-item"><div class="ts-lbl">Liabilities</div><div class="ts-val mono w-amt" id="w-liab-total">—</div></div>
+  </div>
+</div>
+
+<!-- Change since last update — its own card, not a footnote on the hero -->
+<div class="worth-change" id="w-change" style="display:none;">
+  <span class="wc-arrow" id="w-change-arrow">▲</span>
+  <div class="wc-text">
+    <div class="wc-amount w-amt" id="w-change-amt">—</div>
+    <div class="wc-basis" id="w-change-basis"></div>
+  </div>
+</div>
+
+<div class="worth-note" id="w-notice" style="display:none;"></div>
+
+<div class="panel-card">
+  <div class="panel-card-header"><span>🪙</span><span class="pch-title">Assets — what you own</span><span class="pch-total mono w-amt" id="w-assets-sub">—</span></div>
+  <div class="panel-card-body" style="padding:0;" id="w-assets-rows"></div>
+</div>
+
+<div class="panel-card">
+  <div class="panel-card-header"><span>🧾</span><span class="pch-title">Liabilities — what you owe</span><span class="pch-total mono w-amt" id="w-liab-sub">—</span></div>
+  <div class="panel-card-body" style="padding:0;" id="w-liab-rows"></div>
+</div>
+
+<div class="panel-card">
+  <div class="panel-card-header"><span>🔒</span><span class="pch-title">Your data</span></div>
+  <div class="panel-card-body">
+    <p class="note-text" id="w-saved-at">Nothing saved yet — enter a value above and it's kept on this device.</p>
+    <p class="note-text" id="w-install-nudge" style="display:none;">Tip: install Dhanam to your home screen. Browsers can clear data for sites you haven't opened in a while — installed apps keep theirs.</p>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="toggleHideAmounts()" id="w-hide-btn">🙈 Hide amounts</button>
+      <button class="btn btn-secondary" onclick="exportWorthBackup()">⬇️ Download backup</button>
+      <button class="btn btn-secondary" onclick="el('w-import-file').click()">⬆️ Restore backup</button>
+      <button class="btn btn-secondary" onclick="eraseWorthData()">🗑️ Erase my data</button>
+    </div>
+    <input type="file" id="w-import-file" accept="application/json,.json" style="display:none;" onchange="importWorthBackup(this.files[0])">
+    <p class="note-text">A backup is a plain JSON file you keep. It's the way to move your figures to another device — Dhanam has no account and no server, so nothing syncs on its own.</p>
+  </div>
+</div>
+
+</div>
+</div><!-- /hub-worth -->
 
 <div class="toast" id="toast"></div>
 
@@ -2468,6 +2571,7 @@ function switchHub(tab) {
   if (btn) btn.classList.add('active');
   if (tab === 'sip') { updateSIPPlanner(); updateStepupSIP(); updateLumpsum(); }
   if (tab === 'car') { renderCarCalc(); renderCarLoan(); }
+  if (tab === 'worth') renderWorth();
 }
 
 function openLoanCalc() {
@@ -2488,6 +2592,248 @@ function openDisbCalc() {
     renderLoanDisb();
   }
   el('section-disb').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// =====================================================================
+// DHANAM WORTH — net worth tracker
+// =====================================================================
+// Unlike every other hub, this one is stateful by nature: it answers "what
+// do I have today?", not "what would X cost?". It therefore persists by
+// design — a balance sheet you retype every visit is worth nothing (see
+// UX-ANALYSIS.md §2.2). Everything here is tier 1, so all of it is saved.
+const W_ASSETS = [
+  { id: 'cash',     label: 'Cash & Bank' },
+  { id: 'fd',       label: 'Fixed / Recurring Deposits' },
+  { id: 'mf',       label: 'Mutual Funds' },
+  { id: 'stocks',   label: 'Stocks' },
+  { id: 'retire',   label: 'EPF / PPF / NPS' },
+  { id: 'property', label: 'Property' },
+  { id: 'gold',     label: 'Gold' },
+  { id: 'other',    label: 'Other Assets' },
+];
+const W_LIABS = [
+  { id: 'home',  label: 'Home Loan Outstanding' },
+  { id: 'car',   label: 'Car Loan Outstanding' },
+  { id: 'other', label: 'Personal / Other Loans' },
+];
+let worthBuilt = false;
+let amountsHidden = false;
+
+function worthRowsHtml(list, prefix) {
+  return list.map(r => `
+    <div class="w-row">
+      <label for="w-${prefix}-${r.id}">${r.label}</label>
+      <span class="w-share" id="w-share-${prefix}-${r.id}"></span>
+      <input type="number" id="w-${prefix}-${r.id}" min="0" step="1000" placeholder="0" oninput="renderWorth()">
+    </div>`).join('');
+}
+
+function buildWorth() {
+  if (worthBuilt) return;
+  el('w-assets-rows').innerHTML = worthRowsHtml(W_ASSETS, 'a');
+  el('w-liab-rows').innerHTML = worthRowsHtml(W_LIABS, 'l');
+  worthBuilt = true;
+  hydrateWorth();
+  // M1d — installed PWAs keep their storage; browsers evict it for sites you
+  // haven't opened in a while. Only worth saying when not already installed.
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (!standalone) show('w-install-nudge');
+}
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function prettyDate(key) {
+  const d = new Date(key + 'T00:00:00');
+  if (isNaN(d.getTime())) return key;
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long' });
+}
+
+function hydrateWorth() {
+  if (!DS || !DS.worth) return;
+  W_ASSETS.forEach(r => { const val = DS.worth.a && DS.worth.a[r.id]; if (val) el('w-a-' + r.id).value = val; });
+  W_LIABS.forEach(r => { const val = DS.worth.l && DS.worth.l[r.id]; if (val) el('w-l-' + r.id).value = val; });
+}
+
+// The delta compares against the most recent entry from a *different* day —
+// today's own running entry must not be its own baseline.
+function worthDelta(net) {
+  if (!DS || !DS.history || !DS.history.length) return null;
+  const today = todayKey();
+  for (let i = DS.history.length - 1; i >= 0; i--) {
+    if (DS.history[i].date !== today) return { prev: DS.history[i].netWorth, date: DS.history[i].date };
+  }
+  return null;
+}
+
+function recordWorthHistory(net) {
+  const today = todayKey();
+  const h = DS.history;
+  const last = h[h.length - 1];
+  if (last && last.date === today) last.netWorth = net;
+  else h.push({ date: today, netWorth: net });
+  if (h.length > 120) h.splice(0, h.length - 120);   // cap; ~4 months of daily edits
+}
+
+function renderWorth() {
+  buildWorth();
+
+  let assets = 0, liabs = 0, anyInput = false;
+  const aVals = {}, lVals = {};
+  W_ASSETS.forEach(r => {
+    const val = v('w-a-' + r.id);
+    if (val) { aVals[r.id] = val; anyInput = true; }
+    assets += val;
+  });
+  W_LIABS.forEach(r => {
+    const val = v('w-l-' + r.id);
+    if (val) { lVals[r.id] = val; anyInput = true; }
+    liabs += val;
+  });
+  const net = assets - liabs;
+
+  // Per-row share of its own side, so a long list still reads at a glance
+  W_ASSETS.forEach(r => set('w-share-a-' + r.id, assets && aVals[r.id] ? (aVals[r.id]/assets*100).toFixed(0) + '%' : ''));
+  W_LIABS.forEach(r => set('w-share-l-' + r.id, liabs && lVals[r.id] ? (lVals[r.id]/liabs*100).toFixed(0) + '%' : ''));
+
+  set('w-assets-total', assets ? inCr(assets) : '—');
+  set('w-liab-total', liabs ? inCr(liabs) : '—');
+  set('w-assets-sub', assets ? inCr(assets) : '—');
+  set('w-liab-sub', liabs ? inCr(liabs) : '—');
+
+  if (!anyInput) {
+    // Empty state — never NaN, never a fabricated zero net worth
+    set('w-net', '—');
+    set('w-net-exact', '');
+    hide('w-change');
+  } else {
+    // A negative net worth is a real negative financial position, so it earns
+    // red (palette rule 4) — but the minus sign carries it too, never colour
+    // alone. Otherwise the hero stays gold as the primary answer (rule 2).
+    const neg = net < 0;
+    set('w-net', (neg ? '−' : '') + inCr(Math.abs(net)));
+    set('w-net-exact', (neg ? '−' : '') + fmt(Math.abs(net)));
+    el('w-net').classList.toggle('negative', neg);
+
+    const d = worthDelta(net);
+    const card = el('w-change');
+    if (!d) {
+      hide('w-change');   // nothing to compare against yet
+    } else {
+      const diff = net - d.prev;
+      const pct = d.prev ? Math.abs(diff / d.prev * 100) : 0;
+      card.style.display = '';
+      card.classList.remove('up', 'down');
+      if (Math.round(diff) === 0) {
+        set('w-change-arrow', '=');
+        set('w-change-amt', 'No change');
+        set('w-change-basis', `since ${prettyDate(d.date)}`);
+      } else {
+        const up = diff > 0;
+        card.classList.add(up ? 'up' : 'down');
+        set('w-change-arrow', up ? '▲' : '▼');
+        // Colour is never the only signal — the words say up/down too (rule 5)
+        set('w-change-amt', `${up ? 'Up' : 'Down'} ${inCr(Math.abs(diff))}${d.prev ? ` (${up ? '+' : '−'}${pct.toFixed(1)}%)` : ''}`);
+        set('w-change-basis', `since ${prettyDate(d.date)} · was ${inCr(d.prev)}`);
+      }
+    }
+  }
+
+  // Persist. Only once there's something real to store, so a first visit
+  // to an empty form doesn't seed a bogus ₹0 baseline for tomorrow's delta.
+  if (anyInput) {
+    if (!DS) DS = blankState();
+    DS.worth = { a: aVals, l: lVals };
+    recordWorthHistory(net);
+    saveState();
+  }
+  updateWorthStatus();
+}
+
+function updateWorthStatus() {
+  const p = el('w-saved-at');
+  const notice = el('w-notice');
+  if (storageFailed) {
+    p.textContent = "Couldn't save on this device — storage is full or blocked in this browser.";
+  } else if (DS && DS.worth && DS.lastSaved) {
+    const n = DS.history ? DS.history.length : 0;
+    p.textContent = `Saved on this device · ${savedAtLabel()}` + (n > 1 ? ` · ${n} snapshots kept` : '');
+  } else {
+    p.textContent = "Nothing saved yet — enter a value above and it's kept on this device.";
+  }
+  // M1c — we've been here before but the data is gone. Say so plainly; an
+  // unexplained blank form is the worst possible version of this.
+  if (storageEvicted || storageUnreadable) {
+    notice.style.display = '';
+    notice.textContent = storageUnreadable
+      ? "Your saved data couldn't be read, so Dhanam started fresh. Restore a backup below if you have one."
+      : 'Your browser cleared the data saved here. Restore a backup below, or start fresh.';
+  } else {
+    notice.style.display = 'none';
+  }
+}
+
+function toggleHideAmounts() {
+  amountsHidden = !amountsHidden;
+  el('worth-main').classList.toggle('amounts-hidden', amountsHidden);
+  set('w-hide-btn', amountsHidden ? '👁️ Show amounts' : '🙈 Hide amounts');
+}
+
+// ── Backup: export / restore (Option C, §2.3 M1a) ──────────────────────
+function exportWorthBackup() {
+  if (!DS) { showToast('Nothing to back up yet'); return; }
+  const payload = { app: 'dhanam', v: STORE_VER, exported: new Date().toISOString(), state: DS };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `dhanam-backup-${todayKey()}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast('Backup downloaded');
+}
+
+function importWorthBackup(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let payload;
+    try { payload = JSON.parse(reader.result); }
+    catch (e) { showToast("That file isn't a Dhanam backup"); return; }
+    // Validate exactly as loadState() does — an import must clear the same bar
+    const s = payload && payload.app === 'dhanam' ? payload.state : null;
+    if (!s || typeof s !== 'object' || s.v !== STORE_VER) {
+      showToast("That backup is from a different version and can't be read");
+      return;
+    }
+    if (DS && DS.worth && !confirm('Replace the figures saved on this device with the backup?')) return;
+    DS = Object.assign(blankState(), s);
+    storageEvicted = false; storageUnreadable = false;
+    saveState();
+    W_ASSETS.forEach(r => { el('w-a-' + r.id).value = ''; });
+    W_LIABS.forEach(r => { el('w-l-' + r.id).value = ''; });
+    hydrateWorth();
+    if (rememberingInputs()) { el('l-remember').checked = true; hydrateLoanInputs(); }
+    updateRememberHint();
+    renderWorth();
+    showToast('Backup restored');
+  };
+  reader.onerror = () => showToast("Couldn't read that file");
+  reader.readAsText(file);
+  el('w-import-file').value = '';   // allow re-picking the same file
+}
+
+function eraseWorthData() {
+  if (!confirm('Erase everything Dhanam has saved on this device? This includes your balance sheet, its history, and any remembered calculator inputs. It cannot be undone.')) return;
+  eraseState();
+  W_ASSETS.forEach(r => { el('w-a-' + r.id).value = ''; });
+  W_LIABS.forEach(r => { el('w-l-' + r.id).value = ''; });
+  el('l-remember').checked = false;
+  updateRememberHint();
+  renderWorth();
+  showToast('All saved data erased from this device');
 }
 
 // =====================================================================

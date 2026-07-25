@@ -45,6 +45,8 @@
 
 ### Phase 2 — Dhanam Worth (B2 answered: yes — build Option B + C per `UX-ANALYSIS.md` §2.1–§2.4)
 
+> **Status 2026-07-25:** 2a, 2b, 2c, 2e and 2f **shipped**. Still open: **2d** (trend chart), the **projection bridge** in 2b, and `buildWorthRows()` Excel export — all deliberately deferred to keep the first pass verifiable. The `history` array is already in the v1 schema, so the chart has data waiting for it.
+
 **2a — Persistence primitive (do this first, and prove it before Worth exists)**
 - `saveState()`/`loadState()` on `localStorage` under a single versioned key `dhanam.v1`.
 - **Tier-1 only** (§2.1): persist facts about the user (balances, salary, loan principal/tenure, SIP amount, purchase price). **Never persist tier 2** — rates, stamp duty %, tax slabs, ₹/sft premiums, IRDAI tables are re-read from code on every load. Tier 3 (open hub, expanded cards) is out of scope.

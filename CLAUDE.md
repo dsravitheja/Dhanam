@@ -29,7 +29,7 @@ The UI is organized into "hubs" (top-level tabs), toggled via `switchHub(tab)`, 
 - `hub-apartment` → **Dhanam Home** — property cost, home loan, and loan-disbursement (pre-EMI) calculators; the largest and most developed hub
 - `hub-car` → **Dhanam Car** — company car lease tax perquisite analysis, and a separate car-buying loan/depreciation section
 - `hub-sip` → **Dhanam Grow** — SIP planner (monthly / step-up / lumpsum sub-tabs via `switchSIPPlannerTab`)
-- A sixth tile, **Dhanam Worth** (net worth tracker), is shown disabled on the landing page and its tab bar entry is `disabled` — not yet implemented.
+- `hub-worth` → **Dhanam Worth** — net worth tracker: editable balance sheet, hero net-worth figure, change-since-last-update tile, and the backup/erase controls. The only hub that persists data — see **Persistence** below. Still missing (deferred, see `TASK-UX-REDESIGN.md` Phase 2d and the projection bridge in 2b): the collapsed net-worth trend chart, the +5/+10/+20-year projection reusing `calcSIP`/`loanAtYear`, and `buildWorthRows()` Excel export.
 
 Within `hub-apartment`, secondary panels (`section-detail`, `section-loan`, `section-disb`) are shown/hidden via `toggleSection(id)` and `action-btn` toggle buttons, not separate routes or hubs. `toggleSection` lazily initializes each panel the first time it's opened (`detailOpened`/`loanOpened`/`disbOpened` flags) rather than on page load.
 
@@ -42,9 +42,28 @@ For under-construction property loans where the bank disburses funds in stages a
 - **Do not call `renderDisbTranches()` from inside `renderLoanDisb()`.** `renderDisbTranches()` rewrites the tranche rows' `innerHTML`, which drops keyboard focus mid-typing if it runs on every keystroke (this was a real bug — fixed). It's only called on add/remove (`disbAddTranche`/`disbRemoveTranche`), on first open (`toggleSection`'s `disbOpened` branch), and from `resetAll()`. `renderLoanDisb()` itself just recomputes and updates the results table/summary from the current `disbTranches` state.
 - A single 100%-at-month-0 tranche degenerates to a plain EMI loan and must match the `hub-apartment` loan panel's numbers exactly for the same principal/rate/tenure — useful as a sanity check when touching this code.
 
-### No backend, no persistence
+### No backend; persistence is local-only and deliberately narrow
 
-Everything is client-side computation over form inputs — there's no `localStorage`/`sessionStorage`, no API calls, no database. State lives only in the DOM for the duration of the page session. Every input has an `oninput`/`onchange` handler that recalculates and re-renders synchronously (no debouncing, no async).
+There are no API calls, no database, and nothing ever leaves the device. Every input has an `oninput`/`onchange` handler that recalculates and re-renders synchronously (no debouncing, no async).
+
+Since Phase 2a there *is* a small `localStorage` layer, and the rules around it are strict:
+
+- **One versioned key**, `dhanam.v1`, plus a `dhanam.seen` marker used to detect browser eviction. `saveState()`/`loadState()`/`eraseState()` are the only entry points.
+- **Only tier-1 data is stored** — facts about the user (balances, their loan's numbers). **Never store tier-2 market or statutory assumptions** (the 8.75% rate default, stamp duty %, tax slabs, IRDAI depreciation): they must reload from code every time, or a stale saved value silently outlives reality. A field that has a meaningful app default (like `l-rate`) is persisted *only when the value differs from that default*. Full rationale in `UX-ANALYSIS.md` §2.1.
+- **Reads and writes never throw.** A corrupt, foreign, or wrong-version blob is treated as *absent* (`storageUnreadable`), a failed write sets `storageFailed` so the UI never claims data is safe when it isn't, and hydration runs **after** first render so a bad blob can't block paint. This matters more than usual: it's the only bug class in the app that a reload can't rescue the user from.
+- **The schema is flat and additive** — unknown keys ignored, missing keys defaulted. Only bump `STORE_VER` for genuinely breaking shape changes, and write a real migration when you do; never silently discard a user's balance sheet.
+- **`history` is append-only**, one `{date, netWorth}` entry per save-day (same-day saves overwrite), capped at 120. It exists so the change tile and the future trend chart have something to compare against — history cannot be reconstructed retroactively, so don't drop it.
+- Calculator hubs persist nothing unless the user opts in via the loan panel's "Remember my inputs on this device" toggle (default off; switching it off deletes the stored inputs). `hub-worth` persists by design — a balance sheet you retype every visit is worthless.
+- Users can **download a JSON backup, restore one, and erase everything**. Imports are validated exactly as `loadState()` validates. This is the only way to move data between devices; there is no sync and adding one would require a backend (`UX-ANALYSIS.md` §2.5).
+
+### Dhanam Worth specifics (`hub-worth`, `w-*` prefix)
+
+`renderWorth()` is the single entry point: reads all rows, totals both sides, writes the hero figure, updates the change tile, and persists. Rows are generated from the `W_ASSETS`/`W_LIABS` arrays by `buildWorth()` on first open (`worthBuilt` flag) — add a category there, not in the markup.
+
+- **The change tile** compares against the most recent history entry from a *different* day, so today's own running entry is never its own baseline. It renders nothing at all on a first visit, a neutral "No change" at zero, and `--green`/`--red` only for a real delta — always with an arrow glyph *and* the words "Up"/"Down", so colour is never the only signal (palette rule 5).
+- **Empty state** shows `—`, never `NaN` and never a fabricated ₹0 net worth; nothing is written to storage until at least one field is non-zero, so an empty first visit can't seed a bogus baseline for tomorrow's delta.
+- **Negative net worth** renders with a `−` prefix and turns the hero red (a real negative financial position, palette rule 4).
+- **"Hide amounts"** adds `.amounts-hidden` to `#worth-main`, which blurs every figure. If you add any element that displays a number or a share, add it to that selector too — the per-row `%` shares and the change tile's "was ₹X" basis line both had to be included.
 
 ### Naming/ID conventions
 
@@ -58,6 +77,7 @@ DOM IDs are short prefixed codes tying markup to JS lookups via the `v(id)` (num
 - `cb-*` — car buying/loan inputs
 - `sp-*` / `spt-*` — SIP planner (Dhanam Grow) tabs and inputs
 - `disb-*` — loan disbursement / pre-EMI calculator
+- `w-a-*` / `w-l-*` — Dhanam Worth asset / liability rows (generated from `W_ASSETS`/`W_LIABS`); other Worth elements are plain `w-*`
 
 When adding a new field, follow the existing prefix for its section and wire it through the section's single `render*`/`calc*` function rather than adding a new update path.
 
@@ -73,6 +93,7 @@ Each major feature has one `calc*`/`render*` entry point that reads all relevant
 - `calcCarDepreciation` **(calc.js)**, `renderCarLoan()` — car loan + IRDAI depreciation-based resale estimate
 - `updateSIPPlanner`, `calcStepupSIP` **(calc.js)**, `updateStepupSIP`, `updateLumpsum` — Dhanam Grow SIP planner
 - `renderLoanDisb()` — loan disbursement / pre-EMI tranche calculator (`section-disb` inside `hub-apartment`)
+- `renderWorth()` — Dhanam Worth balance sheet, net-worth hero, change tile, and persistence (`hub-worth`)
 
 ### Testing
 
@@ -88,9 +109,9 @@ One known, deliberately-not-silently-fixed finding lives in these tests: `calcSt
 
 Exports are hand-built with no library: `buildZip`/`_u16`/`_u32` construct a raw ZIP, `buildExcel`/`rowsToSheetXml` generate minimal SheetXML, and `exportDetailExcel`/`exportLoanExcel`/`exportCombinedExcel`/`exportSnapshot` assemble the rows per report. If you need to add a new export, follow the `buildDetailRows()`/`buildLoanRows()` pattern (return an array of row arrays) and pass it into `buildExcel`.
 
-### Manual test checklist — landing page & loan disbursement
+### Manual test checklist — landing page, loan disbursement & persistence
 
-No DOM-level test framework exists (see **Testing** above for the automated coverage that does exist, scoped to `calc.js`); re-run this list by hand (`python3 -m http.server`) whenever touching `hub-landing`, `section-disb`, or navigation:
+No DOM-level test framework exists (see **Testing** above for the automated coverage that does exist, scoped to `calc.js`); re-run this list by hand (`python3 -m http.server`) whenever touching `hub-landing`, `section-disb`, `hub-worth`, the persistence layer, or navigation:
 
 1. **Landing default**: fresh load shows the landing page, not the apartment hub; nav shows `⌂ Home` as the active tab.
 2. **Tile navigation**: each tile opens its destination and marks the matching nav tab active; the Dhanam Worth tile does nothing and looks dimmed. Every tile's `.tile-tool` subline should name a destination that actually exists (no orphaned or renamed hubs/sections).
@@ -107,6 +128,18 @@ No DOM-level test framework exists (see **Testing** above for the automated cove
    - Zero/empty inputs must not produce `NaN` or `Infinity` in any output cell.
    - Typing multiple digits into a tranche's `%`/month input must not lose keyboard focus between keystrokes.
 10. **PWA cache**: after bumping the `sw.js` cache version, a previously installed instance picks up the new landing page on reload.
+11. **Persistence — failure paths first** (these matter more than the happy path, because a bad blob is the only failure a reload can't rescue the user from). In devtools → Application → Local Storage:
+    - Write garbage into `dhanam.v1` and reload: the app must load normally from defaults, and the Worth hub must say the saved data couldn't be read.
+    - Set `v` to a different number and reload: the blob is ignored cleanly, same as above.
+    - Delete `dhanam.v1` but leave `dhanam.seen` and reload: the Worth hub reports that the browser cleared the data and offers restore.
+    - Override `localStorage.setItem` to throw, then type: calculators keep working and the UI says it couldn't save — it must never still claim "Saved on this device".
+    - Private/incognito window: everything calculates; no crash.
+12. **Persistence — happy path**: enter a balance sheet, reload, values and net worth return. Turn the loan panel's "Remember my inputs" toggle on, reload, inputs return and the total's hint reads "Remembered on this device"; toggle off and confirm `dhanam.v1` is gone.
+13. **Tier-2 leakage check**: confirm the stored blob contains no rates, stamp duty, tax-slab, or depreciation values. An untouched `l-rate` (8.75%) must **not** be stored; change it to 8.4% and it must be.
+14. **Change tile**: no tile at all on a first-ever visit; after planting an older `history` entry, editing one balance up shows a green ▲ with "Up ₹X (+Y%) since <date>"; editing down shows a red ▼ with "Down"; returning to the exact prior figure shows a neutral "No change". Readable in greyscale (colour is never the only signal).
+15. **Backup round-trip**: Download backup → Erase my data (form clears, `dhanam.*` keys gone) → Restore backup returns the same balance sheet and history. A non-JSON file and a wrong-version backup are both rejected with a message, not a crash.
+16. **Hide amounts**: every figure blurs — hero, assets/liabilities totals, per-row inputs, per-row `%` shares, and the change tile's "was ₹X" line. Labels stay readable.
+17. **Worth empty/edge states**: an all-empty sheet shows `—` everywhere and writes nothing to storage; liabilities exceeding assets shows a red `−₹X` hero; no `NaN`/`Infinity`/`undefined` anywhere in the hub.
 
 ### Styling
 
