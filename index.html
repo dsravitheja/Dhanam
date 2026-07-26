@@ -11,7 +11,76 @@
 <link rel="manifest" href="manifest.json">
 <title>Dhanam — Personal Financial Hub</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@400;500&display=swap');
+/* Self-hosted fonts (R5, Phase 4): subsetted to latin + latin-ext (needed for
+   the ₹ sign, U+20B9, which Google's plain "latin" subset excludes) from the
+   same Inter/Playfair Display/DM Mono families and weights the app already
+   used via the Google Fonts @import. Removes the fonts.googleapis.com/
+   fonts.gstatic.com network request the "nothing is ever sent anywhere"
+   landing copy was contradicting, and lets sw.js precache them for offline. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('fonts/inter-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('fonts/inter-latinext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('fonts/playfair-display-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('fonts/playfair-display-latinext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('fonts/dm-mono-400-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('fonts/dm-mono-400-latinext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('fonts/dm-mono-500-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('fonts/dm-mono-500-latinext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 
 :root {
   --bg: #0a0a0a;
@@ -151,6 +220,15 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   border-bottom:1px solid var(--border); background:var(--surface2);
 }
 .pch-title { flex:1; }
+/* Shared R7 icon set (replaces emoji-as-icon everywhere in UI chrome, see the
+   sprite of <symbol>s right after <body>). Sized in em so it scales with
+   whatever font-size its wrapping span/button already had for the emoji it
+   replaces; color is inherited (currentColor), never a fixed hue, so an
+   icon never becomes a fourth chromatic color outside palette rule 1 —
+   an active/selected ancestor coloring itself gold still colors its icon
+   gold too, same as it colored its text. */
+.icon { width:1em; height:1em; min-width:1em; min-height:1em; display:inline-block; vertical-align:-0.15em; flex-shrink:0; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.tile-icon, .ab-icon { color:var(--text-mid); }
 .pch-tag { font-size:10px; padding:2px 8px; border-radius:4px; background:var(--accent-dim); color:var(--accent); font-weight:600; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
 .panel-card-body { padding:16px 18px; }
 
@@ -524,6 +602,46 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 </head>
 <body>
 
+<!-- ===== ICON SPRITE (R7, Phase 4) =====
+     One shared set of inline-SVG line icons on currentColor, replacing the
+     emoji previously used as icons in nav/tiles/section headers/buttons.
+     Referenced everywhere via <svg class="icon"><use href="#i-name"></use></svg>.
+     Emoji intentionally remain in body copy (e.g. dynamic result labels) —
+     out of R7's scope, which is UI chrome only. -->
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+<defs>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10.5V20h12v-9.5"/><path d="M10 20v-6h4v6"/></symbol>
+<symbol id="i-car" viewBox="0 0 24 24"><path d="M4 16.5V13l2-5h12l2 5v3.5"/><path d="M4 16.5h16"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></symbol>
+<symbol id="i-trend-up" viewBox="0 0 24 24"><path d="M4 17 10 11l4 4 6-7"/><path d="M17 8h3v3"/></symbol>
+<symbol id="i-trend-down" viewBox="0 0 24 24"><path d="M4 7l6 6 4-4 6 7"/><path d="M17 16h3v-3"/></symbol>
+<symbol id="i-coin" viewBox="0 0 24 24"><rect x="2.5" y="6.5" width="19" height="11" rx="1.8"/><circle cx="12" cy="12" r="2.6"/><path d="M5.5 9.3v5.4M18.5 9.3v5.4"/></symbol>
+<symbol id="i-bank" viewBox="0 0 24 24"><path d="M3 10 12 4l9 6"/><path d="M4 10h16v1.5H4z"/><path d="M5.5 11.5V19M9 11.5V19M15 11.5V19M18.5 11.5V19"/><path d="M3 19.5h18"/></symbol>
+<symbol id="i-bar-chart" viewBox="0 0 24 24"><path d="M5 20V12M11 20V6M17 20v-9"/><path d="M3 20h18"/></symbol>
+<symbol id="i-construction" viewBox="0 0 24 24"><path d="M5 20V6l9 3"/><path d="M5 6h3"/><path d="M14 9l4 1.5"/><path d="M18 10.5V20"/><path d="M3 20h16"/></symbol>
+<symbol id="i-building" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="1"/><path d="M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1"/></symbol>
+<symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/></symbol>
+<symbol id="i-clipboard" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="1.5"/><rect x="9" y="2.5" width="6" height="3" rx="0.8"/><path d="M8 10h8M8 13.5h8M8 17h5"/></symbol>
+<symbol id="i-receipt" viewBox="0 0 24 24"><path d="M6 3h12v18l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5V3z"/><path d="M9 8h6M9 12h6"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="1.5"/><path d="M4 9.5h16"/><path d="M8 3v4M16 3v4"/></symbol>
+<symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="3.5" y="8" width="17" height="11" rx="1.5"/><path d="M8.5 8V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v2"/><path d="M3.5 13h17"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><circle cx="12" cy="7.7" r="0.15" stroke-width="2.6"/></symbol>
+<symbol id="i-scope" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></symbol>
+<symbol id="i-rocket" viewBox="0 0 24 24"><path d="M12 2.5c3 2 4.5 5.5 4.5 9 0 2-.5 3.5-1 4.5l-3.5 3-3.5-3c-.5-1-1-2.5-1-4.5 0-3.5 1.5-7 4.5-9z"/><circle cx="12" cy="10" r="1.6"/><path d="M9 15l-2.5 1L6 19l3-1.5M15 15l2.5 1L18 19l-3-1.5"/></symbol>
+<symbol id="i-camera" viewBox="0 0 24 24"><rect x="3" y="7.5" width="18" height="12.5" rx="1.5"/><path d="M8 7.5l1.5-3h5l1.5 3"/><circle cx="12" cy="14" r="3.6"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3.5 3.5l17 17"/><path d="M10.6 5.4A10.8 10.8 0 0 1 12 5.3c5 0 8.5 4 9.5 6.7-.5 1.3-1.6 3-3.2 4.4M7 6.8C4.5 8.3 2.9 10.5 2.5 12c1 2.7 4.5 6.7 9.5 6.7 1.4 0 2.7-.3 3.8-.8"/><path d="M9.9 10a3 3 0 0 0 4.2 4.2"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12C3.5 9.3 7 5.3 12 5.3s8.5 4 9.5 6.7c-1 2.7-4.5 6.7-9.5 6.7S3.5 14.7 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19.5h16"/></symbol>
+<symbol id="i-trophy" viewBox="0 0 24 24"><path d="M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M7 6H4.5a2 2 0 0 0 0 4H7M17 6h2.5a2 2 0 0 1 0 4H17"/><path d="M12 13v4"/><path d="M8 20h8"/><path d="M9 17h6l1 3H8l1-3z"/></symbol>
+<symbol id="i-reset" viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.5-5.4"/><path d="M19 3v5h-5"/></symbol>
+<symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M4 3.5h16"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15"/><path d="M9 7V4.8a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7"/><path d="M6.5 7l1 12.5a1.5 1.5 0 0 0 1.5 1.4h6a1.5 1.5 0 0 0 1.5-1.4L17.5 7"/><path d="M10 11v6M14 11v6"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 5 13.5h5.5L11 22l8-11.5h-5.5L13 2z"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+</defs>
+</svg>
+
 <div class="header">
   <div class="header-inner clickable" onclick="switchHub('landing')" title="Back to home">
     <img src="dhanamlogo.png" alt="Dhanam" class="header-logo">
@@ -537,11 +655,11 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <!-- ===== HUB NAVIGATION ===== -->
 <nav class="hub-nav">
   <div class="hub-nav-inner">
-    <button class="hub-tab active" id="ht-landing" onclick="switchHub('landing')">⌂ Home</button>
-    <button class="hub-tab" id="ht-apartment" onclick="switchHub('apartment')">🏠 Dhanam Home</button>
-    <button class="hub-tab" id="ht-car" onclick="switchHub('car')">🚗 Dhanam Car</button>
-    <button class="hub-tab" id="ht-sip" onclick="switchHub('sip')">📈 Dhanam Grow</button>
-    <button class="hub-tab" id="ht-worth" onclick="switchHub('worth')">💰 Dhanam Worth</button>
+    <button class="hub-tab active" id="ht-landing" onclick="switchHub('landing')"><svg class="icon"><use href="#i-home"></use></svg> Home</button>
+    <button class="hub-tab" id="ht-apartment" onclick="switchHub('apartment')"><svg class="icon"><use href="#i-home"></use></svg> Dhanam Home</button>
+    <button class="hub-tab" id="ht-car" onclick="switchHub('car')"><svg class="icon"><use href="#i-car"></use></svg> Dhanam Car</button>
+    <button class="hub-tab" id="ht-sip" onclick="switchHub('sip')"><svg class="icon"><use href="#i-trend-up"></use></svg> Dhanam Grow</button>
+    <button class="hub-tab" id="ht-worth" onclick="switchHub('worth')"><svg class="icon"><use href="#i-coin"></use></svg> Dhanam Worth</button>
   </div>
 </nav>
 
@@ -549,42 +667,42 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="hub-content active" id="hub-landing">
 <div class="main">
 
-<div class="section-title">⌂ Welcome to Dhanam</div>
+<div class="section-title"><svg class="icon"><use href="#i-home"></use></svg> Welcome to Dhanam</div>
 <p class="landing-intro">What do you want to do? Everything updates live as you type. Nothing is ever sent anywhere — anything you choose to save stays on this device.</p>
 
 <div class="tile-grid">
   <button class="tile" onclick="switchHub('sip')">
-    <span class="tile-icon">📈</span>
+    <span class="tile-icon"><svg class="icon"><use href="#i-trend-up"></use></svg></span>
     <span class="tile-title">Grow My Money</span>
     <span class="tile-tool">Dhanam Grow</span>
     <span class="tile-desc">SIP planner — monthly, step-up & lumpsum investment growth.</span>
   </button>
   <button class="tile" onclick="switchHub('worth')">
-    <span class="tile-icon">💰</span>
+    <span class="tile-icon"><svg class="icon"><use href="#i-coin"></use></svg></span>
     <span class="tile-title">Know My Net Worth</span>
     <span class="tile-tool">Dhanam Worth</span>
     <span class="tile-desc">Track assets, loans & investments in one place — saved on this device.</span>
   </button>
   <button class="tile" onclick="switchHub('apartment')">
-    <span class="tile-icon">🏠</span>
+    <span class="tile-icon"><svg class="icon"><use href="#i-home"></use></svg></span>
     <span class="tile-title">Plan a Home Purchase</span>
     <span class="tile-tool">Dhanam Home</span>
     <span class="tile-desc">Property cost breakdown, stamp duty, registration & GST estimator.</span>
   </button>
   <button class="tile" onclick="openLoanCalc()">
-    <span class="tile-icon">🏦</span>
+    <span class="tile-icon"><svg class="icon"><use href="#i-bank"></use></svg></span>
     <span class="tile-title">Finance My Home</span>
     <span class="tile-tool">Dhanam Home · Loan Analysis</span>
     <span class="tile-desc">EMI scenarios, prepayment projections & Buy-vs-SIP comparison.</span>
   </button>
   <button class="tile" onclick="openDisbCalc()">
-    <span class="tile-icon">💸</span>
+    <span class="tile-icon"><svg class="icon"><use href="#i-coin"></use></svg></span>
     <span class="tile-title">Buying Under Construction?</span>
     <span class="tile-tool">Dhanam Home · Pre-EMI Calculator</span>
     <span class="tile-desc">Pre-EMI interest across a staged disbursement schedule.</span>
   </button>
   <button class="tile" onclick="switchHub('car')">
-    <span class="tile-icon">🚗</span>
+    <span class="tile-icon"><svg class="icon"><use href="#i-car"></use></svg></span>
     <span class="tile-title">Optimize My Company Car</span>
     <span class="tile-tool">Dhanam Car</span>
     <span class="tile-desc">Company car lease tax perquisite, plus car loan & resale value.</span>
@@ -598,7 +716,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="main">
 
 <!-- ===== QUICK CALC ===== -->
-<div class="section-title">⚡ Quick Estimate</div>
+<div class="section-title"><svg class="icon"><use href="#i-bolt"></use></svg> Quick Estimate</div>
 <div class="quick-calc-card">
   <div class="qc-top">
     <span class="qc-badge">Instant estimate</span>
@@ -653,23 +771,23 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <!-- ===== ACTION BUTTONS ===== -->
 <div class="action-row">
   <button class="action-btn" id="btn-detail" onclick="toggleSection('detail')">
-    <span class="ab-icon">📊</span>
+    <span class="ab-icon"><svg class="icon"><use href="#i-bar-chart"></use></svg></span>
     <span class="ab-label">Detailed Cost Analysis</span>
     <span class="ab-arrow">▼</span>
   </button>
   <button class="action-btn" id="btn-loan" onclick="toggleSection('loan')">
-    <span class="ab-icon">🏦</span>
+    <span class="ab-icon"><svg class="icon"><use href="#i-bank"></use></svg></span>
     <span class="ab-label">Loan Analysis</span>
     <span class="ab-arrow">▼</span>
   </button>
   <button class="action-btn" id="btn-disb" onclick="toggleSection('disb')">
-    <span class="ab-icon">🏗️</span>
+    <span class="ab-icon"><svg class="icon"><use href="#i-construction"></use></svg></span>
     <span class="ab-label">Loan Disbursement (Pre-EMI)</span>
     <span class="ab-arrow">▼</span>
   </button>
   <div class="action-utils">
-    <button class="btn btn-secondary" onclick="exportSnapshot()">📸 Export</button>
-    <button class="btn btn-secondary" onclick="resetAll()">↺ Reset</button>
+    <button class="btn btn-secondary" onclick="exportSnapshot()"><svg class="icon"><use href="#i-camera"></use></svg> Export</button>
+    <button class="btn btn-secondary" onclick="resetAll()"><svg class="icon"><use href="#i-reset"></use></svg> Reset</button>
   </div>
 </div>
 
@@ -679,7 +797,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <!-- Property Base -->
   <div class="panel-card">
     <div class="panel-card-header">
-      <span>🏢</span>
+      <span><svg class="icon"><use href="#i-building"></use></svg></span>
       <span class="pch-title">Property Base</span>
       <span class="pch-tag">From Quick Estimate</span>
     </div>
@@ -699,7 +817,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
   <!-- Additional Features -->
   <div class="panel-card">
-    <div class="panel-card-header"><span>✨</span><span class="pch-title">Additional Features</span></div>
+    <div class="panel-card-header"><span><svg class="icon"><use href="#i-sparkle"></use></svg></span><span class="pch-title">Additional Features</span></div>
     <div class="panel-card-body" style="padding:0;">
       <div class="cf-group" style="margin:0;border:none;border-radius:0;">
 
@@ -747,7 +865,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
   <!-- Additional Charges -->
   <div class="panel-card">
-    <div class="panel-card-header"><span>📋</span><span class="pch-title">Additional Charges</span></div>
+    <div class="panel-card-header"><span><svg class="icon"><use href="#i-clipboard"></use></svg></span><span class="pch-title">Additional Charges</span></div>
     <div class="panel-card-body" style="padding:0;">
       <div class="cf-group" style="margin:0;border:none;border-radius:0;">
 
@@ -834,7 +952,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <!-- Government Charges -->
   <div class="panel-card">
     <div class="panel-card-header">
-      <span>🏛️</span>
+      <span><svg class="icon"><use href="#i-bank"></use></svg></span>
       <span class="pch-title">Government Charges</span>
       <span class="pch-tag" id="d-govt-uc-tag" style="display:none;">Under Construction</span>
     </div>
@@ -936,9 +1054,9 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   </div>
 
   <div class="btn-row">
-    <button class="btn btn-secondary" onclick="exportDetailExcel()">📊 Export Detail Excel</button>
-    <button class="btn btn-secondary" onclick="exportSnapshot('detail')">📸 Save as Image</button>
-    <button class="btn btn-secondary" id="btn-combined-from-detail" onclick="exportCombinedExcel()" style="display:none;">📋 Export Combined</button>
+    <button class="btn btn-secondary" onclick="exportDetailExcel()"><svg class="icon"><use href="#i-bar-chart"></use></svg> Export Detail Excel</button>
+    <button class="btn btn-secondary" onclick="exportSnapshot('detail')"><svg class="icon"><use href="#i-camera"></use></svg> Save as Image</button>
+    <button class="btn btn-secondary" id="btn-combined-from-detail" onclick="exportCombinedExcel()" style="display:none;"><svg class="icon"><use href="#i-clipboard"></use></svg> Export Combined</button>
   </div>
 </div><!-- /section-detail -->
 
@@ -1008,7 +1126,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
   <!-- Principal vs. interest over the tenure (R4) -->
   <div class="panel-card" id="l-chart-card" style="display:none;">
-    <div class="panel-card-header"><span>📊</span><span class="pch-title">Principal vs. Interest — 20-Year Tenure</span></div>
+    <div class="panel-card-header"><span><svg class="icon"><use href="#i-bar-chart"></use></svg></span><span class="pch-title">Principal vs. Interest — 20-Year Tenure</span></div>
     <div class="panel-card-body">
       <div class="chart-legend">
         <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Cumulative principal paid</span>
@@ -1041,7 +1159,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <!-- Advanced Loan Analysis -->
   <div class="adv-section" id="adv-section">
     <div class="adv-header" onclick="toggleAdv()">
-      <span style="font-size:16px;">🚀</span>
+      <span style="font-size:16px;"><svg class="icon"><use href="#i-rocket"></use></svg></span>
       <span class="adv-title">Advanced: Extra Payments Projection</span>
       <span class="adv-arrow">▼</span>
     </div>
@@ -1086,7 +1204,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <!-- Buy vs SIP section -->
   <div class="sip-section" id="sip-section">
     <div class="sip-header" onclick="toggleSIP()">
-      <span style="font-size:16px;">📈</span>
+      <span style="font-size:16px;"><svg class="icon"><use href="#i-trend-up"></use></svg></span>
       <span class="sip-title">Buy vs. SIP: What if you invested instead?</span>
       <span class="sip-arrow">▼</span>
     </div>
@@ -1131,8 +1249,8 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   </div>
 
   <div class="btn-row">
-    <button class="btn btn-secondary" onclick="exportLoanExcel()">📊 Export Loan Excel</button>
-    <button class="btn btn-secondary" id="btn-combined-from-loan" onclick="exportCombinedExcel()" style="display:none;">📋 Export Combined</button>
+    <button class="btn btn-secondary" onclick="exportLoanExcel()"><svg class="icon"><use href="#i-bar-chart"></use></svg> Export Loan Excel</button>
+    <button class="btn btn-secondary" id="btn-combined-from-loan" onclick="exportCombinedExcel()" style="display:none;"><svg class="icon"><use href="#i-clipboard"></use></svg> Export Combined</button>
   </div>
 </div><!-- /section-loan -->
 
@@ -1140,7 +1258,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="section-panel" id="section-disb">
 
   <div class="panel-card">
-    <div class="panel-card-header"><span>🏗️</span><span class="pch-title">Loan &amp; Tenure</span><span class="pch-tag">Live</span></div>
+    <div class="panel-card-header"><span><svg class="icon"><use href="#i-construction"></use></svg></span><span class="pch-title">Loan &amp; Tenure</span><span class="pch-tag">Live</span></div>
     <div class="panel-card-body">
       <div class="grid-3">
         <div class="field">
@@ -1169,19 +1287,19 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   </div>
 
   <div class="panel-card">
-    <div class="panel-card-header"><span>📅</span><span class="pch-title">Disbursement Tranches</span><span class="pch-tag">Live</span></div>
+    <div class="panel-card-header"><span><svg class="icon"><use href="#i-calendar"></use></svg></span><span class="pch-title">Disbursement Tranches</span><span class="pch-tag">Live</span></div>
     <div class="panel-card-body">
       <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">
         Add each stage the builder/bank releases funds — as a % of the sanctioned loan, and the month it's disbursed. During this phase, pre-EMI interest is charged only on the amount disbursed so far.
       </p>
       <div id="disb-tranche-rows"></div>
-      <button class="btn btn-secondary" onclick="disbAddTranche()">➕ Add Tranche</button>
+      <button class="btn btn-secondary" onclick="disbAddTranche()"><svg class="icon"><use href="#i-plus"></use></svg> Add Tranche</button>
       <div class="disb-warn" id="disb-warn"></div>
     </div>
   </div>
 
   <div class="panel-card">
-    <div class="panel-card-header"><span>📊</span><span class="pch-title">Disbursement Schedule</span><span class="pch-tag">Live</span></div>
+    <div class="panel-card-header"><span><svg class="icon"><use href="#i-bar-chart"></use></svg></span><span class="pch-title">Disbursement Schedule</span><span class="pch-tag">Live</span></div>
     <div class="panel-card-body">
       <table class="disb-schedule-table">
         <thead><tr><th>Stage</th><th>Cumulative Disbursed</th><th>Pre-EMI Interest / mo</th></tr></thead>
@@ -1191,7 +1309,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   </div>
 
   <div class="panel-card">
-    <div class="panel-card-header"><span>💰</span><span class="pch-title">Summary</span><span class="pch-tag">Live</span></div>
+    <div class="panel-card-header"><span><svg class="icon"><use href="#i-coin"></use></svg></span><span class="pch-title">Summary</span><span class="pch-tag">Live</span></div>
     <div class="panel-card-body">
       <div class="loan-stat"><span class="ls-lbl">Total Pre-EMI Interest Paid</span><span class="ls-val red" id="disb-total-preemi">—</span></div>
       <div class="loan-stat"><span class="ls-lbl">EMI after Final Disbursement</span><span class="ls-val big" id="disb-emi">—</span></div>
@@ -1209,9 +1327,9 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="hub-content" id="hub-car">
   <div class="main">
 
-    <div class="section-title">🚗 Company Car Lease — Tax Analysis</div>
+    <div class="section-title"><svg class="icon"><use href="#i-car"></use></svg> Company Car Lease — Tax Analysis</div>
     <div class="panel-card">
-      <div class="panel-card-header"><span>💼</span><span class="pch-title">Salary &amp; Car Policy Inputs</span><span class="pch-tag">Live</span></div>
+      <div class="panel-card-header"><span><svg class="icon"><use href="#i-briefcase"></use></svg></span><span class="pch-title">Salary &amp; Car Policy Inputs</span><span class="pch-tag">Live</span></div>
       <div class="panel-card-body">
         <div class="grid-3">
           <div class="field highlight">
@@ -1268,7 +1386,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <div id="car-summary" style="margin-bottom:14px;"></div>
 
     <div class="panel-card" style="margin-bottom:28px;">
-      <div class="panel-card-header"><span>ℹ️</span><span class="pch-title">Important Notes &amp; Caveats</span></div>
+      <div class="panel-card-header"><span><svg class="icon"><use href="#i-info"></use></svg></span><span class="pch-title">Important Notes &amp; Caveats</span></div>
       <div class="panel-card-body">
         <ul style="font-size:12px;color:var(--text-dim);line-height:2;padding-left:16px;">
           <li>Perquisite per IT Rule 3(2): ≤1600cc = ₹1,800/mo · &gt;1600cc = ₹2,400/mo · company driver = +₹900/mo.</li>
@@ -1281,7 +1399,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       </div>
     </div>
 
-    <div class="section-title">🏦 Car Buying — Loan Analysis</div>
+    <div class="section-title"><svg class="icon"><use href="#i-bank"></use></svg> Car Buying — Loan Analysis</div>
     <div class="loan-top">
       <div class="loan-inputs-grid">
         <div class="loan-field">
@@ -1302,7 +1420,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
     <div id="cb-cards" class="loan-grid" style="margin-bottom:14px;"></div>
     <div id="cb-depreciation" class="panel-card" style="margin-bottom:28px;display:none;">
-      <div class="panel-card-header"><span>📉</span><span class="pch-title">Estimated Resale Value (IRDAI Depreciation)</span></div>
+      <div class="panel-card-header"><span><svg class="icon"><use href="#i-trend-down"></use></svg></span><span class="pch-title">Estimated Resale Value (IRDAI Depreciation)</span></div>
       <div class="panel-card-body">
         <!-- Static sibling of cb-depr-body, not inside its innerHTML (R20,
              Phase 3c): cb-depr-body's table is rebuilt on every keystroke,
@@ -1321,17 +1439,17 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <!-- ===== SIP PLANNER HUB ===== -->
 <div class="hub-content" id="hub-sip">
   <div class="main">
-    <div class="section-title">📈 Dhanam Grow — SIP Planner</div>
+    <div class="section-title"><svg class="icon"><use href="#i-trend-up"></use></svg> Dhanam Grow — SIP Planner</div>
     <div class="sip-planner-tabs">
-      <button class="sip-planner-tab active" id="spt-monthly" onclick="switchSIPPlannerTab('monthly')">💰 Monthly SIP</button>
-      <button class="sip-planner-tab" id="spt-stepup" onclick="switchSIPPlannerTab('stepup')">📈 Step-up SIP</button>
-      <button class="sip-planner-tab" id="spt-lumpsum" onclick="switchSIPPlannerTab('lumpsum')">💵 Lumpsum</button>
+      <button class="sip-planner-tab active" id="spt-monthly" onclick="switchSIPPlannerTab('monthly')"><svg class="icon"><use href="#i-coin"></use></svg> Monthly SIP</button>
+      <button class="sip-planner-tab" id="spt-stepup" onclick="switchSIPPlannerTab('stepup')"><svg class="icon"><use href="#i-trend-up"></use></svg> Step-up SIP</button>
+      <button class="sip-planner-tab" id="spt-lumpsum" onclick="switchSIPPlannerTab('lumpsum')"><svg class="icon"><use href="#i-coin"></use></svg> Lumpsum</button>
     </div>
 
     <!-- Monthly SIP -->
     <div id="spt-content-monthly">
       <div class="panel-card">
-        <div class="panel-card-header"><span>💰</span><span class="pch-title">Monthly SIP Calculator</span></div>
+        <div class="panel-card-header"><span><svg class="icon"><use href="#i-coin"></use></svg></span><span class="pch-title">Monthly SIP Calculator</span></div>
         <div class="panel-card-body">
           <div class="grid-3">
             <div class="field highlight">
@@ -1361,7 +1479,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="panel-card">
-        <div class="panel-card-header"><span>📈</span><span class="pch-title">Corpus Growth Curve</span></div>
+        <div class="panel-card-header"><span><svg class="icon"><use href="#i-trend-up"></use></svg></span><span class="pch-title">Corpus Growth Curve</span></div>
         <div class="panel-card-body">
           <div class="chart-legend">
             <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Corpus</span>
@@ -1372,7 +1490,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="panel-card">
-        <div class="panel-card-header"><span>📅</span><span class="pch-title">Corpus at Milestones</span></div>
+        <div class="panel-card-header"><span><svg class="icon"><use href="#i-calendar"></use></svg></span><span class="pch-title">Corpus at Milestones</span></div>
         <div class="panel-card-body" style="padding:0;">
           <table class="milestone-table">
             <thead><tr><th>Year</th><th>Invested (₹)</th><th>Corpus (₹)</th><th>Gains (₹)</th></tr></thead>
@@ -1385,7 +1503,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <!-- Step-up SIP -->
     <div id="spt-content-stepup" style="display:none;">
       <div class="panel-card">
-        <div class="panel-card-header"><span>📈</span><span class="pch-title">Step-up SIP (Annual Increase)</span></div>
+        <div class="panel-card-header"><span><svg class="icon"><use href="#i-trend-up"></use></svg></span><span class="pch-title">Step-up SIP (Annual Increase)</span></div>
         <div class="panel-card-body">
           <div class="grid-2" style="margin-bottom:12px;">
             <div class="field highlight">
@@ -1421,7 +1539,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="panel-card">
-        <div class="panel-card-header"><span>📈</span><span class="pch-title">Corpus Growth Curve</span></div>
+        <div class="panel-card-header"><span><svg class="icon"><use href="#i-trend-up"></use></svg></span><span class="pch-title">Corpus Growth Curve</span></div>
         <div class="panel-card-body">
           <div class="chart-legend">
             <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Step-up corpus</span>
@@ -1433,7 +1551,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="panel-card">
-        <div class="panel-card-header"><span>📅</span><span class="pch-title">Year-by-year Milestones</span></div>
+        <div class="panel-card-header"><span><svg class="icon"><use href="#i-calendar"></use></svg></span><span class="pch-title">Year-by-year Milestones</span></div>
         <div class="panel-card-body" style="padding:0;">
           <table class="milestone-table">
             <thead><tr><th>Year</th><th>SIP/mo (₹)</th><th>Invested (₹)</th><th>Corpus (₹)</th></tr></thead>
@@ -1446,7 +1564,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <!-- Lumpsum -->
     <div id="spt-content-lumpsum" style="display:none;">
       <div class="panel-card">
-        <div class="panel-card-header"><span>💵</span><span class="pch-title">Lumpsum Investment Calculator</span></div>
+        <div class="panel-card-header"><span><svg class="icon"><use href="#i-coin"></use></svg></span><span class="pch-title">Lumpsum Investment Calculator</span></div>
         <div class="panel-card-body">
           <div class="grid-3">
             <div class="field highlight">
@@ -1475,7 +1593,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="panel-card">
-        <div class="panel-card-header"><span>📈</span><span class="pch-title">Growth Curve</span></div>
+        <div class="panel-card-header"><span><svg class="icon"><use href="#i-trend-up"></use></svg></span><span class="pch-title">Growth Curve</span></div>
         <div class="panel-card-body">
           <div class="chart-legend">
             <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Value</span>
@@ -1486,7 +1604,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="panel-card">
-        <div class="panel-card-header"><span>📅</span><span class="pch-title">Growth at Milestones</span></div>
+        <div class="panel-card-header"><span><svg class="icon"><use href="#i-calendar"></use></svg></span><span class="pch-title">Growth at Milestones</span></div>
         <div class="panel-card-body" style="padding:0;">
           <table class="milestone-table">
             <thead><tr><th>Year</th><th>Value (₹)</th><th>Gain (₹)</th><th>Multiplier</th></tr></thead>
@@ -1503,7 +1621,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="hub-content" id="hub-worth">
 <div class="main" id="worth-main">
 
-<div class="section-title">💰 Dhanam Worth</div>
+<div class="section-title"><svg class="icon"><use href="#i-coin"></use></svg> Dhanam Worth</div>
 <p class="landing-intro">What you own, minus what you owe. Saved only on this device — never sent anywhere.</p>
 
 <div class="total-card">
@@ -1531,7 +1649,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
      up or down?", this answers "what shape has it been?" (2d / R3) -->
 <div class="collapse-card" id="w-trend-card" style="display:none;">
   <div class="collapse-header" onclick="toggleChartCard('w-trend-card', renderWorthTrend)">
-    <span class="collapse-title">📉 Net worth over time</span>
+    <span class="collapse-title"><svg class="icon"><use href="#i-trend-down"></use></svg> Net worth over time</span>
     <span class="collapse-arrow">▼</span>
   </div>
   <div class="collapse-body">
@@ -1541,12 +1659,12 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 </div>
 
 <div class="panel-card">
-  <div class="panel-card-header"><span>🪙</span><span class="pch-title">Assets — what you own</span><span class="pch-total mono w-amt" id="w-assets-sub">—</span></div>
+  <div class="panel-card-header"><span><svg class="icon"><use href="#i-coin"></use></svg></span><span class="pch-title">Assets — what you own</span><span class="pch-total mono w-amt" id="w-assets-sub">—</span></div>
   <div class="panel-card-body" style="padding:0;" id="w-assets-rows"></div>
 </div>
 
 <div class="panel-card">
-  <div class="panel-card-header"><span>🧾</span><span class="pch-title">Liabilities — what you owe</span><span class="pch-total mono w-amt" id="w-liab-sub">—</span></div>
+  <div class="panel-card-header"><span><svg class="icon"><use href="#i-receipt"></use></svg></span><span class="pch-title">Liabilities — what you owe</span><span class="pch-total mono w-amt" id="w-liab-sub">—</span></div>
   <div class="panel-card-body" style="padding:0;" id="w-liab-rows"></div>
 </div>
 
@@ -1554,7 +1672,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
      saved balance sheet forward, so Worth is the app's anchor rather than a
      seventh calculator. -->
 <div class="panel-card" id="w-proj-card" style="display:none;">
-  <div class="panel-card-header"><span>🔭</span><span class="pch-title">Projected Net Worth</span></div>
+  <div class="panel-card-header"><span><svg class="icon"><use href="#i-scope"></use></svg></span><span class="pch-title">Projected Net Worth</span></div>
   <div class="panel-card-body">
     <p class="note-text" style="margin-bottom:12px;">Assumes your investments (all assets except property) grow at the rate below with your monthly savings added in, debts amortize at the rate/years below, and property value stays flat. A projection, not a promise.</p>
     <div class="grid-2">
@@ -1589,16 +1707,16 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 </div>
 
 <div class="panel-card">
-  <div class="panel-card-header"><span>🔒</span><span class="pch-title">Your data</span></div>
+  <div class="panel-card-header"><span><svg class="icon"><use href="#i-lock"></use></svg></span><span class="pch-title">Your data</span></div>
   <div class="panel-card-body">
     <p class="note-text" id="w-saved-at">Nothing saved yet — enter a value above and it's kept on this device.</p>
     <p class="note-text" id="w-install-nudge" style="display:none;">Tip: install Dhanam to your home screen. Browsers can clear data for sites you haven't opened in a while — installed apps keep theirs.</p>
     <div class="btn-row">
-      <button class="btn btn-secondary" onclick="toggleHideAmounts()" id="w-hide-btn">🙈 Hide amounts</button>
-      <button class="btn btn-secondary" onclick="exportWorthExcel()">📊 Export Excel</button>
-      <button class="btn btn-secondary" onclick="exportWorthBackup()">⬇️ Download backup</button>
-      <button class="btn btn-secondary" onclick="el('w-import-file').click()">⬆️ Restore backup</button>
-      <button class="btn btn-secondary" onclick="eraseWorthData()">🗑️ Erase my data</button>
+      <button class="btn btn-secondary" onclick="toggleHideAmounts()" id="w-hide-btn"><svg class="icon"><use href="#i-eye-off"></use></svg><span id="w-hide-btn-label">Hide amounts</span></button>
+      <button class="btn btn-secondary" onclick="exportWorthExcel()"><svg class="icon"><use href="#i-bar-chart"></use></svg> Export Excel</button>
+      <button class="btn btn-secondary" onclick="exportWorthBackup()"><svg class="icon"><use href="#i-download"></use></svg> Download backup</button>
+      <button class="btn btn-secondary" onclick="el('w-import-file').click()"><svg class="icon"><use href="#i-upload"></use></svg> Restore backup</button>
+      <button class="btn btn-secondary" onclick="eraseWorthData()"><svg class="icon"><use href="#i-trash"></use></svg> Erase my data</button>
     </div>
     <input type="file" id="w-import-file" accept="application/json,.json" style="display:none;" onchange="importWorthBackup(this.files[0])">
     <p class="note-text">A backup is a plain JSON file you keep. It's the way to move your figures to another device — Dhanam has no account and no server, so nothing syncs on its own.</p>
@@ -2358,7 +2476,7 @@ function renderLoans() {
       <div class="loan-stat"><span class="ls-lbl">Total Interest</span><span class="ls-val red">${inCr(totalInterest)}</span></div>
       <div class="loan-stat"><span class="ls-lbl">Total Amount Paid</span><span class="ls-val">${inCr(totalPaid + own)}</span></div>
       <div class="yr-break">
-        <div class="yr-break-title">📅 At 5-Year Mark</div>
+        <div class="yr-break-title"><svg class="icon"><use href="#i-calendar"></use></svg> At 5-Year Mark</div>
         <div class="loan-stat"><span class="ls-lbl">Principal Paid</span><span class="ls-val">${inCr(y5.principalPaid)}</span></div>
         <div class="loan-stat"><span class="ls-lbl">Interest Paid</span><span class="ls-val red">${inCr(y5.interestPaid)}</span></div>
         <div class="loan-stat"><span class="ls-lbl">Balance Remaining</span><span class="ls-val">${inCr(y5.balance)}</span></div>
@@ -2459,7 +2577,7 @@ function renderAdvLoan() {
       <div class="loan-stat"><span class="ls-lbl">With extra total interest</span><span class="ls-val" style="color:var(--green)">${inCr(adv.totalInterest)}</span></div>
       <div class="loan-stat"><span class="ls-lbl">Interest saved</span><span class="ls-val" style="color:var(--green)">${inCr(Math.max(0, normal.totalInterest - adv.totalInterest))}</span></div>
       <div class="yr-break">
-        <div class="yr-break-title">📅 At 5-Year Mark (with extra)</div>
+        <div class="yr-break-title"><svg class="icon"><use href="#i-calendar"></use></svg> At 5-Year Mark (with extra)</div>
         <div class="loan-stat"><span class="ls-lbl">Principal Paid</span><span class="ls-val">${inCr(adv.y5Principal)}</span></div>
         <div class="loan-stat"><span class="ls-lbl">Interest Paid</span><span class="ls-val red">${inCr(adv.y5Interest)}</span></div>
       </div>`;
@@ -2506,10 +2624,10 @@ function exportSnapshot(src) {
 
   // Header
   ctx.fillStyle = P.accent;
-  ctx.font = 'bold 26px Georgia, serif';
-  ctx.fillText('Apartment Cost Analysis', pad, 50);
+  ctx.font = "bold 26px 'Playfair Display', serif";
+  ctx.fillText('Dhanam — Home Cost Analysis', pad, 50);
   ctx.fillStyle = P.textDim;
-  ctx.font = '12px Arial';
+  ctx.font = "12px 'Inter', sans-serif";
   ctx.fillText('Hyderabad · ' + new Date().toLocaleDateString('en-IN'), pad, 70);
   if (uc) { ctx.fillStyle = P.accent; ctx.fillText('Under Construction Property', W - pad - 180, 70); }
 
@@ -2518,14 +2636,14 @@ function exportSnapshot(src) {
 
   // Total
   ctx.fillStyle = P.textDim;
-  ctx.font = '11px Arial';
+  ctx.font = "11px 'Inter', sans-serif";
   ctx.textAlign = 'center';
   ctx.fillText('TOTAL COST TO PURCHASE', W/2, 116);
   ctx.fillStyle = P.accent;
-  ctx.font = 'bold 44px Georgia, serif';
+  ctx.font = "bold 44px 'Playfair Display', serif";
   ctx.fillText(fmt(total || sqft*rate), W/2, 166);
   ctx.fillStyle = P.textDim;
-  ctx.font = '14px Arial';
+  ctx.font = "14px 'Inter', sans-serif";
   ctx.fillText(fmtCr(total || sqft*rate), W/2, 188);
   ctx.textAlign = 'left';
 
@@ -2550,7 +2668,7 @@ function exportSnapshot(src) {
   ].filter(Boolean);
 
   let y = 230;
-  ctx.font = '10px Arial';
+  ctx.font = "10px 'Inter', sans-serif";
   ctx.fillStyle = P.textDim;
   ctx.fillText('COMPONENT', pad, y);
   ctx.fillText('AMOUNT', 360, y);
@@ -2561,10 +2679,10 @@ function exportSnapshot(src) {
   rows.forEach((row, i) => {
     const isLast = i === rows.length - 1;
     ctx.fillStyle = isLast ? P.accent : (i%2===0 ? P.textMid : P.textDim);
-    ctx.font = isLast ? 'bold 13px Arial' : '12px Arial';
+    ctx.font = isLast ? "bold 13px 'Inter', sans-serif" : "12px 'Inter', sans-serif";
     ctx.fillText(row[0], pad, y);
     ctx.fillStyle = isLast ? P.accent : P.text;
-    ctx.font = '12px monospace';
+    ctx.font = "12px 'DM Mono', monospace";
     ctx.fillText(row[1], 360, y);
     ctx.fillStyle = P.textDim;
     ctx.fillText(row[2], 560, y);
@@ -2574,8 +2692,8 @@ function exportSnapshot(src) {
 
   y += 10;
   ctx.fillStyle = P.border; ctx.fillRect(pad, 780, W-pad*2, 1);
-  ctx.fillStyle = P.textDim; ctx.font = '10px Arial';
-  ctx.fillText('Apartment Cost Analyzer · ' + new Date().toLocaleString('en-IN'), pad, 796);
+  ctx.fillStyle = P.textDim; ctx.font = "10px 'Inter', sans-serif";
+  ctx.fillText('Dhanam · ' + new Date().toLocaleString('en-IN'), pad, 796);
   ctx.textAlign = 'right';
   ctx.fillText('All charges approximate · Prices in INR', W-pad, 796);
   ctx.textAlign = 'left';
@@ -2583,7 +2701,7 @@ function exportSnapshot(src) {
   canvas.toBlob(blob => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'apartment_cost_snapshot.png'; a.click();
+    a.href = url; a.download = 'dhanam_home_cost_snapshot.png'; a.click();
     URL.revokeObjectURL(url);
     showToast('Image saved!');
   }, 'image/png');
@@ -2680,7 +2798,7 @@ function buildDetailRows() {
   const R = (...c) => c;
   const B = () => [];
   const rows = [];
-  rows.push(['APARTMENT COST ANALYZER — HYDERABAD']);
+  rows.push(['DHANAM — HOME COST ANALYSIS (HYDERABAD)']);
   rows.push(['Generated: ' + new Date().toLocaleDateString('en-IN')]);
   rows.push(B());
   rows.push(['PROPERTY DETAILS']);
@@ -2748,7 +2866,7 @@ function buildLoanRows() {
   const l = LD;
   if (!l.loan) return null;
   const rows = [];
-  rows.push(['LOAN ANALYSIS — APARTMENT COST ANALYZER']);
+  rows.push(['DHANAM — HOME LOAN ANALYSIS']);
   rows.push(['Generated: ' + new Date().toLocaleDateString('en-IN')]);
   rows.push([]);
   rows.push(['LOAN INPUTS']);
@@ -2817,7 +2935,7 @@ function exportDetailExcel() {
   const rows = buildDetailRows();
   if (!rows) { showToast('Run Detailed Cost Analysis first'); return; }
   const buf = buildExcel([{ name: 'Cost Analysis', rows }]);
-  downloadExcel(buf, 'apartment_cost_analysis.xlsx');
+  downloadExcel(buf, 'dhanam_home_cost_analysis.xlsx');
   showToast('Detail Excel downloaded!');
 }
 
@@ -2825,7 +2943,7 @@ function exportLoanExcel() {
   const rows = buildLoanRows();
   if (!rows) { showToast('Complete Loan Analysis first'); return; }
   const buf = buildExcel([{ name: 'Loan Analysis', rows }]);
-  downloadExcel(buf, 'apartment_loan_analysis.xlsx');
+  downloadExcel(buf, 'dhanam_home_loan_analysis.xlsx');
   showToast('Loan Excel downloaded!');
 }
 
@@ -2837,7 +2955,7 @@ function exportCombinedExcel() {
   if (dRows) sheets.push({ name: 'Cost Analysis', rows: dRows });
   if (lRows) sheets.push({ name: 'Loan Analysis', rows: lRows });
   const buf = buildExcel(sheets);
-  downloadExcel(buf, 'apartment_full_analysis.xlsx');
+  downloadExcel(buf, 'dhanam_home_full_analysis.xlsx');
   showToast(`Combined Excel downloaded (${sheets.length} sheet${sheets.length>1?'s':''})!`);
 }
 
@@ -3292,7 +3410,8 @@ function updateWorthStatus() {
 function toggleHideAmounts() {
   amountsHidden = !amountsHidden;
   el('worth-main').classList.toggle('amounts-hidden', amountsHidden);
-  set('w-hide-btn', amountsHidden ? '👁️ Show amounts' : '🙈 Hide amounts');
+  el('w-hide-btn').querySelector('use').setAttribute('href', amountsHidden ? '#i-eye' : '#i-eye-off');
+  set('w-hide-btn-label', amountsHidden ? 'Show amounts' : 'Hide amounts');
 }
 
 // ── Backup: export / restore (Option C, §2.3 M1a) ──────────────────────
@@ -3530,7 +3649,7 @@ function renderSIPComparison() {
           <div class="loan-stat"><span class="ls-lbl">Interest cost</span><span class="ls-val red">${inCr(totalInterest)}</span></div>
           <div class="loan-stat"><span class="ls-lbl">SIP corpus</span><span class="ls-val" style="color:var(--accent)">${inCr(corpus)}</span></div>
           <div class="loan-stat verdict-row">
-            <span class="ls-lbl">${sipWins ? '📈 SIP wins by' : '🏢 Buying saves'}</span>
+            <span class="ls-lbl">${sipWins ? '<svg class="icon"><use href="#i-trend-up"></use></svg> SIP wins by' : '<svg class="icon"><use href="#i-building"></use></svg> Buying saves'}</span>
             <span class="ls-val" style="color:${sipWins ? 'var(--green)' : 'var(--accent)'}">${inCr(Math.abs(advantage))}</span>
           </div>
           ${breakeven !== null ? `<div class="note-text" style="padding:3px 0;">Property needs ≥${breakeven}% p.a. growth to match SIP</div>` : ''}
@@ -3563,7 +3682,7 @@ function renderSIPComparison() {
       <div class="loan-stat"><span class="ls-lbl">Total invested</span><span class="ls-val red">${inCr(totalPaid)}</span></div>
       <div class="loan-stat"><span class="ls-lbl">SIP corpus</span><span class="ls-val" style="color:var(--accent)">${inCr(corpus)}</span></div>
       <div class="loan-stat verdict-row">
-        <span class="ls-lbl">${sipWins ? '📈 SIP wins by' : '🏢 Buying saves'}</span>
+        <span class="ls-lbl">${sipWins ? '<svg class="icon"><use href="#i-trend-up"></use></svg> SIP wins by' : '<svg class="icon"><use href="#i-building"></use></svg> Buying saves'}</span>
         <span class="ls-val" style="color:${sipWins ? 'var(--green)' : 'var(--accent)'}">${inCr(Math.abs(advantage))}</span>
       </div>
       ${breakeven !== null ? `<div class="note-text" style="padding:3px 0;">Property needs ≥${breakeven}% p.a. growth to match SIP</div>` : ''}`;
@@ -3886,7 +4005,7 @@ function renderCarCalc() {
       <span class="car-summary-val" style="color:${bAdv >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(scenB.monthlyTakeHome)}/mo (${bAdv >= 0 ? '+' : ''}${fmt(bAdv)} vs baseline)</span>
     </div>
     <div class="car-summary-row" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
-      <span class="car-summary-lbl" style="font-weight:600;color:var(--text)">🏆 Best option</span>
+      <span class="car-summary-lbl" style="font-weight:600;color:var(--text)"><svg class="icon"><use href="#i-trophy"></use></svg> Best option</span>
       <span class="car-summary-val" style="color:var(--accent);font-weight:600">${best}</span>
     </div>
   </div>`;
