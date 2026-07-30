@@ -262,17 +262,53 @@ Both bugs push the same direction — the app **overstates** deductions/tax and 
 
 On the owner's own numbers (₹4.5L/mo total fixed pay, real PF ₹21,600/mo, new regime) the take-home figure moves from ₹2,93,950 to ₹3,26,350/mo — ₹32,400/mo of the reported ~₹40K discrepancy, consistent with the EPF bug being the dominant term. *Tracked as R33 (EPF field), R34 (marginal relief), R35 (field hint, shipped first) in `TASK-UX-REDESIGN.md`.*
 
+### D15. Dhanam Car's motor-car perquisite constants are pre-April-2026 law — *severity: high (correctness), effort: trivial* — ✅ **FIXED 2026-07-30**
+
+Found on 2026-07-30, same session as D14, when the owner asked directly whether the app reflects the perquisite rules that took effect April 1, 2026. It doesn't. `calcPerquisite()` in `calc.js` still hardcodes the *previous* Income-tax Rules, 1962 table:
+
+```js
+function calcPerquisite(bigEngine, hasDriver) {
+  return (bigEngine ? 2400 : 1800) + (hasDriver ? 900 : 0);
+}
+```
+
+The CBDT notified the Income-tax Rules, 2026 (under the new Income-tax Act, 2025) on 2026-03-20, effective 2026-04-01 — i.e. **already in force for the entire current financial year**, not a future change. The motor-car perquisite table (employer-owned/hired car, running costs met by employer, partly personal use — the scenario `calcPerquisite()` models) moved:
+
+| Scenario | Old (Rules 1962) — what the app returns | New (Rules 2026) — effective now |
+|---|---|---|
+| Engine ≤1.6L or EV | ₹1,800/mo | ₹5,000/mo |
+| Engine >1.6L | ₹2,400/mo | ₹7,000/mo |
+| Chauffeur add-on | ₹900/mo | ₹3,000/mo |
+
+Effect: `perqAnnual` (added to taxable income in Carve-out A and Additive B) is understated by **₹38,400–₹80,400/year** depending on engine size and driver, which understates tax and overstates take-home in those two scenarios specifically — the Baseline scenario doesn't use `calcPerquisite()` at all, so it's unaffected. *(This bullet originally gave the range as ₹38,400–₹55,200; measuring all four combinations during the fix showed that covers only the no-chauffeur cases. With a driver it's ₹63,600 at ≤1.6L and ₹80,400 at >1.6L, since the chauffeur add-on itself more than tripled.)*
+
+Checked at the same time and found **not** stale: Budget 2026 left the new-regime slabs, the ₹75,000 standard deduction, and the ₹12L/₹60,000 Section 87A rebate that `calcIncomeTax()` depends on unchanged for FY2026-27 — so this is isolated to the four perquisite constants, not a wider tax-engine problem.
+
+*Fix:* update the four constants to the Rules 2026 table above; low effort, no architectural change (still a pure function in `calc.js`), but needs a `node tests.js` case pinning the new values so a future "helpful" revert back to the old numbers gets caught.
+
+**✅ Shipped 2026-07-30 (Phase 8b; full writeup in `PHASE-8B-REPORT.md`).** The four constants now hold the Rules 2026 table, with the notification and commencement dates recorded in a comment beside them. Tests went 45 → 47: all four values pinned, plus the chauffeur add-on asserted flat at ₹3,000 across engine sizes, plus an explicit check that no Rules 1962 value (₹1,800/₹2,400/₹900/₹2,700/₹3,300) survives anywhere in the table.
+
+Two things were done beyond the stated fix, both because the research turned them up:
+
+- **The figures were verified against source rather than taken on trust** — including the detail that matters most here: the ₹5,000/₹7,000 row is the **employer-meets-running-expenses** case, which is exactly what this hub models (the employer pays EMI, fuel and driver). Mapping to the wrong row would have produced a new confidently-wrong number while claiming to fix one. The rule *number* under the Rules 2026 could **not** be confirmed from any source, so the caveat copy cites "Income-tax Rules, 2026 (in force 1 Apr 2026)" instead of carrying the old "IT Rule 3(2)" citation into a rulebook where it may no longer hold.
+- **The engine checkbox now says "(leave off for electric)".** The ≤1.6L bracket explicitly covers EVs and nothing on screen said so; an EV owner guessing wrong is a ₹24,000/year error in taxable perquisite.
+
+*Tracked as R37, Phase 8b in `TASK-UX-REDESIGN.md`.*
+
+**The wider lesson, since this is the third statutory-constant bug in two days** (R33's EPF model, R34's 87A cliff, and now R37): these constants were all correct when typed and rotted silently afterwards, with nothing on screen dating them and no test that would fail when the law moved. The perquisite figures were wrong for four months before anyone thought to ask. That's the case for D11/D13's provenance work (Phase 6b) stated in concrete terms — and until it lands, the cheap mitigation is that **any commit touching a statutory constant should date it in the visible copy and pin it with a test**, which is what this one does for one hub.
+
 ---
 
 ## Priority map
 
-> **Read this as the original ordering, not the live one.** Most of what follows has shipped; `TASK-UX-REDESIGN.md`'s "Remaining work" table is the authoritative view of what's left. Three items were added after the original analysis and sit **above everything still open below** — each is a real numbers-are-wrong bug or a universality gap, not a polish item:
+> **Read this as the original ordering, not the live one.** Most of what follows has shipped; `TASK-UX-REDESIGN.md`'s "Remaining work" table is the authoritative view of what's left. Four items were added after the original analysis and sit **above everything still open below** — each is a real numbers-are-wrong bug or a universality gap, not a polish item:
 >
 > | # | Item | Type | Severity | Effort |
 > |---|---|---|---|---|
 > | 0a | D13 regional defaults presented as universal | **Correctness** | **High** | Medium |
 > | 0b | D12 comparison framing (pre-tax vs guaranteed) | **Correctness/trust** | **High** | Low (framing) / High (modeling) |
 > | ~~0c~~ | ~~D14 Dhanam Car EPF base bug + missing 87A marginal relief~~ — ✅ **FIXED 2026-07-30** (Phase 8) | **Correctness/bug** | **High** | Low–Medium |
+> | ~~0d~~ | ~~D15 Dhanam Car perquisite constants are pre-April-2026 law~~ — ✅ **FIXED 2026-07-30** (Phase 8b) | **Correctness** | **High** | Trivial |
 
 | # | Item | Type | Severity | Effort |
 |---|---|---|---|---|

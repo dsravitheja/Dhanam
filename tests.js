@@ -275,12 +275,36 @@ ok('calcIncomeTax: old regime cliff is untouched by the new-regime relief fix',
   `got ${calcIncomeTax(500001, 'old')}, expected ${12500.2 * 1.04}`);
 
 // =====================================================================
-// calcPerquisite — exact lookup table per IT Rule 3(2)
+// calcPerquisite — exact lookup table, Income-tax Rules 2026 (R37 / D15)
 // =====================================================================
-ok('calcPerquisite: small engine, no driver -> 1800', calcPerquisite(false, false) === 1800);
-ok('calcPerquisite: big engine, no driver -> 2400', calcPerquisite(true, false) === 2400);
-ok('calcPerquisite: small engine, with driver -> 2700', calcPerquisite(false, true) === 2700);
-ok('calcPerquisite: big engine, with driver -> 3300', calcPerquisite(true, true) === 3300);
+// In force from 2026-04-01. These four assertions exist to *pin* the current
+// statutory values, not to prove arithmetic — the function is a lookup table,
+// so the only way it can go wrong is by holding stale law, which is exactly
+// what happened before Phase 8b (it still returned the Rules 1962 figures
+// ₹1,800 / ₹2,400 / ₹900 months after they were superseded). A failure here
+// means someone changed the constants: check it against the Act before
+// "fixing" the test.
+ok('calcPerquisite: <=1.6L or EV, no driver -> 5000', calcPerquisite(false, false) === 5000,
+  `got ${calcPerquisite(false, false)}`);
+ok('calcPerquisite: >1.6L, no driver -> 7000', calcPerquisite(true, false) === 7000,
+  `got ${calcPerquisite(true, false)}`);
+ok('calcPerquisite: <=1.6L or EV, with driver -> 8000', calcPerquisite(false, true) === 8000,
+  `got ${calcPerquisite(false, true)}`);
+ok('calcPerquisite: >1.6L, with driver -> 10000', calcPerquisite(true, true) === 10000,
+  `got ${calcPerquisite(true, true)}`);
+
+// The chauffeur add-on must be a flat ₹3,000 regardless of engine size — a
+// property the four point assertions above imply but don't state, and the one
+// most likely to be broken by a careless edit to the ternaries.
+ok('calcPerquisite: chauffeur add-on is a flat 3000, independent of engine size',
+  calcPerquisite(false, true) - calcPerquisite(false, false) === 3000 &&
+  calcPerquisite(true, true) - calcPerquisite(true, false) === 3000);
+
+// None of the Rules 1962 values may survive anywhere in the table.
+ok('calcPerquisite: no pre-2026 value (1800/2400/900/2700/3300) is still returned',
+  ![1800, 2400, 900, 2700, 3300].some(stale =>
+    [calcPerquisite(false, false), calcPerquisite(true, false),
+     calcPerquisite(false, true), calcPerquisite(true, true)].includes(stale)));
 
 // =====================================================================
 // calcCarDepreciation
