@@ -1364,7 +1364,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin-top:14px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);cursor:pointer;">
             <input type="checkbox" id="car-big-engine" onchange="renderCarCalc()" style="accent-color:var(--accent);width:16px;height:16px;">
-            Engine &gt; 1600cc
+            Engine &gt; 1600cc <span style="color:var(--text-dim)">(leave off for electric)</span>
           </label>
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);cursor:pointer;">
             <input type="checkbox" id="car-has-driver" onchange="renderCarCalc()" style="accent-color:var(--accent);width:16px;height:16px;">
@@ -1390,7 +1390,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       <div class="panel-card-header"><span><svg class="icon"><use href="#i-info"></use></svg></span><span class="pch-title">Important Notes &amp; Caveats</span></div>
       <div class="panel-card-body">
         <ul style="font-size:12px;color:var(--text-dim);line-height:2;padding-left:16px;">
-          <li>Perquisite per IT Rule 3(2): ≤1600cc = ₹1,800/mo · &gt;1600cc = ₹2,400/mo · company driver = +₹900/mo.</li>
+          <li>Perquisite per the Income-tax Rules, 2026 (in force 1 Apr 2026): ≤1600cc or electric = ₹5,000/mo · &gt;1600cc = ₹7,000/mo · company driver = +₹3,000/mo. These replaced the long-standing ₹1,800/₹2,400/₹900 figures under the Income-tax Rules, 1962 — roughly a 3× increase, so a car package that looked worthwhile under the old table may not under this one.</li>
           <li>Old regime includes standard deduction (₹50,000) + 80C (₹1.5L) only. HRA, 80D excluded for simplicity.</li>
           <li>New regime (FY2025-26): standard deduction ₹75,000; rebate u/s 87A for taxable ≤ ₹12L, with marginal relief up to ≈₹12.71L.</li>
           <li>EPF is taken from the amount you enter, not derived from salary — real EPF applies to Basic + DA only, which this app has no way to infer from total fixed pay. The same figure is used in all three scenarios, since a car carve-out comes out of allowances rather than Basic.</li>

@@ -140,8 +140,21 @@ function calcIncomeTax(annualTaxable, regime) {
   return tax * 1.04; // 4% cess
 }
 
+// Motor-car perquisite, monthly. Income-tax Rules, 2026 (under the Income-tax
+// Act, 2025) — CBDT-notified 2026-03-20, in force from 2026-04-01. Models the
+// row this app's car hub actually describes: car owned/hired by the employer,
+// running and maintenance met by the employer, partly personal use.
+//
+// Superseded the Income-tax Rules, 1962 figures (₹1,800 / ₹2,400 / ₹900 driver)
+// that this function returned until Phase 8b — roughly a 3× increase. The
+// ≤1.6-litre bracket explicitly covers electric vehicles, which is why an EV
+// belongs in the `bigEngine = false` branch regardless of motor size.
+//
+// Tier-2 statutory data: never persisted, always re-read from here (see
+// CLAUDE.md's persistence rules). If a later Finance Act moves these, change
+// them here and update the as-of date in index.html's caveat list.
 function calcPerquisite(bigEngine, hasDriver) {
-  return (bigEngine ? 2400 : 1800) + (hasDriver ? 900 : 0);
+  return (bigEngine ? 7000 : 5000) + (hasDriver ? 3000 : 0);
 }
 
 function calcCarDepreciation(price, years) {

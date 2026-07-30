@@ -138,11 +138,19 @@ ok('calcIncomeTax: above the breakeven (13L) -> full slab tax 78000, relief no l
 // Old regime has no marginal-relief provision — its cliff is real law, not a bug.
 ok('calcIncomeTax: old regime cliff untouched by the new-regime relief fix', approxEqual(calcIncomeTax(500001, 'old'), 12500.2 * 1.04, 0.01), `got ${calcIncomeTax(500001,'old')}`);
 
-// calcPerquisite
-ok('calcPerquisite: small engine, no driver -> 1800', calcPerquisite(false, false) === 1800);
-ok('calcPerquisite: big engine, no driver -> 2400', calcPerquisite(true, false) === 2400);
-ok('calcPerquisite: small engine, with driver -> 2700', calcPerquisite(false, true) === 2700);
-ok('calcPerquisite: big engine, with driver -> 3300', calcPerquisite(true, true) === 3300);
+// calcPerquisite — Income-tax Rules 2026, in force 2026-04-01 (R37 / D15).
+// These pin current statutory values; a failure means the constants moved.
+ok('calcPerquisite: <=1.6L or EV, no driver -> 5000', calcPerquisite(false, false) === 5000, `got ${calcPerquisite(false,false)}`);
+ok('calcPerquisite: >1.6L, no driver -> 7000', calcPerquisite(true, false) === 7000, `got ${calcPerquisite(true,false)}`);
+ok('calcPerquisite: <=1.6L or EV, with driver -> 8000', calcPerquisite(false, true) === 8000, `got ${calcPerquisite(false,true)}`);
+ok('calcPerquisite: >1.6L, with driver -> 10000', calcPerquisite(true, true) === 10000, `got ${calcPerquisite(true,true)}`);
+ok('calcPerquisite: chauffeur add-on is a flat 3000, independent of engine size',
+  calcPerquisite(false, true) - calcPerquisite(false, false) === 3000 &&
+  calcPerquisite(true, true) - calcPerquisite(true, false) === 3000);
+ok('calcPerquisite: no pre-2026 value (1800/2400/900/2700/3300) is still returned',
+  ![1800, 2400, 900, 2700, 3300].some(stale =>
+    [calcPerquisite(false,false), calcPerquisite(true,false),
+     calcPerquisite(false,true), calcPerquisite(true,true)].includes(stale)));
 
 // calcCarDepreciation
 ok('calcCarDepreciation: year 1 is exactly 80% of price', calcCarDepreciation(1000000, 1) === 1000000 * 0.80);
