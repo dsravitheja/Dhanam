@@ -167,6 +167,14 @@ Owner's intent, noted here so it isn't rediscovered later: user accounts are a p
 - **Sequencing:** ship B + C, see whether the net-worth habit actually forms and whether cross-device demand is real (from real use, not speculation). If it is, the JSON schema from §2.1 becomes the natural sync payload, and the tier-1/tier-2 split already drawn here is exactly the boundary a server would store versus compute. Nothing in the local design has to be undone to move later — which is the point of doing it in this order.
 - **Do not half-build it.** No analytics, no "optional cloud backup", no telemetry as a stepping stone; those forfeit the privacy claim without delivering accounts.
 
+**Update 2026-07-25 — the audience answer changes the stakes here, not the conclusion.** Going public makes the "never sent anywhere" claim a promise to strangers rather than a note to self, which *raises* the bar for adding a backend rather than lowering it. Firebase specifically has been raised as the likely candidate; the conditions it would have to meet are written up in `TASK-UX-REDESIGN.md` under "Out of scope" (tracked as B9). The three that matter most:
+
+- **The promise is a one-way ratchet.** It can be tightened silently; it cannot be loosened silently. If data ever reaches a server, the copy changes *everywhere* — landing page, About page, Worth hub — **before** the feature ships, not after.
+- **Adopt a server only for a feature that cannot exist without one**, and name that feature first. Cross-device is already answered, imperfectly but honestly, by the JSON backup. "It would be nice to have accounts" is not a feature.
+- **If it happens, encrypt client-side before upload** so the server holds a blob it cannot read. That's the only shape in which the differentiator survives roughly intact — and note that in a client-only app, Firestore security rules are the *entire* security model, with nothing behind them.
+
+**One more consequence of going public:** the beta itself is now the primary source of product truth. §2.2's argument — that the habit either forms or it doesn't, and speculation won't tell you which — applies to every open question in this document. The owner's own scenario-running is what surfaced D12; watching five non-family testers, ideally outside Telangana, is what will surface the next one.
+
 ---
 
 ## Design-quality issues (Apple-lens + industry best practice)
@@ -214,9 +222,57 @@ Excel and PNG exports are titled "APARTMENT COST ANALYZER — HYDERABAD" — the
 - Milestone/amortization tables have no `overflow-x` wrapper at narrow widths.
 - Car loan EMI re-implements the formula inline instead of calling `calcEMI` (consistency risk, not a bug today).
 
+> ⚠️ **Third bullet promoted out of this list (2026-07-25).** "Invisible assumptions in otherwise-editable calculators" was rated *low* here because the audience was one person who knew what the assumptions were. Once the audience question was answered — general — it stopped being a nick and became a correctness bug. It is now **D13**, high severity. The rest of D11 stays low.
+
+### D12. Comparisons mix pre-tax, post-tax and risk-adjusted numbers — *severity: high (correctness/trust), effort: low for the framing, high for the modeling*
+
+Found on 2026-07-26 by the owner running a real scenario — defer a house purchase two years, invest the would-be EMI as an SIP — and noticing the SIP looked better than it was. Two distinct problems, and conflating them leads to building the expensive one first:
+
+- **Framing (the serious one).** The Buy-vs-SIP and prepay-vs-SIP panels place a **risky, pre-tax** figure beside a **guaranteed, effectively tax-free** one and present the difference as though it were real. Prepaying a loan returns the loan rate with certainty and triggers no tax event; an SIP returns an uncertain amount taxed on redemption. Much of the displayed gap is an artifact of comparing two different kinds of number. **This is not fixable by adding figures** — it needs the framing changed. The distortion runs both ways: the borrow side has untaxed benefits (Section 24, 80C, old regime) the app also ignores, so naming only the SIP side's tax drag would swap one bias for its mirror image.
+- **Precision (the ordinary one).** Every corpus and gain figure in the app is pre-tax, which systematically overstates what the user actually ends up with.
+
+**The test that separates them, and the general rule this document should apply from here on:** *if the user reads only the hero number and nothing else, are they **misled**, or merely **imprecise**?* Misled ⇒ change the number or its framing; a footnote won't help, because people read numbers and skip notes. Imprecise ⇒ a dated, plainly-worded disclaimer is honest and sufficient. Redemption timing and future tax law are the second kind — the app genuinely cannot know them, and saying so is the correct answer. The comparison panels are the first kind.
+
+⚠️ **Modeling this properly is harder than it looks and may not be worth it.** Each SIP installment carries its own holding-period clock, so a redemption splits into long-term and short-term buckets by installment date; `calcSIP` is a closed-form annuity that structurally cannot express that (only a month-by-month simulation can). And equity tax treatment changed in 2018, 2023 and 2024 — a precise post-tax figure projected twenty years out asserts both a redemption event that may never happen and rules that will certainly change. **A precisely wrong number is worse than a roughly right range, and worse than an honest "we don't model this."**
+
+*Tracked as 6d-i (framing, ships with the prepayment tile) and R31/R32 (Phase 7) in `TASK-UX-REDESIGN.md`.*
+
+### D13. Regional defaults are presented as universal — *severity: high (correctness), effort: medium*
+
+Promoted out of D11 on 2026-07-25 when the audience question was answered in favour of a general Indian user base. Stamp duty (4%), registration (0.5%), the ₹/sft premiums and the milestone schedule are Telangana values, hardcoded, with **no regional qualifier anywhere on screen**. A user in Pune or Bengaluru receives a confidently wrong total and — unlike every other issue in this document — has no way to notice: nothing looks broken, no field appears wrong, the arithmetic is internally consistent. **A wrong number delivered confidently is worse than no number.**
+
+The fix isn't an exhaustive rate database, which would silently rot. A state selector driving stamp duty and registration, defaulting to Telangana so nothing regresses for the owner, with both values still directly editable and the active state visible beside the figures it drives, is more honest and more maintainable. *Tracked as R21/Phase 6a.*
+
+### D14. Dhanam Car overstates the EPF deduction, understating take-home by tens of thousands/month — *severity: high (correctness/bug), effort: low–medium* — ✅ **FIXED 2026-07-30**
+
+Found on 2026-07-30 by the owner comparing "Optimize My Car"'s take-home figure against their real payslip and finding it off by roughly ₹40K/month. Two distinct bugs, of different sizes:
+
+- **The big one — EPF computed on the wrong base.** `renderCarCalc()` in `index.html` has exactly one salary-amount field, `car-basic` ("Basic Monthly Salary"), and reuses it for two different things: it's the base for annual gross salary (correct — gross for tax purposes should include Basic + HRA + Special Allowance), *and* it's the base for the EPF deduction (`basic * epfPct`, wrong — real EPF is calculated only on statutory Basic + DA, not on HRA or Special Allowance). A user who — reasonably, since there's no other field for it — enters their whole fixed pay into `car-basic` gets EPF calculated on their entire fixed pay instead of just the Basic slice of it. Since Basic is often only ~40–50% of total fixed pay in Indian salary structures, this can overstate the EPF deduction by ₹25–35K/month at upper-middle salary levels, which lands directly on the take-home figure. The field's own hint text ("Applied on basic salary") describes the intended behaviour, not the actual one, once the field is being used to hold total fixed pay rather than pure Basic.
+- **The small one — no Section 87A marginal relief.** `calcIncomeTax()` in `calc.js` treats the ₹12L new-regime rebate as a hard cliff (`if (annualTaxable <= 1200000) tax = 0`). Real law has marginal relief for taxable income between ₹12,00,000 and ~₹12,70,000 that caps tax at `taxable − 1200000`; the app's naive slab math overtaxes anyone landing in that ~₹70K band. *(This bullet originally estimated the overcharge at "up to ~₹31K/year". Measuring it during the fix put it at **₹62,399/year — ~₹5,200/month — at its worst**, right at the threshold, decaying linearly to zero at the ₹12,70,588 breakeven. Twice the original estimate, and a real cliff: earning ₹1 over ₹12,00,000 of taxable income cost ₹62,400 in tax.)*
+
+Both bugs push the same direction — the app **overstates** deductions/tax and **understates** take-home — so they compound rather than partially cancel, which is consistent with the owner's ~₹40K/month discrepancy being explained almost entirely by the first bug, with the second contributing a smaller amount if their taxable income happens to sit in that band.
+
+*Fix path (agreed with owner):* rejected adding a second "true Basic" field, since most people don't know that split any better than they know the EPF math — it would just relocate the confusion. Instead, add a dedicated **"Monthly EPF Deduction (₹)"** input (defaulted to a reasonable estimate, fully editable) taken straight off the user's payslip, and stop deriving EPF from `car-basic` entirely.
+
+**✅ Shipped 2026-07-30 (Phase 8; full writeup in `PHASE-8-REPORT.md`).** Both bugs are fixed:
+
+- `car-epf-pct` was retired outright and replaced by `car-epf-amt` ("Monthly EPF Deduction (₹)", default ₹6,000). One `epfMonthly`/`epfAnnual` pair now feeds the baseline, carve-out A, additive B and the old-regime 80C cap — the three independent copies of `basic * epfPct` are gone. The scenario cards print the EPF line explicitly so take-home can be traced against a payslip, and the caveat list states the model.
+- A third, smaller wrongness surfaced while fixing the first: scenario A had been deriving an even lower EPF from `effectiveBasic` (Basic minus the car package). A carve-out comes out of allowances, not statutory Basic, so the PF line doesn't move with it — EPF is now constant across all three scenarios, which also makes it cancel out of every vs-baseline delta.
+- `calcIncomeTax()`'s new-regime branch now applies Section 87A marginal relief, capping tax before cess at `taxable − 1200000` up to the ₹12,70,588.24 breakeven. Six new assertions in `tests.js`/`tests.html`, including a sweep across the band proving no cliff survives. The old regime's ₹5L cliff is deliberately left intact — that one is real law — and is now pinned by its own test.
+
+On the owner's own numbers (₹4.5L/mo total fixed pay, real PF ₹21,600/mo, new regime) the take-home figure moves from ₹2,93,950 to ₹3,26,350/mo — ₹32,400/mo of the reported ~₹40K discrepancy, consistent with the EPF bug being the dominant term. *Tracked as R33 (EPF field), R34 (marginal relief), R35 (field hint, shipped first) in `TASK-UX-REDESIGN.md`.*
+
 ---
 
 ## Priority map
+
+> **Read this as the original ordering, not the live one.** Most of what follows has shipped; `TASK-UX-REDESIGN.md`'s "Remaining work" table is the authoritative view of what's left. Three items were added after the original analysis and sit **above everything still open below** — each is a real numbers-are-wrong bug or a universality gap, not a polish item:
+>
+> | # | Item | Type | Severity | Effort |
+> |---|---|---|---|---|
+> | 0a | D13 regional defaults presented as universal | **Correctness** | **High** | Medium |
+> | 0b | D12 comparison framing (pre-tax vs guaranteed) | **Correctness/trust** | **High** | Low (framing) / High (modeling) |
+> | ~~0c~~ | ~~D14 Dhanam Car EPF base bug + missing 87A marginal relief~~ — ✅ **FIXED 2026-07-30** (Phase 8) | **Correctness/bug** | **High** | Low–Medium |
 
 | # | Item | Type | Severity | Effort |
 |---|---|---|---|---|
@@ -240,5 +296,7 @@ Excel and PNG exports are titled "APARTMENT COST ANALYZER — HYDERABAD" — the
 1. **Landing model:** reorder the existing tool tiles, or reframe as goal-based language ("Grow my money" / "Plan a home purchase")? Goal-based is the bigger swing and the more Apple-like one.
 2. ~~**Persistence:** are you willing to amend "nothing is saved" to "saved only on your device"?~~ **Answered 2026-07-25: yes.** Option B approved, scoped to tier-1 inputs only (§2.1), with Option C JSON export/import shipping alongside it and all mitigations in §2.3 treated as ship conditions. Net-worth change tile and collapsed trend chart per §2.4. Accounts/backend acknowledged as a future direction and explicitly out of scope (§2.5).
 3. **Loan Disbursement:** okay to demote it into Dhanam Home (keeping a deep-link tile if you want), or does it stay top-level for your own workflow?
-4. **Audience:** is Dhanam primarily *your* personal tool (keep Hyderabad/Telangana defaults front and center) or heading toward general Indian users (defaults become an editable "assumptions" layer)? This decides how much D11 matters.
-5. **Logo file:** is there a source/vector version of `dhanamlogo.png`? 5.2 MB → ~20 KB needs a re-export, ideally to SVG or a small PNG set that can also become the manifest icon.
+4. ~~**Audience:** is Dhanam primarily *your* personal tool or heading toward general Indian users?~~ **Answered 2026-07-25: general Indian users**, with a public release planned after a close-circle beta. This is the most consequential answer in this list. It converts the invisible-assumptions nick into **D13** (high, correctness), makes the fonts/logo items in D9 launch-blocking rather than polish, and adds a whole class of work this document didn't originally contain — provenance, disclaimers, term definitions, orientation for people who don't already know what a perquisite is. See Phase 6 in `TASK-UX-REDESIGN.md`.
+5. ~~**Logo file:** is there a source/vector version of `dhanamlogo.png`?~~ **Answered 2026-07-26: no** — compress the existing mark as-is. Shipped: 5.2 MB → 10.9 KB, plus real 512×512 `any`/`maskable` manifest icons.
+6. **New (2026-07-26) — post-tax figures: on by default?** If Phase 7 ships post-tax numbers, default-off hides the more honest figure behind a control most people never touch, while default-on makes every headline figure smaller and more conditional, partially undoing the D4 density work. See B10 in `TASK-UX-REDESIGN.md`.
+7. **New (2026-07-25) — backend:** Firebase has been raised for the wider-audience phase. §2.5 already draws the boundary; the additional Firebase-specific conditions (client-side encryption, `asia-south1`, security rules as the entire security model, DPDP obligations, and Firebase's default-on telemetry contradicting the no-analytics stance) are recorded under "Out of scope" in `TASK-UX-REDESIGN.md` as B9. **The privacy promise is a one-way ratchet — it can be tightened silently, never loosened silently.**

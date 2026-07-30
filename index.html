@@ -1335,15 +1335,16 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
           <div class="field highlight">
             <label>Basic Monthly Salary (₹)</label>
             <input type="number" id="car-basic" value="100000" oninput="renderCarCalc()">
+            <span class="field-hint">Total fixed pay per month (Basic + HRA + Special Allowance combined), not Basic alone</span>
           </div>
           <div class="field">
             <label>Monthly Bonus / Variable (₹)</label>
             <input type="number" id="car-bonus" value="0" oninput="renderCarCalc()">
           </div>
           <div class="field">
-            <label>EPF Employee (%)</label>
-            <input type="number" id="car-epf-pct" value="12" step="0.5" oninput="renderCarCalc()">
-            <span class="field-hint">Applied on basic salary</span>
+            <label>Monthly EPF Deduction (₹)</label>
+            <input type="number" id="car-epf-amt" value="6000" min="0" step="100" oninput="renderCarCalc()">
+            <span class="field-hint">Copy the employee PF line straight off your payslip — EPF applies to Basic + DA only, not your full fixed pay</span>
           </div>
         </div>
         <div class="grid-3" style="margin-top:12px">
@@ -1391,7 +1392,8 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <ul style="font-size:12px;color:var(--text-dim);line-height:2;padding-left:16px;">
           <li>Perquisite per IT Rule 3(2): ≤1600cc = ₹1,800/mo · &gt;1600cc = ₹2,400/mo · company driver = +₹900/mo.</li>
           <li>Old regime includes standard deduction (₹50,000) + 80C (₹1.5L) only. HRA, 80D excluded for simplicity.</li>
-          <li>New regime (FY2025-26): standard deduction ₹75,000; rebate u/s 87A for taxable ≤ ₹12L.</li>
+          <li>New regime (FY2025-26): standard deduction ₹75,000; rebate u/s 87A for taxable ≤ ₹12L, with marginal relief up to ≈₹12.71L.</li>
+          <li>EPF is taken from the amount you enter, not derived from salary — real EPF applies to Basic + DA only, which this app has no way to infer from total fixed pay. The same figure is used in all three scenarios, since a car carve-out comes out of allowances rather than Basic.</li>
           <li>Carve-out (A): your CTC reduces by car package; employer pays EMI/fuel/driver. Your take-home reduces but no car expense.</li>
           <li>Additive (B): car is on top of your CTC; full salary retained; only perquisite value added to taxable income.</li>
           <li>Consult a CA for personalised tax planning before restructuring your salary.</li>
@@ -3903,7 +3905,14 @@ updateRememberHint();
 function renderCarCalc() {
   const basic = +v('car-basic') || 0;
   const bonus = +v('car-bonus') || 0;
-  const epfPct = +v('car-epf-pct') / 100 || 0.12;
+  // EPF is read straight off the payslip, never derived from car-basic (R33/D14):
+  // car-basic holds total fixed pay, while EPF applies only to statutory
+  // Basic + DA, so deriving one from the other overstated the deduction by
+  // tens of thousands a month. The same figure is used in all three scenarios —
+  // a car carve-out comes out of the flexible/allowance side of the package,
+  // not out of Basic, so the PF line on the payslip doesn't move with it.
+  const epfMonthly = Math.max(0, +v('car-epf-amt') || 0);
+  const epfAnnual = epfMonthly * 12;
   const carEmi = +v('car-emi') || 0;
   const carFuel = +v('car-fuel') || 0;
   const carDriverAllow = +v('car-driver-allow') || 0;
@@ -3919,11 +3928,10 @@ function renderCarCalc() {
   const deductions80C = regime === 'old' ? 150000 : 0;
 
   function scenarioCalc(annualGross, carOutOfPocket) {
-    const epfAnnual = Math.min(basic * 12 * epfPct, basic * 12); // EPF on basic
     const taxable = Math.max(0, annualGross - stdDed - (regime === 'old' ? Math.min(epfAnnual, deductions80C) : 0));
     const annualTax = calcIncomeTax(taxable, regime);
     const monthlyTax = annualTax / 12;
-    const monthlyTakeHome = annualGross / 12 - (basic * epfPct) - monthlyTax;
+    const monthlyTakeHome = annualGross / 12 - epfMonthly - monthlyTax;
     return { annualGross, epfAnnual, taxable, annualTax, monthlyTax, monthlyTakeHome, carOutOfPocket };
   }
 
@@ -3934,20 +3942,18 @@ function renderCarCalc() {
   // Carve-out A: effective basic reduces by car package
   const effectiveBasic = Math.max(0, basic - carPkg);
   const aGross = (effectiveBasic + bonus) * 12;
-  const aTaxableAdj = Math.max(0, aGross - stdDed - (regime === 'old' ? Math.min(effectiveBasic * 12 * epfPct, 150000) : 0) + perqAnnual);
+  const aTaxableAdj = Math.max(0, aGross - stdDed - (regime === 'old' ? Math.min(epfAnnual, deductions80C) : 0) + perqAnnual);
   const aTax = calcIncomeTax(aTaxableAdj, regime) ;
   const aMonthTax = aTax / 12;
-  const aEpfMonthly = effectiveBasic * epfPct;
-  const aMonthTakeHome = aGross / 12 - aEpfMonthly - aMonthTax;
+  const aMonthTakeHome = aGross / 12 - epfMonthly - aMonthTax;
   const scenA = { annualGross: aGross, taxable: aTaxableAdj, annualTax: aTax, monthlyTax: aMonthTax, monthlyTakeHome: aMonthTakeHome, carOutOfPocket: 0 };
 
   // Additive B: full salary + car on top; perquisite added to taxable
   const bGross = baseGross;
-  const bTaxable = Math.max(0, bGross - stdDed - (regime === 'old' ? Math.min(basic * 12 * epfPct, 150000) : 0) + perqAnnual);
+  const bTaxable = Math.max(0, bGross - stdDed - (regime === 'old' ? Math.min(epfAnnual, deductions80C) : 0) + perqAnnual);
   const bTax = calcIncomeTax(bTaxable, regime);
   const bMonthTax = bTax / 12;
-  const bEpfMonthly = basic * epfPct;
-  const bMonthTakeHome = bGross / 12 - bEpfMonthly - bMonthTax;
+  const bMonthTakeHome = bGross / 12 - epfMonthly - bMonthTax;
   const scenB = { annualGross: bGross, taxable: bTaxable, annualTax: bTax, monthlyTax: bMonthTax, monthlyTakeHome: bMonthTakeHome, carOutOfPocket: 0 };
 
   const baseNetPostCar = base.monthlyTakeHome - carPkg;
@@ -3968,6 +3974,11 @@ function renderCarCalc() {
       <div class="car-stat"><span class="car-stat-lbl">Monthly Tax</span><span class="car-stat-val red">${fmt(scen.monthlyTax)}</span></div>
       <div class="car-divider"></div>
       <div class="car-section-lbl">Monthly Cash Flow</div>
+      <!-- Deliberately NOT .red: palette rule 4 reserves red for a real cost, and
+           EPF isn't one — it's the user's own money moving into a retirement
+           account, which hub-worth counts as an asset (W_ASSETS 'EPF / PPF / NPS').
+           The − prefix carries the "subtracted from cash flow" meaning on its own. -->
+      <div class="car-stat"><span class="car-stat-lbl">EPF deduction</span><span class="car-stat-val">${epfMonthly > 0 ? '−' + fmt(epfMonthly) : '₹0'}</span></div>
       <div class="car-stat"><span class="car-stat-lbl">Take-home (pre car)</span><span class="car-stat-val big">${fmt(scen.monthlyTakeHome)}</span></div>
       <div class="car-stat"><span class="car-stat-lbl">Car out-of-pocket</span><span class="car-stat-val red">${isBase ? '−' + fmt(carPkg) : '₹0'}</span></div>
       <div class="car-stat"><span class="car-stat-lbl">Effective net/mo</span><span class="car-stat-val accent">${fmt(effective)}</span></div>

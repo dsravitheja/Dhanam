@@ -121,6 +121,23 @@ ok('calcIncomeTax: new regime just above 87A cliff -> tax > 0', calcIncomeTax(12
 ok('calcIncomeTax: old regime 87A cliff at 5L -> 0', calcIncomeTax(500000, 'old') === 0);
 ok('calcIncomeTax: old regime just above 87A cliff -> tax > 0', calcIncomeTax(500001, 'old') > 0);
 
+// Section 87A marginal relief, new regime only (R34 / D14) — tax before cess is
+// capped at (taxable − 12L) until slab tax falls back below it at 12,70,588.24.
+const MARGINAL_RELIEF_BREAKEVEN = 1200000 + 60000 / 0.85;
+ok('calcIncomeTax: 87A relief at 12,00,001 -> excess + cess (1.04), not slab tax', approxEqual(calcIncomeTax(1200001, 'new'), 1.04, 0.01), `got ${calcIncomeTax(1200001,'new')}`);
+ok('calcIncomeTax: 87A relief at 12,10,000 -> 10400 (naive slab would be 63960)', approxEqual(calcIncomeTax(1210000, 'new'), 10400, 0.01), `got ${calcIncomeTax(1210000,'new')}`);
+ok('calcIncomeTax: 87A relief exactly ties slab tax at the ~12,70,588 breakeven', approxEqual(calcIncomeTax(MARGINAL_RELIEF_BREAKEVEN, 'new'), (MARGINAL_RELIEF_BREAKEVEN - 1200000) * 1.04, 0.01), `got ${calcIncomeTax(MARGINAL_RELIEF_BREAKEVEN,'new')}`);
+ok('calcIncomeTax: above the breakeven (13L) -> full slab tax 78000, relief no longer binds', approxEqual(calcIncomeTax(1300000, 'new'), 78000, 0.01), `got ${calcIncomeTax(1300000,'new')}`);
+{
+  let cliffFound = null;
+  for (let t = 1195000; t <= 1300000; t += 1000) {
+    if (calcIncomeTax(t + 1000, 'new') - calcIncomeTax(t, 'new') > 1000 * 1.04 + 0.01) { cliffFound = t; break; }
+  }
+  ok('calcIncomeTax: no cliff across the 87A band — tax never rises faster than income', cliffFound === null, cliffFound === null ? '' : `jump at taxable=${cliffFound}`);
+}
+// Old regime has no marginal-relief provision — its cliff is real law, not a bug.
+ok('calcIncomeTax: old regime cliff untouched by the new-regime relief fix', approxEqual(calcIncomeTax(500001, 'old'), 12500.2 * 1.04, 0.01), `got ${calcIncomeTax(500001,'old')}`);
+
 // calcPerquisite
 ok('calcPerquisite: small engine, no driver -> 1800', calcPerquisite(false, false) === 1800);
 ok('calcPerquisite: big engine, no driver -> 2400', calcPerquisite(true, false) === 2400);
