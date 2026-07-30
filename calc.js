@@ -115,7 +115,17 @@ function calcIncomeTax(annualTaxable, regime) {
       tax += chunk * rate;
       remaining -= chunk;
     }
-    if (annualTaxable <= 1200000) tax = 0; // 87A rebate new regime
+    if (annualTaxable <= 1200000) {
+      tax = 0; // 87A rebate, new regime
+    } else {
+      // Section 87A marginal relief: just past the ₹12L rebate threshold, the
+      // slab tax (₹60,000 at 12L) exceeds the extra income earned, so the law
+      // caps tax at the excess over ₹12,00,000 instead of letting a cliff form.
+      // Relief is computed on tax *before* cess; cess then applies to the
+      // relieved figure. Stops binding at ~₹12,70,588, where slab tax first
+      // falls back below the excess (60000 + 0.15x <= x  =>  x >= 60000/0.85).
+      tax = Math.min(tax, annualTaxable - 1200000);
+    }
   } else {
     const slabs = [[250000,0],[250000,.05],[500000,.20],[Infinity,.30]];
     let remaining = annualTaxable;

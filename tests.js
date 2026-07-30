@@ -220,6 +220,61 @@ ok('calcIncomeTax: old regime 87A cliff, taxable=5,00,001 -> tax > 0',
   `got ${calcIncomeTax(500001, 'old')}`);
 
 // =====================================================================
+// calcIncomeTax — Section 87A marginal relief, new regime (R34 / D14)
+// =====================================================================
+// Without relief the ₹12L rebate is a cliff: slab tax at 12,00,000 is already
+// ₹60,000, so earning ₹1 more would cost ₹62,400 (with cess). The law caps tax
+// before cess at (taxable − 12,00,000) until slab tax falls back below it, at
+// taxable = 12,00,000 + 60000/0.85 = 12,70,588.24.
+const MARGINAL_RELIEF_BREAKEVEN = 1200000 + 60000 / 0.85; // 12,70,588.24
+
+// Just above the threshold: relief binds hard — ₹1 of extra income costs ₹1.04,
+// not the naive ₹62,400 of slab tax + cess.
+ok('calcIncomeTax: 87A marginal relief, taxable=12,00,001 -> tax = excess + cess (not slab tax)',
+  approxEqual(calcIncomeTax(1200001, 'new'), 1 * 1.04, 0.01),
+  `got ${calcIncomeTax(1200001, 'new')}, expected ${1 * 1.04}`);
+
+// Mid-band, hand-verified: excess = 10,000; slab tax = 60000 + 15% of 10,000
+// = 61,500, so relief caps tax at 10,000 -> 10,400 with cess (naive: 63,960).
+ok('calcIncomeTax: 87A marginal relief, taxable=12,10,000 -> 10,400 (naive slab would be 63,960)',
+  approxEqual(calcIncomeTax(1210000, 'new'), 10400, 0.01),
+  `got ${calcIncomeTax(1210000, 'new')}, expected 10400`);
+
+// At the breakeven the two are equal, so relief neither binds nor changes anything:
+// slab tax = 60000 + 0.15 * 70588.24 = 70588.24 = the excess itself.
+ok('calcIncomeTax: 87A marginal relief, at the ~12,70,588 breakeven relief exactly ties slab tax',
+  approxEqual(calcIncomeTax(MARGINAL_RELIEF_BREAKEVEN, 'new'), (MARGINAL_RELIEF_BREAKEVEN - 1200000) * 1.04, 0.01),
+  `got ${calcIncomeTax(MARGINAL_RELIEF_BREAKEVEN, 'new')}`);
+
+// Above the breakeven relief stops mattering — plain slab math returns.
+// taxable = 13,00,000: 0-4L@0 + 4-8L@5%=20000 + 8-12L@10%=40000 + 1L@15%=15000
+// = 75,000 slab; cess 4% -> 78,000. The excess (1,00,000) is larger, so no cap.
+ok('calcIncomeTax: above breakeven (13L) -> full slab tax, relief no longer binds',
+  approxEqual(calcIncomeTax(1300000, 'new'), 78000, 0.01),
+  `got ${calcIncomeTax(1300000, 'new')}, expected 78000`);
+
+// The whole point of marginal relief is that no extra rupee of income can ever
+// reduce take-home. Sweep the band and assert tax never rises faster than income.
+{
+  let cliffFound = null;
+  for (let t = 1195000; t <= 1300000; t += 1000) {
+    const here = calcIncomeTax(t, 'new');
+    const next = calcIncomeTax(t + 1000, 'new');
+    if (next - here > 1000 * 1.04 + 0.01) { cliffFound = t; break; }
+  }
+  ok('calcIncomeTax: no cliff across the 87A band — tax never rises faster than income',
+    cliffFound === null,
+    cliffFound === null ? '' : `tax jumps by more than the income increase at taxable=${cliffFound}`);
+}
+
+// Old regime has no marginal-relief provision at its ₹5L rebate — its cliff is
+// real law, not a bug, and R34 must not have "fixed" it. At 5,00,001 the tax is
+// the full slab amount (12,500.20 + cess), not the ₹1 of excess.
+ok('calcIncomeTax: old regime cliff is untouched by the new-regime relief fix',
+  approxEqual(calcIncomeTax(500001, 'old'), 12500.2 * 1.04, 0.01),
+  `got ${calcIncomeTax(500001, 'old')}, expected ${12500.2 * 1.04}`);
+
+// =====================================================================
 // calcPerquisite — exact lookup table per IT Rule 3(2)
 // =====================================================================
 ok('calcPerquisite: small engine, no driver -> 1800', calcPerquisite(false, false) === 1800);

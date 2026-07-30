@@ -43,6 +43,15 @@ For under-construction property loans where the bank disburses funds in stages a
 - **Do not call `renderDisbTranches()` from inside `renderLoanDisb()`.** `renderDisbTranches()` rewrites the tranche rows' `innerHTML`, which drops keyboard focus mid-typing if it runs on every keystroke (this was a real bug — fixed). It's only called on add/remove (`disbAddTranche`/`disbRemoveTranche`), on first open (`toggleSection`'s `disbOpened` branch), and from `resetAll()`. `renderLoanDisb()` itself just recomputes and updates the results table/summary from the current `disbTranches` state.
 - A single 100%-at-month-0 tranche degenerates to a plain EMI loan and must match the `hub-apartment` loan panel's numbers exactly for the same principal/rate/tenure — useful as a sanity check when touching this code.
 
+### Dhanam Car lease analysis specifics (`renderCarCalc()`, `car-*` prefix)
+
+`renderCarCalc()` compares three scenarios — baseline (own car), carve-out A (CTC reduced by the car package), additive B (car on top, perquisite added to taxable) — reading every input and writing both `#car-scenario-cards` and `#car-summary` in one pass.
+
+- **`car-basic` is total fixed pay per month** (Basic + HRA + Special Allowance combined), not statutory Basic. Its `field-hint` says so; don't reintroduce copy that implies otherwise.
+- **EPF is a directly-entered payslip figure (`car-epf-amt`), never derived from `car-basic` (R33/D14, Phase 8).** Real EPF applies to Basic + DA only, which the app has no way to infer from total fixed pay — the old `car-epf-pct × car-basic` derivation overstated the deduction by ~₹32K/month at upper-middle salaries and landed straight on the take-home figure. `epfMonthly`/`epfAnnual` are computed **once** at the top of the function; `scenarioCalc()`, scenario A, scenario B and the old-regime 80C cap all read those. That "once" matters: the bug existed in *three* independently-written copies of the same derivation, and only fixing the baseline would have left A and B wrong. Adding a fourth scenario means reusing `epfMonthly`, not writing a fifth derivation.
+- **EPF is deliberately constant across all three scenarios.** A carve-out is taken out of the flexible/allowance side of the package, not out of statutory Basic, so the payslip's PF line doesn't move with it — and a constant EPF cancels cleanly out of every vs-baseline delta. Scenario A used to derive a lower EPF from `effectiveBasic`; that was the same bug in miniature. `effectiveBasic` legitimately still drives scenario A's *gross*, just not its EPF.
+- The panel's caveat list is the disclosure surface for every simplification here (no professional tax, no old-regime HRA exemption, the EPF model above). Add to it when you add an assumption — this hub's numbers are compared against real payslips.
+
 ### No backend; persistence is local-only and deliberately narrow
 
 There are no API calls, no database, and nothing ever leaves the device. Every input has an `oninput`/`onchange` handler that recalculates and re-renders synchronously (no debouncing, no async).
@@ -77,7 +86,7 @@ DOM IDs are short prefixed codes tying markup to JS lookups via the `v(id)` (num
 - `l-*` — Loan panel (home loan)
 - `adv-*` — Advanced/prepayment loan comparison
 - `sip-*` — SIP comparison within the loan panel
-- `car-*` — company car lease inputs
+- `car-*` — company car lease inputs (`car-basic` is *total fixed pay*, `car-epf-amt` is the payslip EPF amount — the retired `car-epf-pct` is not coming back; see **Dhanam Car lease analysis specifics** above)
 - `cb-*` — car buying/loan inputs
 - `sp-*` / `spt-*` — SIP planner (Dhanam Grow) tabs and inputs
 - `disb-*` — loan disbursement / pre-EMI calculator
@@ -93,7 +102,7 @@ Each major feature has one `calc*`/`render*` entry point that reads all relevant
 - `calcEMI`, `loanAtYear`, `simulateLoan` **(calc.js)**, `renderLoans()` — home loan amortization and prepayment simulation
 - `renderAdvLoan()` — extra-EMI/lumpsum prepayment scenario comparison
 - `calcSIP` **(calc.js)**, `renderSIPComparison()` — SIP-vs-prepayment comparison
-- `calcIncomeTax`, `calcPerquisite` **(calc.js)**, `renderCarCalc()` — company car lease tax analysis (old vs. new regime)
+- `calcIncomeTax`, `calcPerquisite` **(calc.js)**, `renderCarCalc()` — company car lease tax analysis (old vs. new regime). `calcIncomeTax`'s new-regime branch applies **Section 87A marginal relief** (R34, Phase 8): above the ₹12L rebate threshold, tax *before cess* is capped at `taxable − 1200000`, which removes what used to be a cliff and stops binding at ₹12,70,588.24 (`1200000 + 60000/0.85`). The old-regime ₹5L rebate is a genuine cliff in law and must stay one — there's a test pinning it so a future "consistency" fix can't quietly extend relief to it.
 - `calcCarDepreciation` **(calc.js)**, `renderCarLoan()` — car loan + IRDAI depreciation-based resale estimate, with a resale-value-by-year chart (Phase 3b) that renders off of `price` alone so it's unaffected by the loan-amount early return in the EMI-cards half of the function
 - `updateSIPPlanner`, `calcStepupSIP` **(calc.js)**, `updateStepupSIP`, `updateLumpsum` — Dhanam Grow SIP planner
 - `renderLoanDisb()` — loan disbursement / pre-EMI tranche calculator (`section-disb` inside `hub-apartment`)
@@ -170,6 +179,8 @@ No DOM-level test framework exists (see **Testing** above for the automated cove
 24. **Dhanam Home accordion (R14)**: opening any of `section-detail`/`section-loan`/`section-disb` collapses whichever of the other two was open, leaving exactly one `action-btn` `.active`; clicking an open panel's own button still collapses it; values typed into one panel survive switching to another and back (collapsing never clears inputs or re-runs a panel's first-open prefill); the combined-export buttons, once shown, stay visible regardless of which single panel is currently open. Does **not** apply to the nested compare/advanced/SIP `.collapse-card`s inside `section-loan` — those can be opened independently of the accordion.
 25. **Chart redraw on every reveal path (R11)**: dots stay circular (not oval) after — switching Dhanam Grow tabs in any order; leaving the Grow hub with a non-monthly tab active and re-entering it; collapsing `section-loan` via the accordion, hitting Reset, and reopening it; resizing the browser window from ~1200px down to 375px and back. No chart is ever left showing a distorted render once its host is visible on screen.
 26. **Grow-hub years inputs are clamped, not just defaulted (R18, Phase 3c)**: typing a value above 50 into `sp-years`/`su-years`/`ls-years` snaps the field itself to 50 (not just the calculation) and the tab stays responsive — this matters most on the step-up tab, whose chart calls the month-by-month `calcStepupSIP` once per year and would otherwise do ~n² work per keystroke for a large typed value. Typing below 1 snaps to 1. Clearing the field falls back to 20, matching the pre-3c default behaviour.
+27. **Dhanam Car EPF is an input, not a derivation (R33, Phase 8)**: all three scenario cards show the **same** "EPF deduction" figure, and it equals whatever is typed into `car-epf-amt` — changing `car-basic` must move Annual Gross, Taxable Income and tax but leave the EPF line untouched. Take-home reads exactly `annual gross ÷ 12 − EPF − monthly tax` on every card, so it can be reconciled against a real payslip line by line. Clearing `car-epf-amt`, typing a negative, and typing an EPF larger than gross must all compute without `NaN`/`Infinity` (a large EPF may legitimately drive take-home negative). Switching to the old regime still caps the 80C deduction at ₹1.5L using the same annualized figure.
+28. **New-regime 87A cliff is gone (R34, Phase 8)**: in the car hub on the new regime, set inputs so taxable income lands just above ₹12,00,000 (e.g. `car-basic` ≈ ₹1,06,300, no bonus) — Annual Tax + Cess must be a few hundred rupees, not ~₹62,400, and nudging salary up must never reduce take-home anywhere across the ₹12L–₹12.7L band. `node tests.js` covers the arithmetic; this item is the on-screen confirmation.
 
 ### Styling
 
