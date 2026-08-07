@@ -14,7 +14,8 @@
 const {
   calcEMI, loanAtYear, simulateLoan,
   calcSIP, calcStepupSIP,
-  calcIncomeTax, calcPerquisite, calcCarDepreciation
+  calcIncomeTax, calcPerquisite, calcCarDepreciation,
+  calcRunningCost, calcInsuranceTotal, calcLeaseNetCost, calcBreakevenKm
 } = require('./calc.js');
 
 let pass = 0, fail = 0;
@@ -320,6 +321,162 @@ ok('calcCarDepreciation: monotonically decreasing in years',
   `y1=${calcCarDepreciation(1000000,1).toFixed(0)} y3=${calcCarDepreciation(1000000,3).toFixed(0)} y5=${calcCarDepreciation(1000000,5).toFixed(0)}`);
 ok('calcCarDepreciation: zero price -> zero resale',
   calcCarDepreciation(0, 5) === 0);
+
+// =====================================================================
+// calcEMI — fv (balloon/residual) argument, Phase 9 / R38
+// =====================================================================
+// At fv=0, calcEMI must take the exact original 3-arg code path, so every
+// existing caller stays bit-identical (not just algebraically equal — see
+// the comment above calcEMI in calc.js for why that distinction matters).
+function preFvCalcEMI(P, annualRate, years) {
+  const r = annualRate / 12 / 100;
+  const n = years * 12;
+  if (r === 0) return P / n;
+  return P * r * Math.pow(1+r, n) / (Math.pow(1+r, n) - 1);
+}
+{
+  const cases = [[1000000, 10, 1], [5000000, 8.75, 20], [1200000, 0, 10], [2000000, 9.5, 15]];
+  const allBitIdentical = cases.every(([P, rate, years]) =>
+    calcEMI(P, rate, years) === preFvCalcEMI(P, rate, years) &&
+    calcEMI(P, rate, years, 0) === preFvCalcEMI(P, rate, years));
+  ok('calcEMI: fv=0 (explicit or defaulted) is bit-identical to the pre-fv formula for every existing caller shape',
+    allBitIdentical);
+}
+
+// Correctness oracle for the fv path: amortize month-by-month at the
+// returned payment; the balance after n months must equal fv exactly.
+function balanceAfterMonths(P, annualRate, emi, n, fv) {
+  const r = annualRate / 12 / 100;
+  let bal = P;
+  for (let i = 0; i < n; i++) bal = bal + bal * r - emi;
+  return bal;
+}
+{
+  const P = 2000000, rate = 10, years = 4, fv = 200000;
+  const emi = calcEMI(P, rate, years, fv);
+  const n = years * 12;
+  const terminalBalance = balanceAfterMonths(P, rate, emi, n, fv);
+  ok('calcEMI: balloon path amortizes to exactly fv (₹20L @ 10% / 4yr / ₹2L residual)',
+    approxEqual(emi, 47319.32, 0.01) && approxEqual(terminalBalance, fv, 0.01),
+    `emi=${emi.toFixed(2)} (expected ~47319.32), terminalBalance=${terminalBalance.toFixed(4)} (expected ${fv})`);
+}
+ok('calcEMI: zero-rate balloon is exactly (P - fv) / n',
+  calcEMI(1200000, 0, 10, 200000) === (1200000 - 200000) / 120,
+  `got ${calcEMI(1200000, 0, 10, 200000)}`);
+ok('calcEMI: 0% residual (fv=0 via 100% financing) equals the plain calcEMI result',
+  calcEMI(2000000, 9, 4, 0) === calcEMI(2000000, 9, 4),
+  `balloon-at-0=${calcEMI(2000000,9,4,0)} plain=${calcEMI(2000000,9,4)}`);
+
+// =====================================================================
+// calcInsuranceTotal — closed-form geometric series vs. year-by-year loop
+// =====================================================================
+function insuranceLoop(price, rate, depRate, years) {
+  let total = 0, base = price;
+  for (let y = 0; y < years; y++) {
+    total += base * rate;
+    base *= (1 - depRate);
+  }
+  return total;
+}
+{
+  const price = 2000000, rate = 0.03, years = 5;
+  const closedForm15 = calcInsuranceTotal(price, rate, 0.15, years);
+  const loop15 = insuranceLoop(price, rate, 0.15, years);
+  ok('calcInsuranceTotal: closed form matches year-by-year loop at dep=15%',
+    approxEqual(closedForm15, loop15, 0.01),
+    `closedForm=${closedForm15.toFixed(2)} loop=${loop15.toFixed(2)}`);
+
+  const closedForm0 = calcInsuranceTotal(price, rate, 0, years);
+  const loop0 = insuranceLoop(price, rate, 0, years);
+  ok('calcInsuranceTotal: dep=0 guard matches year-by-year loop (flat rate x years)',
+    approxEqual(closedForm0, loop0, 0.01) && closedForm0 === price * rate * years,
+    `closedForm=${closedForm0.toFixed(2)} loop=${loop0.toFixed(2)} flat=${(price*rate*years).toFixed(2)}`);
+}
+
+// =====================================================================
+// calcRunningCost
+// =====================================================================
+{
+  const a = { cityKm: 8000, hwyKm: 4000, petrolPrice: 117, iceHwyMult: 1.35, homeRate: 8, publicRate: 20, evHwyMult: 1.15 };
+  const ice = calcRunningCost('ICE', 15, a);
+  ok('calcRunningCost: ICE perKm * totalKm == annual',
+    approxEqual(ice.perKm * (a.cityKm + a.hwyKm), ice.annual, 0.01),
+    `perKm=${ice.perKm.toFixed(4)} totalKm=${a.cityKm+a.hwyKm} product=${(ice.perKm*(a.cityKm+a.hwyKm)).toFixed(2)} annual=${ice.annual.toFixed(2)}`);
+
+  const ev = calcRunningCost('EV', 15, a);
+  ok('calcRunningCost: EV perKm * totalKm == annual',
+    approxEqual(ev.perKm * (a.cityKm + a.hwyKm), ev.annual, 0.01),
+    `perKm=${ev.perKm.toFixed(4)} totalKm=${a.cityKm+a.hwyKm} product=${(ev.perKm*(a.cityKm+a.hwyKm)).toFixed(2)} annual=${ev.annual.toFixed(2)}`);
+
+  const zeroMileageRow = calcRunningCost('ICE', 0, { ...a, cityKm: 0, hwyKm: 0 });
+  ok('calcRunningCost: zero-mileage/zero-efficiency row produces 0, never NaN/Infinity',
+    zeroMileageRow.annual === 0 && zeroMileageRow.perKm === 0 &&
+    isFinite(zeroMileageRow.annual) && isFinite(zeroMileageRow.perKm),
+    `annual=${zeroMileageRow.annual} perKm=${zeroMileageRow.perKm}`);
+
+  const zeroKmOnly = calcRunningCost('ICE', 15, { ...a, cityKm: 0, hwyKm: 0 });
+  ok('calcRunningCost: zero total km with valid mileage still gives finite perKm (no div-by-zero)',
+    isFinite(zeroKmOnly.perKm) && zeroKmOnly.perKm === 0,
+    `perKm=${zeroKmOnly.perKm}`);
+}
+
+// =====================================================================
+// calcLeaseNetCost
+// =====================================================================
+{
+  const base = {
+    price: 2000000, annualRate: 10, residualPct: 0.10, years: 4,
+    hasDriver: false, marginalRate: 0.312,
+    type: 'ICE', efficiency: 15,
+    cityKm: 8000, hwyKm: 4000, petrolPrice: 117, iceHwyMult: 1.35,
+    homeRate: 8, publicRate: 20, evHwyMult: 1.15,
+    maintAnnual: 9000, insRate: 0.03, depRate: 0.15,
+  };
+  const result = calcLeaseNetCost({ ...base, bigEngine: true });
+  ok('calcLeaseNetCost: netCost === rawOutflow - taxSaved (internal consistency)',
+    approxEqual(result.netCost, result.rawOutflow - result.taxSaved, 0.01),
+    `netCost=${result.netCost.toFixed(2)} rawOutflow-taxSaved=${(result.rawOutflow-result.taxSaved).toFixed(2)}`);
+  ok('calcLeaseNetCost: netCostAfterResale === netCost - resaleValue',
+    approxEqual(result.netCostAfterResale, result.netCost - result.resaleValue, 0.01));
+
+  // Pin: the perquisite must come from calcPerquisite, not a flat/hardcoded
+  // value (correction 2, R39) — a big-engine ICE row and an otherwise-
+  // identical row (same price/EMI/running/maint/insurance, bigEngine=false,
+  // as an EV row's perquisite bracket would compute) must differ in netCost
+  // by exactly marginalRate * (7000-5000) * months = 2000 * 0.312 * 48 = 29952.
+  const normalPerq = calcLeaseNetCost({ ...base, bigEngine: false });
+  const expectedGap = 2000 * base.marginalRate * (base.years * 12);
+  ok('calcLeaseNetCost: perquisite sourced from calcPerquisite — big-engine vs. <=1.6L/EV bracket differ by exactly marginalRate*2000*months (₹29,952 at defaults)',
+    approxEqual(result.netCost - normalPerq.netCost, expectedGap, 0.01),
+    `diff=${(result.netCost-normalPerq.netCost).toFixed(2)} expected=${expectedGap.toFixed(2)}`);
+  ok('calcLeaseNetCost: ₹29,952 pin holds at the stated defaults (31.2% marginal rate, 4yr)',
+    approxEqual(expectedGap, 29952, 0.01), `got ${expectedGap}`);
+
+  // taxSaved stays signed (not clamped) — a below-perquisite EMI is a real
+  // negative, not a bug to hide.
+  const tinyLease = calcLeaseNetCost({ ...base, price: 100000, bigEngine: false });
+  ok('calcLeaseNetCost: taxSaved can be negative (EMI below perquisite) and is not clamped to 0',
+    tinyLease.taxSaved < 0, `taxSaved=${tinyLease.taxSaved.toFixed(2)}`);
+}
+
+// =====================================================================
+// calcBreakevenKm — three distinct outcomes
+// =====================================================================
+ok('calcBreakevenKm: EV never cheaper per km (denom<=0) -> null, not Infinity/NaN',
+  calcBreakevenKm(100000, 6, 200000, 5, 4) === null,
+  `got ${calcBreakevenKm(100000, 6, 200000, 5, 4)}`);
+{
+  const alreadyCheaper = calcBreakevenKm(100000, 2, 200000, 5, 4);
+  ok('calcBreakevenKm: EV fixed cost already lower -> a value <= 0, never a positive "needs more km" figure',
+    alreadyCheaper !== null && alreadyCheaper <= 0,
+    `got ${alreadyCheaper}`);
+}
+{
+  const needsMore = calcBreakevenKm(300000, 2, 200000, 5, 4);
+  ok('calcBreakevenKm: normal case -> a positive breakeven km/yr',
+    approxEqual(needsMore, 8333.33, 0.01),
+    `got ${needsMore}`);
+}
 
 // =====================================================================
 // SUMMARY

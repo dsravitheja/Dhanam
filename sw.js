@@ -1,4 +1,4 @@
-const CACHE = 'apt-cost-v12';
+const CACHE = 'apt-cost-v13';
 // calc.js must be precached — index.html loads it via <script src>, so without
 // it here the whole app breaks offline, not just degrades. Phase 4 (R5) added
 // the logo/manifest icons and the self-hosted font files here too, now that
