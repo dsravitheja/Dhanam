@@ -604,6 +604,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .cc-field input:focus, .cc-field select:focus { border-color:var(--accent); }
 .cc-field-check { flex:0 0 auto; padding-bottom:9px; }
 .cc-field-check label { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-mid); white-space:nowrap; cursor:pointer; }
+.cc-row-hint { flex:1 0 100%; font-size:11px; color:var(--text-mid); margin-top:2px; }
 .cc-rank-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; margin-bottom:12px; }
 .cc-rank-card.rank-1 {
   border-color:var(--accent);
@@ -4306,6 +4307,21 @@ function renderCarLoan() {
 // section. This block is the DOM-coupled half: reading cc-* inputs, the
 // ccCars shortlist, and rendering the hero/breakeven/chart/result cards.
 
+// A row that's been started (any field touched) but doesn't yet pass the
+// price>0 && eff>0 guard gets a same-row explanation of what's missing —
+// the guard itself was already correct (R39's blank-row rule), what was
+// missing was telling the user *where* to look. Returns '' for a genuinely
+// untouched row, so the two fresh rows on first open stay quiet.
+function ccRowHintText(c) {
+  const started = !!(c.name || c.price > 0 || c.eff > 0);
+  if (!started) return '';
+  const missing = [];
+  if (!(c.price > 0)) missing.push('on-road price');
+  if (!(c.eff > 0)) missing.push(c.type === 'EV' ? 'efficiency' : 'mileage');
+  if (!missing.length) return '';
+  return `Add ${missing.join(' and ')} to include this car in the comparison`;
+}
+
 function ccRowHtml(c, i) {
   const isEV = c.type === 'EV';
   return `<div class="cc-row">
@@ -4336,6 +4352,7 @@ function ccRowHtml(c, i) {
         onchange="ccCars[${i}].bigEngine = this.checked; renderCarCompare();"> &gt;1600cc</label>
     </div>` : ''}
     <button class="disb-tr-remove" onclick="ccRemoveCar(${i})" ${ccCars.length <= 1 ? 'disabled' : ''} title="Remove car">✕</button>
+    <div class="cc-row-hint" id="cc-row-hint-${i}">${xesc(ccRowHintText(c))}</div>
   </div>`;
 }
 
@@ -4476,6 +4493,11 @@ function ccVerdict(km) {
 
 function renderCarCompare() {
   buildCC();
+
+  // Per-row "what's missing" hint — updated here (a text-only write, never
+  // an innerHTML rebuild) so it stays live on every keystroke without
+  // touching the input the user is currently typing into.
+  ccCars.forEach((c, i) => set('cc-row-hint-' + i, ccRowHintText(c)));
 
   const rows = ccComputedRows();
 
