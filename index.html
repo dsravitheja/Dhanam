@@ -171,12 +171,12 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 @media(max-width:640px){ .qc-inputs { grid-template-columns:1fr 1fr; } }
 .qf { display:flex; flex-direction:column; gap:4px; }
 .qf label { font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.08em; }
-.qf input {
+.qf input, .qf select {
   font-family:'DM Mono',monospace; font-size:15px; font-weight:500; color:var(--accent2);
   background:rgba(0,0,0,.3); border:1px solid var(--hl-border); border-radius:6px;
   padding:7px 10px; outline:none; width:100%;
 }
-.qf input:focus { border-color:var(--accent); }
+.qf input:focus, .qf select:focus { border-color:var(--accent); }
 .qf.hidden { display:none; }
 
 .qc-result {
@@ -778,6 +778,21 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       <input type="number" id="q-rate" value="7500" oninput="updateQuick()">
     </div>
     <div class="qf">
+      <label>State</label>
+      <select id="q-state" onchange="applyPropertyState()">
+        <option value="TG" selected>Telangana</option>
+        <option value="AP">Andhra Pradesh</option>
+        <option value="KA">Karnataka</option>
+        <option value="MH">Maharashtra</option>
+        <option value="DL">Delhi (NCT)</option>
+        <option value="TN">Tamil Nadu</option>
+        <option value="UP">Uttar Pradesh</option>
+        <option value="GJ">Gujarat</option>
+        <option value="WB">West Bengal</option>
+      </select>
+      <span class="field-hint">Sets Stamp Duty + Reg below — indicative, edit if yours differs</span>
+    </div>
+    <div class="qf">
       <label>Stamp Duty + Reg (%)</label>
       <input type="number" id="q-reg" value="4.5" step="0.1" oninput="updateQuick()">
     </div>
@@ -793,7 +808,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     </div>
     <div class="qcr-divider"></div>
     <div class="qcr-item">
-      <span class="qcr-lbl">Registration</span>
+      <span class="qcr-lbl">Registration <span id="qr-state-lbl"></span></span>
       <span class="qcr-val" id="qr-reg">—</span>
     </div>
     <div class="qcr-item" id="qr-gst-item" style="display:none;">
@@ -1001,12 +1016,12 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <div class="field">
           <label>Stamp Duty (%)</label>
           <input type="number" id="d-stamp" value="4" step="0.1" oninput="calcDetail()">
-          <span class="field-hint">Telangana: 4%</span>
+          <span class="field-hint" id="d-stamp-hint">Telangana: 4%</span>
         </div>
         <div class="field">
           <label>Registration Fee (%)</label>
           <input type="number" id="d-regfee" value="0.5" step="0.1" oninput="calcDetail()">
-          <span class="field-hint">Hyderabad: 0.5%</span>
+          <span class="field-hint" id="d-regfee-hint">Telangana: 0.5%</span>
         </div>
         <div class="field" id="d-gst-field" style="display:none;">
           <label>GST on Construction (%)</label>
@@ -2177,10 +2192,13 @@ let storageUnreadable = false; // state present but corrupt/foreign-version -> s
 let storageFailed = false;     // a write was rejected (quota / private mode) -> never claim it saved
 
 function blankState() {
-  // carCompare: additive key (Phase 9 / R43) — an old blob missing it just
-  // defaults to null via loadState()'s Object.assign(blankState(), s), no
-  // STORE_VER bump needed (CLAUDE.md's "schema is flat and additive" rule).
-  return { v: STORE_VER, lastSaved: null, rememberInputs: false, loan: null, worth: null, carCompare: null, history: [] };
+  // carCompare, propertyState: additive keys (Phase 9 / R43, Phase 6a / R21)
+  // — an old blob missing either just defaults via loadState()'s
+  // Object.assign(blankState(), s), no STORE_VER bump needed (CLAUDE.md's
+  // "schema is flat and additive" rule). propertyState holds only the
+  // state *code* ('TG', 'KA', ...) — never the rates it implies, which are
+  // tier-2 and always re-resolve from PROPERTY_STATES on load.
+  return { v: STORE_VER, lastSaved: null, rememberInputs: false, loan: null, worth: null, carCompare: null, propertyState: null, history: [] };
 }
 
 function loadState() {
@@ -2341,8 +2359,14 @@ function toggleSection(id) {
       // Pre-fill from quick calc
       el('d-sqft').value = v('q-sqft') || 1500;
       el('d-rate').value = v('q-rate') || 7500;
-      el('d-stamp').value = 4;
-      el('d-regfee').value = 0.5;
+      // R21: match whatever state is currently selected in Quick Estimate,
+      // not a hardcoded Telangana — a Karnataka user opening this panel for
+      // the first time must see Karnataka's split figures, not silently
+      // get reset to Telangana's.
+      const curState = propertyStateByCode(el('q-state').value);
+      el('d-stamp').value = curState.stamp;
+      el('d-regfee').value = curState.reg;
+      updatePropertyStateLabels(curState);
       el('d-gst').value = v('q-gst') || 5;
       syncUCToDetail();
       calcDetail();
@@ -2420,6 +2444,69 @@ function updateCfRow(key) {
   if (checked) row.classList.remove('cf-disabled');
   else row.classList.add('cf-disabled');
   calcDetail();
+}
+
+// =====================================================================
+// STATE-AWARE STAMP DUTY / REGISTRATION (R21, Phase 6a)
+// =====================================================================
+// Indicative stamp duty + registration rates, as of 2026-08-08 — NOT
+// exhaustive or authoritative. Real rates vary by buyer gender, property
+// type, and municipal corporation even within one state; these are single
+// representative figures for a straightforward urban apartment purchase,
+// meant as an editable starting point, not a source of truth. If your
+// state isn't listed, or its actual rate differs, just edit Stamp Duty +
+// Reg (or the split Stamp Duty / Registration Fee fields) directly — the
+// selector only sets a default, it never locks the fields.
+// Telangana MUST stay { stamp: 4, reg: 0.5 } — it is this app's original,
+// still-shipping default, and R21's acceptance criteria requires selecting
+// it reproduce today's numbers exactly.
+const PROPERTY_STATES = [
+  { code: 'TG', name: 'Telangana',      stamp: 4,   reg: 0.5 },
+  { code: 'AP', name: 'Andhra Pradesh', stamp: 5,   reg: 0.5 },
+  { code: 'KA', name: 'Karnataka',      stamp: 5,   reg: 1   },
+  { code: 'MH', name: 'Maharashtra',    stamp: 6,   reg: 1   },
+  { code: 'DL', name: 'Delhi (NCT)',    stamp: 6,   reg: 1   },
+  { code: 'TN', name: 'Tamil Nadu',     stamp: 7,   reg: 4   },
+  { code: 'UP', name: 'Uttar Pradesh',  stamp: 7,   reg: 1   },
+  { code: 'GJ', name: 'Gujarat',        stamp: 4.9, reg: 1   },
+  { code: 'WB', name: 'West Bengal',    stamp: 6,   reg: 1   },
+];
+
+function propertyStateByCode(code) {
+  return PROPERTY_STATES.find(s => s.code === code) || PROPERTY_STATES[0];
+}
+
+// Updates the "which state's rates am I looking at" labels next to the
+// figures they drive — Quick Estimate's result row and the Detail panel's
+// Government Charges hints — without touching any input value.
+function updatePropertyStateLabels(st) {
+  set('qr-state-lbl', '(' + st.name + ')');
+  set('d-stamp-hint', st.name + ': ' + st.stamp + '%');
+  set('d-regfee-hint', st.name + ': ' + st.reg + '%');
+}
+
+// Sets q-reg (combined) / d-stamp / d-regfee (split) from the table for
+// whichever state is selected in #q-state, then re-renders. All three
+// fields remain directly editable afterward — this only sets a default.
+// `save` is false only while hydrating from a persisted selection at page
+// load, so restoring it doesn't immediately re-save the same value.
+function applyPropertyState(save) {
+  const st = propertyStateByCode(el('q-state').value);
+  el('q-reg').value = st.stamp + st.reg;
+  el('d-stamp').value = st.stamp;
+  el('d-regfee').value = st.reg;
+  updatePropertyStateLabels(st);
+  updateQuick();
+  if (detailOpened) calcDetail();
+  if (save !== false) {
+    // Tier-1: the user's chosen state is a fact about them, not a market
+    // assumption — persisted unconditionally, like Compare Cars' shortlist
+    // (B11). The rates themselves are never stored (tier-2); they always
+    // re-resolve from PROPERTY_STATES above on load.
+    if (!DS) DS = blankState();
+    DS.propertyState = st.code;
+    saveState();
+  }
 }
 
 // =====================================================================
@@ -2895,7 +2982,7 @@ function exportSnapshot(src) {
   ctx.fillText('Dhanam — Home Cost Analysis', pad, 50);
   ctx.fillStyle = P.textDim;
   ctx.font = "12px 'Inter', sans-serif";
-  ctx.fillText('Hyderabad · ' + new Date().toLocaleDateString('en-IN'), pad, 70);
+  ctx.fillText(propertyStateByCode(el('q-state').value).name + ' · ' + new Date().toLocaleDateString('en-IN'), pad, 70);
   if (uc) { ctx.fillStyle = P.accent; ctx.fillText('Under Construction Property', W - pad - 180, 70); }
 
   ctx.fillStyle = P.border;
@@ -3065,7 +3152,11 @@ function buildDetailRows() {
   const R = (...c) => c;
   const B = () => [];
   const rows = [];
-  rows.push(['DHANAM — HOME COST ANALYSIS (HYDERABAD)']);
+  // R21: title/notes reflect whichever state is currently selected in Quick
+  // Estimate, not a hardcoded Telangana/Hyderabad — an exported document is
+  // just as much "on screen" as the app itself for this bug's purposes.
+  const stForExport = propertyStateByCode(el('q-state').value);
+  rows.push(['DHANAM — HOME COST ANALYSIS (' + stForExport.name.toUpperCase() + ')']);
   rows.push(['Generated: ' + new Date().toLocaleDateString('en-IN')]);
   rows.push(B());
   rows.push(['PROPERTY DETAILS']);
@@ -3087,8 +3178,8 @@ function buildDetailRows() {
 
   rows.push(['GOVERNMENT CHARGES']);
   if (d.uc) rows.push(['GST on Construction', `${d.gstPct}%`, d.gstAmt, '5% for under-construction']);
-  rows.push(['Stamp Duty', `${d.stampPct}%`, d.stampAmt, 'Telangana: 4%']);
-  rows.push(['Registration Fee', `${d.regPct}%`, d.regFeeAmt, 'Hyderabad: 0.5%']);
+  rows.push(['Stamp Duty', `${d.stampPct}%`, d.stampAmt, `${stForExport.name}: ${stForExport.stamp}%`]);
+  rows.push(['Registration Fee', `${d.regPct}%`, d.regFeeAmt, `${stForExport.name}: ${stForExport.reg}%`]);
   rows.push(['Total Govt. Charges', '', d.gstAmt + d.regTotal, '']);
   rows.push(B());
 
@@ -3286,9 +3377,12 @@ function resetAll() {
   // Quick calc
   el('q-sqft').value = 1500;
   el('q-rate').value = 7500;
+  el('q-state').value = 'TG';   // R21: Reset and a fresh load must produce identical numbers
   el('q-reg').value = 4.5;
   el('q-gst').value = 5;
   el('q-uc').checked = false;
+  updatePropertyStateLabels(propertyStateByCode('TG'));
+  if (DS) { DS.propertyState = 'TG'; saveState(); }   // only touch storage if something was already stored (don't seed a blob purely from Reset)
 
   // Detail
   el('d-sqft').value = 1500;
@@ -4161,11 +4255,25 @@ if ('serviceWorker' in navigator) {
 // =====================================================================
 // INIT
 // =====================================================================
+// Seed q-reg/d-stamp/d-regfee + their labels from PROPERTY_STATES' Telangana
+// row before first render — this reproduces the same values the markup's
+// own hardcoded defaults already had, so it's a no-op numerically, but it's
+// what populates qr-state-lbl/d-stamp-hint/d-regfee-hint (R21) instead of
+// leaving them blank until a state is ever actively picked.
+applyPropertyState(false);
 updateQuick();
 
 // Hydrate persisted state *after* the first render, never before — a bad
 // blob must not be able to block first paint (§2.3 M2b).
 DS = loadState();
+if (DS && DS.propertyState && PROPERTY_STATES.some(s => s.code === DS.propertyState)) {
+  el('q-state').value = DS.propertyState;
+  // Re-runs updateQuick() and, if detailOpened, calcDetail() (R21) — the
+  // latter is moot on a cold load since detailOpened is always false here,
+  // but applyPropertyState() checks it anyway so this stays the one code
+  // path for "state changed", cold-load or interactive.
+  applyPropertyState(false);
+}
 if (rememberingInputs()) {
   el('l-remember').checked = true;
   hydrateLoanInputs();
