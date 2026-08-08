@@ -33,12 +33,12 @@ Sequencing call: building a new hub on a palette with 20+ hardcoded grays means 
 
 Every hardcoded gray now resolves through `:root`. Four new **neutral** tokens (palette rule 1 holds — still exactly three chromatic hues):
 
-| Token | Value | Use |
-|---|---|---|
-| `--border-subtle` | `#1c1c1c` | in-card row dividers |
-| `--hero-grad-1` / `-2` | `#1c1a11` / `#1a1a1a` | `.total-card` / `.sp-result-card` gradient |
-| `--on-accent` | `#0a0a0a` | ink on gold fills |
-| `--header-grad-mid` / `-end` | `#141414` / `#181818` | header sheen |
+| Token                        | Value                 | Use                                        |
+| ---------------------------- | --------------------- | ------------------------------------------ |
+| `--border-subtle`            | `#1c1c1c`             | in-card row dividers                       |
+| `--hero-grad-1` / `-2`       | `#1c1a11` / `#1a1a1a` | `.total-card` / `.sp-result-card` gradient |
+| `--on-accent`                | `#0a0a0a`             | ink on gold fills                          |
+| `--header-grad-mid` / `-end` | `#141414` / `#181818` | header sheen                               |
 
 Swept: all stat/table dividers, the two hero-card gradients, the toast (→ `--surface2`), the toggle track (→ `--border`), ink on every gold fill, the header gradient, and `manifest.json`'s `background_color` (`#0f0f0f` → `#0a0a0a`, so a PWA launch flashes brand black rather than a lighter gray). Computed values verified identical to pre-sweep except the toggle track, which moved 3 units (`#333` → `#303030`).
 
@@ -99,6 +99,7 @@ Plus one privacy leak in my own feature: **hide-amounts blurred the headline fig
 No Playwright module is installed, but Chrome for Testing is cached and Node 24 ships a global `WebSocket`, so I wrote a **zero-dependency CDP driver** (scratchpad, not committed) that navigates, evaluates, reloads, and screenshots. That made the failure paths — which are the whole point of 2a — actually testable rather than asserted.
 
 **Persistence, failure paths first:**
+
 - Hand-corrupted `dhanam.v1` (`"{ this is not json"`) → app loads and works from defaults; hint reports the data couldn't be read.
 - `v: 99` blob → ignored cleanly.
 - State removed while `dhanam.seen` survives → correctly reports browser eviction.
@@ -149,9 +150,9 @@ No Playwright module is installed, but Chrome for Testing is cached and Node 24 
 
 **Commits** (branch `claude/clever-pascal-rn4p3h`, pushed):
 
-| | |
-|---|---|
-| `649ab6c` | `docs: expand persistence design, resolve B2, spec net-worth change tile` |
-| `d2a7a60` | `feat: complete D1 gray sweep into the palette custom-property system` |
-| `92b7316` | `feat: add localStorage persistence primitive behind a loan-panel opt-in` |
+|           |                                                                                 |
+| --------- | ------------------------------------------------------------------------------- |
+| `649ab6c` | `docs: expand persistence design, resolve B2, spec net-worth change tile`       |
+| `d2a7a60` | `feat: complete D1 gray sweep into the palette custom-property system`          |
+| `92b7316` | `feat: add localStorage persistence primitive behind a loan-panel opt-in`       |
 | `370a319` | `feat: ship Dhanam Worth — balance sheet, net-worth hero, change tile, backups` |

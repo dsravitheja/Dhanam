@@ -61,11 +61,11 @@ This is how Dhanam graduates from toolbox to app: **Worth is the noun; the calcu
 
 **Three implementation postures (in ascending commitment):**
 
-| Option | What it is | Trade-off |
-|---|---|---|
-| **A. Session worksheet + export** | An assets/liabilities form (cash, FD, MF, EPF/PPF, property, gold, loans) that totals live and exports via the existing `buildExcel` pipeline. Nothing persists. | Zero architecture change, ships fast — but retyping every visit means nobody will use it twice. Honest MVP, weak product. |
+| Option                                          | What it is                                                                                                                                                                                                                 | Trade-off                                                                                                                                           |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A. Session worksheet + export**               | An assets/liabilities form (cash, FD, MF, EPF/PPF, property, gold, loans) that totals live and exports via the existing `buildExcel` pipeline. Nothing persists.                                                           | Zero architecture change, ships fast — but retyping every visit means nobody will use it twice. Honest MVP, weak product.                           |
 | **B. localStorage persistence** *(recommended)* | Same worksheet, saved to `localStorage` on the device. Update the promise to "saved only on this device, never sent anywhere" — which is still a *stronger* privacy story than any fintech app. Add export/erase controls. | One new primitive (a small `saveState`/`loadState` layer). Also unlocks remembering inputs across *all* hubs — fixing the "no memory" gap app-wide. |
-| **C. File-based snapshots** | Export/import a JSON "Dhanam file" the user owns. | Maximum privacy purity, but import friction kills habitual use. Better as a backup feature on top of B. |
+| **C. File-based snapshots**                     | Export/import a JSON "Dhanam file" the user owns.                                                                                                                                                                          | Maximum privacy purity, but import friction kills habitual use. Better as a backup feature on top of B.                                             |
 
 **Recommendation: B**, with the Worth hub structured as: (1) editable balance-sheet with Indian asset categories, (2) hero net-worth number in the existing `total-card` style, (3) a **change-since-last-visit tile** (see §2.4), (4) a net-worth trend chart behind an expanded view, and (5) a "projected worth" section that *reuses* `calcSIP`/`loanAtYear` to draw the future from today's snapshot — the bridge between Worth and Grow that no standalone calculator can offer.
 
@@ -77,11 +77,11 @@ This is how Dhanam graduates from toolbox to app: **Worth is the noun; the calcu
 
 "Save the inputs" is under-specified, and getting it wrong is the most likely way this feature starts producing *wrong* answers rather than merely annoying ones. Split every input into three tiers:
 
-| Tier | Examples | Persist? |
-|---|---|---|
-| **1 — Facts about you** | Asset/liability balances, salary, loan principal & tenure, monthly SIP amount, property purchase price | **Yes.** This is the entire point. |
+| Tier                                   | Examples                                                                                                            | Persist?                                                    |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| **1 — Facts about you**                | Asset/liability balances, salary, loan principal & tenure, monthly SIP amount, property purchase price              | **Yes.** This is the entire point.                          |
 | **2 — Market & statutory assumptions** | 8.75% SBI rate, 4% Telangana stamp duty, FY2025-26 tax slabs, ₹100/sft floor-rise premium, IRDAI depreciation table | **No.** Always reload the app's current maintained default. |
-| **3 — Ephemeral UI state** | Which hub is open, which collapse cards are expanded, active SIP sub-tab | Optional. Low value, low risk — defer. |
+| **3 — Ephemeral UI state**             | Which hub is open, which collapse cards are expanded, active SIP sub-tab                                            | Optional. Low value, low risk — defer.                      |
 
 Persisting tier 2 is a quiet trap: save 8.75% today and in 2028 the app confidently computes an EMI at a rate that has been wrong for three years, with no indication the number came from a stale session rather than the app's maintained default. Same failure mode for tax slabs and stamp duty. Mixing "what I own" with "what the market does" into one blob also makes every future default update a silent no-op for existing users.
 
@@ -114,23 +114,27 @@ That gap — 9 fields and no memory versus 2 fields and a delta — is the whole
 Each of these is a condition of shipping B, not an optional nicety.
 
 **R1. Safari silently deletes `localStorage` after 7 days.** Safari's tracking prevention wipes script-writable storage for origins with no user interaction in 7 days. Home-screen-installed PWAs are exempt, but a desktop-Safari or in-browser iPhone user who checks monthly finds the app **empty every single time** — and empty-after-being-promised-persistence is worse than never having promised it. *This is the heaviest risk.*
+
 - **M1a.** Ship Option C (one-click JSON export / import of a "Dhanam file") in the same phase, not later — it's the honest answer to eviction *and* to cross-device.
 - **M1b.** Store and display a `lastSaved` date on the Worth hub so a wipe is visible and explicable rather than mysterious.
 - **M1c.** If a previously-populated state is found missing (a `dhanam.seen` marker exists but the state key is gone), show a one-line non-alarming notice: "Your saved data was cleared by your browser. Import a backup or start fresh." Never a silent blank form.
 - **M1d.** Nudge PWA installation from the Worth hub specifically, since installation is what actually buys durable storage on iOS.
 
 **R2. This is the first bug class that can brick the app on load.** Today every bug is recoverable by reloading, because state dies with the tab. A malformed or half-written blob parsed at init throws *before* first paint, and reloading won't fix it — the user must clear site data, which they will not know how to do.
+
 - **M2a.** `loadState()` wraps everything in `try/catch` and treats any unreadable or version-mismatched state as absent, never as fatal.
 - **M2b.** `loadState()` is off the critical path of first paint: render the app from defaults, then hydrate.
 - **M2c.** `saveState()` also `try/catch`-wrapped (quota / private-mode `SecurityError` must not break typing).
 - **M2d.** Add corrupt-state and wrong-version cases to the manual checklist in `CLAUDE.md` — `tests.js` covers only pure `calc.js` functions, so this class is manual-verification territory.
 
 **R3. Shared-device exposure.** A household laptop now shows a full balance sheet to whoever opens the browser next; without a backend there is no meaningful lock.
+
 - **M3a.** A "hide amounts" blur toggle on the Worth hub (state itself may be tier 3 / not persisted).
 - **M3b.** Never surface net worth on the landing page or in the nav — it stays inside the hub.
 - **M3c.** Prominent, clearly-labelled "Erase my data" control with a confirm step.
 
 **R4. It creates a sync expectation the architecture can't meet.** Once the data is trusted, "why isn't this on my phone too?" follows immediately. Cross-device access requires a backend — no static-file trick avoids it (see `ARCHITECTURE-ANALYSIS.md`, "no backend" section).
+
 - **M4a.** Copy is explicit that storage is per-device: "saved only on this device — never sent anywhere."
 - **M4b.** JSON export/import (M1a) is the sanctioned manual bridge between devices.
 - **M4c.** See §2.5 for the accounts/backend question, which is deliberately out of scope for this redesign.
@@ -138,6 +142,7 @@ Each of these is a condition of shipping B, not an optional nicety.
 **R5. Ordinary browser hygiene wipes it** — "clear browsing data", private windows, cleanup extensions. Unavoidable; covered by M1a–M1c.
 
 **R6. Schema churn.** Every new Worth field is a migration decision. Bumping `dhanam.v1` → `v2` and discarding v1 is safe but silently destroys the user's data, which for a net-worth tracker *is* the asset.
+
 - **M6a.** Keep the persisted shape flat and additive so new fields are absent-not-invalid; unknown keys are ignored, missing keys fall back to defaults.
 - **M6b.** Only bump the version for genuinely breaking shape changes, and write a real migration when you do — never a silent discard.
 - **M6c.** The exported JSON carries the same version field so imports can be validated and migrated identically.
@@ -180,41 +185,52 @@ Owner's intent, noted here so it isn't rediscovered later: user accounts are a p
 ## Design-quality issues (Apple-lens + industry best practice)
 
 ### D1. Off-palette gray remnants undermine the theme — *severity: medium, effort: low*
+
 The `:root` palette is green/gold, but dozens of hardcoded grays from an earlier dark-gray theme survive: row borders `#1c1c1c`/`#1e1e1e`, hover borders `#444`/`#555`, hint text `#555`, toast `#2a2a2a`, hero-card gradients `#1c1a11 → #1a1a1a` (`.total-card`, `.sp-result-card` — the two most prominent surfaces in the app!), toggle track `#333`, manifest `background_color: #0f0f0f`. On the deep-green background these read as slightly "dirty" panels. *Fix:* sweep every hardcoded gray into the CSS custom-property system.
 
 ### D2. Contrast failures on the smallest text — *severity: high (accessibility), effort: low*
+
 - `.field-hint`, `.note-text`, `.br-calc` use `color: #555` on dark green surfaces ≈ **2.3:1 contrast — clear WCAG AA failure**, on the *smallest* text in the app (10–11px). These are the "SBI avg ~8.75%", "Telangana: 4%" hints — genuinely useful content rendered nearly invisible.
 - `--text-dim: #7a8a7e` lands around 4.5–5:1 — borderline for 10–11px uppercase labels used everywhere.
-*Fix:* lift hint text to at least `--text-dim`, and lift `--text-dim` itself a step for small sizes.
+  *Fix:* lift hint text to at least `--text-dim`, and lift `--text-dim` itself a step for small sizes.
 
 ### D3. Emoji as the icon system — *severity: medium, effort: medium*
+
 🏠 🚗 📈 💸 💰 ⌂ 🏦 📊 ✨ 🏛️ appear in tabs, tiles, headers, buttons. Emoji render differently on every OS, can't take the brand's gold color, and read as casual — directly against the luxe identity the palette and serif establish. Apple would never ship SF-Symbols-by-emoji. *Fix:* a tiny inline-SVG icon set (6–10 line icons, `currentColor`), keeping the single-file architecture.
 
 ### D4. Answer buried in a wall of numbers — *severity: high (core UX), effort: medium*
+
 The loan panel renders 3 scenario cards × 8 stats + 3 custom-year cards + (opened) 3 advanced cards × 10 stats + 3 SIP cards × 3 tenures × 6 stats + 3 custom cards ≈ **100+ numbers on one screen**. The Jobs principle: give the answer, then let the curious dig. Every section should lead with one opinionated hero statement — "20-year loan: **₹43,391/mo**, total interest ₹64L" — with the comparison grid a tap away. The collapse-card pattern already in the codebase is the right tool; it's just not applied to the densest surfaces.
 
 ### D5. Nothing is a chart — *severity: medium, effort: medium*
+
 For an app whose entire value is *compounding over time*, there is not a single graph. Milestone tables (`sp-milestones`, amortization, depreciation) make the user do the visualization in their head. One simple SVG area/line chart (corpus growth, principal-vs-interest crossover, depreciation curve) would communicate more than any table. This is the highest-leverage "delight" addition available.
 
 ### D6. Focus-loss bug while typing tranche values — *severity: high (bug), effort: low*
+
 In `hub-disb`, each keystroke in a tranche input calls `renderLoanDisb()` → `renderDisbTranches()`, which rewrites the rows' `innerHTML` — **destroying the input mid-typing and dropping keyboard focus after every character**. Typing "50" requires re-clicking the field between digits. *Fix:* update tranche state without re-rendering the row being edited (re-render only on add/remove/blur).
 
 ### D7. iOS zoom-on-focus — *severity: medium (mobile), effort: trivial*
+
 Inputs use 13–14px fonts (`.field input` 14px, `.cf-input` 13px). Mobile Safari auto-zooms any focused input under 16px, causing the page to lurch on every field tap — a classic mobile-web annoyance for a PWA meant to be installed on phones. *Fix:* ≥16px input font on touch widths.
 
 ### D8. Keyboard & screen-reader access is near zero — *severity: medium, effort: medium*
+
 Collapse headers, `adv-header`, `sip-header` are `<div onclick>` — unreachable by keyboard, no `aria-expanded`. Hub nav has no `tablist`/`aria-selected` semantics. Mode-toggle buttons (`₹/sft`/`Lump`) are ~20px tall — far below the 44px touch-target minimum. Only `.tile` defines `:focus-visible`. *Fix:* buttons for all clickables, ARIA states on expand/collapse and tabs, larger touch targets.
 
 ### D9. PWA promises it doesn't keep — *severity: medium, effort: low*
+
 - **5.2 MB logo PNG** (`dhanamlogo.png`) for a 54px header image — likely multi-second first paint on mobile data; the entire rest of the app is ~144 KB.
 - The service worker **never caches non-HTML assets** (the cache-first branch does `match(req) || fetch(req)` with no `cache.put`), and the logo/fonts aren't in `ASSETS` — so **offline, the logo and Google Fonts are missing** despite "offline-capable PWA."
 - Google Fonts via `@import` = render-blocking chain *and* quietly contradicts "nothing is sent anywhere" (every visit pings Google). Self-hosting/subsetting fonts fixes speed, offline, and the privacy claim in one move.
 - Manifest icon is an emoji-in-SVG data URI — the installed home-screen icon is a 💰 on gray, the single most brand-visible pixel on a user's phone. `background_color: #0f0f0f` flashes gray, not brand green, at launch.
 
 ### D10. Stale/inconsistent identity in exports — *severity: low, effort: low*
+
 Excel and PNG exports are titled "APARTMENT COST ANALYZER — HYDERABAD" — the app's pre-Dhanam name. Snapshot PNG uses Georgia/Arial, not the brand fonts, and the old gray-black palette. Exports are the only artifacts users *share*; they should carry the brand.
 
 ### D11. Small trust & consistency nicks — *severity: low*
+
 - "Reset" sits next to global-looking Export but only resets the apartment/loan hub — no scope indication.
 - Hardcoded-year facts ("FY2025-26", "SBI ~8.75% (2025)") will silently go stale; they need a visible "assumptions as of…" line.
 - Tax-slab constants, Hyderabad milestones, ₹100/sft premiums are invisible assumptions in otherwise-editable calculators.
@@ -243,87 +259,43 @@ Promoted out of D11 on 2026-07-25 when the audience question was answered in fav
 
 The fix isn't an exhaustive rate database, which would silently rot. A state selector driving stamp duty and registration, defaulting to Telangana so nothing regresses for the owner, with both values still directly editable and the active state visible beside the figures it drives, is more honest and more maintainable. *Tracked as R21/Phase 6a.*
 
-### D14. Dhanam Car overstates the EPF deduction, understating take-home by tens of thousands/month — *severity: high (correctness/bug), effort: low–medium* — ✅ **FIXED 2026-07-30**
+### D14. Dhanam Car overstates the EPF deduction, understating take-home by tens of thousands/month — *severity: high (correctness/bug), effort: low–medium*
 
 Found on 2026-07-30 by the owner comparing "Optimize My Car"'s take-home figure against their real payslip and finding it off by roughly ₹40K/month. Two distinct bugs, of different sizes:
 
 - **The big one — EPF computed on the wrong base.** `renderCarCalc()` in `index.html` has exactly one salary-amount field, `car-basic` ("Basic Monthly Salary"), and reuses it for two different things: it's the base for annual gross salary (correct — gross for tax purposes should include Basic + HRA + Special Allowance), *and* it's the base for the EPF deduction (`basic * epfPct`, wrong — real EPF is calculated only on statutory Basic + DA, not on HRA or Special Allowance). A user who — reasonably, since there's no other field for it — enters their whole fixed pay into `car-basic` gets EPF calculated on their entire fixed pay instead of just the Basic slice of it. Since Basic is often only ~40–50% of total fixed pay in Indian salary structures, this can overstate the EPF deduction by ₹25–35K/month at upper-middle salary levels, which lands directly on the take-home figure. The field's own hint text ("Applied on basic salary") describes the intended behaviour, not the actual one, once the field is being used to hold total fixed pay rather than pure Basic.
-- **The small one — no Section 87A marginal relief.** `calcIncomeTax()` in `calc.js` treats the ₹12L new-regime rebate as a hard cliff (`if (annualTaxable <= 1200000) tax = 0`). Real law has marginal relief for taxable income between ₹12,00,000 and ~₹12,70,000 that caps tax at `taxable − 1200000`; the app's naive slab math overtaxes anyone landing in that ~₹70K band. *(This bullet originally estimated the overcharge at "up to ~₹31K/year". Measuring it during the fix put it at **₹62,399/year — ~₹5,200/month — at its worst**, right at the threshold, decaying linearly to zero at the ₹12,70,588 breakeven. Twice the original estimate, and a real cliff: earning ₹1 over ₹12,00,000 of taxable income cost ₹62,400 in tax.)*
+- **The small one — no Section 87A marginal relief.** `calcIncomeTax()` in `calc.js` treats the ₹12L new-regime rebate as a hard cliff (`if (annualTaxable <= 1200000) tax = 0`). Real law has marginal relief for taxable income between ₹12,00,000 and ~₹12,70,000 that caps tax at `taxable − 1200000`; the app's naive slab math overtaxes anyone landing in that ~₹70K band by up to ~₹31K/year (~₹2,600/month).
 
 Both bugs push the same direction — the app **overstates** deductions/tax and **understates** take-home — so they compound rather than partially cancel, which is consistent with the owner's ~₹40K/month discrepancy being explained almost entirely by the first bug, with the second contributing a smaller amount if their taxable income happens to sit in that band.
 
-*Fix path (agreed with owner):* rejected adding a second "true Basic" field, since most people don't know that split any better than they know the EPF math — it would just relocate the confusion. Instead, add a dedicated **"Monthly EPF Deduction (₹)"** input (defaulted to a reasonable estimate, fully editable) taken straight off the user's payslip, and stop deriving EPF from `car-basic` entirely.
-
-**✅ Shipped 2026-07-30 (Phase 8; full writeup in `PHASE-8-REPORT.md`).** Both bugs are fixed:
-
-- `car-epf-pct` was retired outright and replaced by `car-epf-amt` ("Monthly EPF Deduction (₹)", default ₹6,000). One `epfMonthly`/`epfAnnual` pair now feeds the baseline, carve-out A, additive B and the old-regime 80C cap — the three independent copies of `basic * epfPct` are gone. The scenario cards print the EPF line explicitly so take-home can be traced against a payslip, and the caveat list states the model.
-- A third, smaller wrongness surfaced while fixing the first: scenario A had been deriving an even lower EPF from `effectiveBasic` (Basic minus the car package). A carve-out comes out of allowances, not statutory Basic, so the PF line doesn't move with it — EPF is now constant across all three scenarios, which also makes it cancel out of every vs-baseline delta.
-- `calcIncomeTax()`'s new-regime branch now applies Section 87A marginal relief, capping tax before cess at `taxable − 1200000` up to the ₹12,70,588.24 breakeven. Six new assertions in `tests.js`/`tests.html`, including a sweep across the band proving no cliff survives. The old regime's ₹5L cliff is deliberately left intact — that one is real law — and is now pinned by its own test.
-
-On the owner's own numbers (₹4.5L/mo total fixed pay, real PF ₹21,600/mo, new regime) the take-home figure moves from ₹2,93,950 to ₹3,26,350/mo — ₹32,400/mo of the reported ~₹40K discrepancy, consistent with the EPF bug being the dominant term. *Tracked as R33 (EPF field), R34 (marginal relief), R35 (field hint, shipped first) in `TASK-UX-REDESIGN.md`.*
-
-### D15. Dhanam Car's motor-car perquisite constants are pre-April-2026 law — *severity: high (correctness), effort: trivial* — ✅ **FIXED 2026-07-30**
-
-Found on 2026-07-30, same session as D14, when the owner asked directly whether the app reflects the perquisite rules that took effect April 1, 2026. It doesn't. `calcPerquisite()` in `calc.js` still hardcodes the *previous* Income-tax Rules, 1962 table:
-
-```js
-function calcPerquisite(bigEngine, hasDriver) {
-  return (bigEngine ? 2400 : 1800) + (hasDriver ? 900 : 0);
-}
-```
-
-The CBDT notified the Income-tax Rules, 2026 (under the new Income-tax Act, 2025) on 2026-03-20, effective 2026-04-01 — i.e. **already in force for the entire current financial year**, not a future change. The motor-car perquisite table (employer-owned/hired car, running costs met by employer, partly personal use — the scenario `calcPerquisite()` models) moved:
-
-| Scenario | Old (Rules 1962) — what the app returns | New (Rules 2026) — effective now |
-|---|---|---|
-| Engine ≤1.6L or EV | ₹1,800/mo | ₹5,000/mo |
-| Engine >1.6L | ₹2,400/mo | ₹7,000/mo |
-| Chauffeur add-on | ₹900/mo | ₹3,000/mo |
-
-Effect: `perqAnnual` (added to taxable income in Carve-out A and Additive B) is understated by **₹38,400–₹80,400/year** depending on engine size and driver, which understates tax and overstates take-home in those two scenarios specifically — the Baseline scenario doesn't use `calcPerquisite()` at all, so it's unaffected. *(This bullet originally gave the range as ₹38,400–₹55,200; measuring all four combinations during the fix showed that covers only the no-chauffeur cases. With a driver it's ₹63,600 at ≤1.6L and ₹80,400 at >1.6L, since the chauffeur add-on itself more than tripled.)*
-
-Checked at the same time and found **not** stale: Budget 2026 left the new-regime slabs, the ₹75,000 standard deduction, and the ₹12L/₹60,000 Section 87A rebate that `calcIncomeTax()` depends on unchanged for FY2026-27 — so this is isolated to the four perquisite constants, not a wider tax-engine problem.
-
-*Fix:* update the four constants to the Rules 2026 table above; low effort, no architectural change (still a pure function in `calc.js`), but needs a `node tests.js` case pinning the new values so a future "helpful" revert back to the old numbers gets caught.
-
-**✅ Shipped 2026-07-30 (Phase 8b; full writeup in `PHASE-8B-REPORT.md`).** The four constants now hold the Rules 2026 table, with the notification and commencement dates recorded in a comment beside them. Tests went 45 → 47: all four values pinned, plus the chauffeur add-on asserted flat at ₹3,000 across engine sizes, plus an explicit check that no Rules 1962 value (₹1,800/₹2,400/₹900/₹2,700/₹3,300) survives anywhere in the table.
-
-Two things were done beyond the stated fix, both because the research turned them up:
-
-- **The figures were verified against source rather than taken on trust** — including the detail that matters most here: the ₹5,000/₹7,000 row is the **employer-meets-running-expenses** case, which is exactly what this hub models (the employer pays EMI, fuel and driver). Mapping to the wrong row would have produced a new confidently-wrong number while claiming to fix one. The rule *number* under the Rules 2026 could **not** be confirmed from any source, so the caveat copy cites "Income-tax Rules, 2026 (in force 1 Apr 2026)" instead of carrying the old "IT Rule 3(2)" citation into a rulebook where it may no longer hold.
-- **The engine checkbox now says "(leave off for electric)".** The ≤1.6L bracket explicitly covers EVs and nothing on screen said so; an EV owner guessing wrong is a ₹24,000/year error in taxable perquisite.
-
-*Tracked as R37, Phase 8b in `TASK-UX-REDESIGN.md`.*
-
-**The wider lesson, since this is the third statutory-constant bug in two days** (R33's EPF model, R34's 87A cliff, and now R37): these constants were all correct when typed and rotted silently afterwards, with nothing on screen dating them and no test that would fail when the law moved. The perquisite figures were wrong for four months before anyone thought to ask. That's the case for D11/D13's provenance work (Phase 6b) stated in concrete terms — and until it lands, the cheap mitigation is that **any commit touching a statutory constant should date it in the visible copy and pin it with a test**, which is what this one does for one hub.
+*Fix path (agreed with owner, not yet implemented):* rejected adding a second "true Basic" field, since most people don't know that split any better than they know the EPF math — it would just relocate the confusion. Instead, add a dedicated **"Monthly EPF Deduction (₹)"** input (defaulted to a reasonable estimate, fully editable) taken straight off the user's payslip, and stop deriving EPF from `car-basic` entirely. *Tracked as R33 (EPF field), R34 (marginal relief) in `TASK-UX-REDESIGN.md`.* The `car-basic` field's hint text was updated immediately (2026-07-30, ahead of the rest of this fix) to clarify it means total fixed pay, not Basic alone — *tracked as R35*.
 
 ---
 
 ## Priority map
 
-> **Read this as the original ordering, not the live one.** Most of what follows has shipped; `TASK-UX-REDESIGN.md`'s "Remaining work" table is the authoritative view of what's left. Four items were added after the original analysis and sit **above everything still open below** — each is a real numbers-are-wrong bug or a universality gap, not a polish item:
->
-> | # | Item | Type | Severity | Effort |
-> |---|---|---|---|---|
-> | 0a | D13 regional defaults presented as universal | **Correctness** | **High** | Medium |
-> | 0b | D12 comparison framing (pre-tax vs guaranteed) | **Correctness/trust** | **High** | Low (framing) / High (modeling) |
-> | ~~0c~~ | ~~D14 Dhanam Car EPF base bug + missing 87A marginal relief~~ — ✅ **FIXED 2026-07-30** (Phase 8) | **Correctness/bug** | **High** | Low–Medium |
-> | ~~0d~~ | ~~D15 Dhanam Car perquisite constants are pre-April-2026 law~~ — ✅ **FIXED 2026-07-30** (Phase 8b) | **Correctness** | **High** | Trivial |
+> **Read this as the original ordering, not the live one.** Most of what follows has shipped; `TASK-UX-REDESIGN.md`'s "Remaining work" table is the authoritative view of what's left. Three items were added after the original analysis and sit **above everything still open below** — each is a real numbers-are-wrong bug or a universality gap, not a polish item:
+> 
+> | #   | Item                                                      | Type                  | Severity | Effort                          |
+> | --- | --------------------------------------------------------- | --------------------- | -------- | ------------------------------- |
+> | 0a  | D13 regional defaults presented as universal              | **Correctness**       | **High** | Medium                          |
+> | 0b  | D12 comparison framing (pre-tax vs guaranteed)            | **Correctness/trust** | **High** | Low (framing) / High (modeling) |
+> | 0c  | D14 Dhanam Car EPF base bug + missing 87A marginal relief | **Correctness/bug**   | **High** | Low–Medium                      |
 
-| # | Item | Type | Severity | Effort |
-|---|---|---|---|---|
-| 1 | Landing reorder + naming coherence (Strategic #1) | Structure | High | Low |
-| 2 | Worth hub w/ localStorage + change tile + projection bridge (Strategic #2, §2.1–§2.4) | Structure | High | High |
-| 3 | D6 tranche focus-loss bug | Bug | High | Low |
-| 4 | D2 contrast failures | A11y | High | Low |
-| 5 | D4 hero-answer-first density reduction | UX | High | Medium |
-| 6 | D9 PWA: logo size, SW caching, fonts, manifest icon | Perf/trust | Medium | Low–Med |
-| 7 | D7 iOS input zoom | Mobile | Medium | Trivial |
-| 8 | D1 gray-remnant sweep | Polish | Medium | Low |
-| 9 | D3 emoji → SVG icons | Brand | Medium | Medium |
-| 10 | D5 charts | Delight | Medium | Medium |
-| 11 | D8 keyboard/ARIA | A11y | Medium | Medium |
-| 12 | D10–D11 export branding, stale-data labels, misc | Polish | Low | Low |
+| #   | Item                                                                                  | Type       | Severity | Effort  |
+| --- | ------------------------------------------------------------------------------------- | ---------- | -------- | ------- |
+| 1   | Landing reorder + naming coherence (Strategic #1)                                     | Structure  | High     | Low     |
+| 2   | Worth hub w/ localStorage + change tile + projection bridge (Strategic #2, §2.1–§2.4) | Structure  | High     | High    |
+| 3   | D6 tranche focus-loss bug                                                             | Bug        | High     | Low     |
+| 4   | D2 contrast failures                                                                  | A11y       | High     | Low     |
+| 5   | D4 hero-answer-first density reduction                                                | UX         | High     | Medium  |
+| 6   | D9 PWA: logo size, SW caching, fonts, manifest icon                                   | Perf/trust | Medium   | Low–Med |
+| 7   | D7 iOS input zoom                                                                     | Mobile     | Medium   | Trivial |
+| 8   | D1 gray-remnant sweep                                                                 | Polish     | Medium   | Low     |
+| 9   | D3 emoji → SVG icons                                                                  | Brand      | Medium   | Medium  |
+| 10  | D5 charts                                                                             | Delight    | Medium   | Medium  |
+| 11  | D8 keyboard/ARIA                                                                      | A11y       | Medium   | Medium  |
+| 12  | D10–D11 export branding, stale-data labels, misc                                      | Polish     | Low      | Low     |
 
 ---
 

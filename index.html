@@ -9,6 +9,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Dhanam">
 <link rel="manifest" href="manifest.json">
+<!-- R26, Phase 4b: iOS ignores manifest.json icons for Add-to-Home-Screen,
+     so apple-touch-icon is needed separately; rel="icon" gives the desktop
+     tab a mark instead of a default-favicon 404. Both reuse R5's existing
+     precached PNGs — no new asset, nothing to add to sw.js's ASSETS. -->
+<link rel="apple-touch-icon" href="icon-512.png">
+<link rel="icon" href="dhanamlogo.png">
 <title>Dhanam — Personal Financial Hub</title>
 <style>
 /* Self-hosted fonts (R5, Phase 4): subsetted to latin + latin-ext (needed for
@@ -226,9 +232,17 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
    replaces; color is inherited (currentColor), never a fixed hue, so an
    icon never becomes a fourth chromatic color outside palette rule 1 —
    an active/selected ancestor coloring itself gold still colors its icon
-   gold too, same as it colored its text. */
+   gold too, same as it colored its text (e.g. `.hub-tab.active`'s nav icon).
+   R28, Phase 4b: `.tile-icon`/`.ab-icon` below are a deliberate exception to
+   that inheritance, pinned to a fixed neutral instead — `.tile-title` is
+   permanently `--accent2` (gold) as a design choice, not a state, so an
+   inheriting tile icon would be gold on every tile at all times, competing
+   with the headline and violating palette rule 2 (gold is for emphasis/
+   active state, not decoration); `.action-btn.active` turns its text gold
+   as a real state change, and the icon pin keeps that gold reserved for the
+   text rather than doubling it onto the icon too. */
 .icon { width:1em; height:1em; min-width:1em; min-height:1em; display:inline-block; vertical-align:-0.15em; flex-shrink:0; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-.tile-icon, .ab-icon { color:var(--text-mid); }
+.tile-icon, .ab-icon { color:var(--text-mid); } /* R28: deliberately not inherited — see comment above */
 .pch-tag { font-size:10px; padding:2px 8px; border-radius:4px; background:var(--accent-dim); color:var(--accent); font-weight:600; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
 .panel-card-body { padding:16px 18px; }
 
@@ -568,11 +582,6 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .car-stat-val.accent { color:var(--accent); }
 .car-divider { margin:8px 0; border-top:1px dashed var(--border); padding-top:8px; }
 .car-section-lbl { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); margin-bottom:6px; }
-.car-summary-box { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; margin-bottom:14px; }
-.car-summary-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border-subtle); flex-wrap:wrap; gap:8px; }
-.car-summary-row:last-child { border-bottom:none; }
-.car-summary-lbl { font-size:12px; color:var(--text-dim); }
-.car-summary-val { font-family:'DM Mono',monospace; font-size:13px; }
 .cb-derived-box { display:flex; gap:12px; flex-wrap:wrap; margin-top:10px; }
 .cb-derived-item { flex:1; min-width:130px; padding:8px 12px; background:rgba(201,168,76,.06); border-radius:6px; border:1px solid rgba(201,168,76,.2); }
 .cb-derived-lbl { font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.07em; margin-bottom:2px; }
@@ -604,6 +613,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .cc-field input:focus, .cc-field select:focus { border-color:var(--accent); }
 .cc-field-check { flex:0 0 auto; padding-bottom:9px; }
 .cc-field-check label { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-mid); white-space:nowrap; cursor:pointer; }
+.cc-row-hint { flex:1 0 100%; font-size:11px; color:var(--text-mid); margin-top:2px; }
 .cc-rank-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; margin-bottom:12px; }
 .cc-rank-card.rank-1 {
   border-color:var(--accent);
@@ -613,6 +623,12 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .cc-rank-card.rank-1 .cc-rank-badge { background:rgba(201,168,76,.18); color:var(--accent); }
 .cc-rank-title { font-family:'Playfair Display',serif; font-size:17px; font-weight:700; color:var(--text); }
 .cc-rank-type { font-size:11px; color:var(--text-dim); margin-bottom:10px; }
+/* Per-card disclosure (R47, Phase 10c) — the compact default shows the net
+   cost hero + this one supporting line; everything else sits behind the
+   nested .collapse-card below. --surface3 (darker than the card's own
+   --surface2) keeps the nested toggle visually distinct from the card body. */
+.cc-rank-sub { font-family:'DM Mono',monospace; font-size:13px; color:var(--text-mid); margin:2px 0 12px; }
+.cc-detail-card { background:var(--surface3); margin-top:2px; }
 .cc-be-row { display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-bottom:1px solid var(--border-subtle); gap:12px; flex-wrap:wrap; }
 .cc-be-row:last-child { border-bottom:none; }
 .cc-be-name { font-size:13px; color:var(--text); font-weight:500; }
@@ -631,7 +647,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <!-- ===== ICON SPRITE (R7, Phase 4) =====
      One shared set of inline-SVG line icons on currentColor, replacing the
      emoji previously used as icons in nav/tiles/section headers/buttons.
-     Referenced everywhere via <svg class="icon"><use href="#i-name"></use></svg>.
+     Referenced everywhere via <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-name"></use></svg>.
      Emoji intentionally remain in body copy (e.g. dynamic result labels) —
      out of R7's scope, which is UI chrome only. -->
 <svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
@@ -663,9 +679,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <symbol id="i-reset" viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.5-5.4"/><path d="M19 3v5h-5"/></symbol>
 <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M4 3.5h16"/></symbol>
 <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15"/><path d="M9 7V4.8a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7"/><path d="M6.5 7l1 12.5a1.5 1.5 0 0 0 1.5 1.4h6a1.5 1.5 0 0 0 1.5-1.4L17.5 7"/><path d="M10 11v6M14 11v6"/></symbol>
-<symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 5 13.5h5.5L11 22l8-11.5h-5.5L13 2z"/></symbol>
-<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
-</defs>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 5 13.5h5.5L11 22l8-11.5h-5.5L13 2z"/></symbol></defs>
 </svg>
 
 <div class="header">
@@ -681,11 +695,11 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <!-- ===== HUB NAVIGATION ===== -->
 <nav class="hub-nav">
   <div class="hub-nav-inner">
-    <button class="hub-tab active" id="ht-landing" onclick="switchHub('landing')"><svg class="icon"><use href="#i-home"></use></svg> Home</button>
-    <button class="hub-tab" id="ht-apartment" onclick="switchHub('apartment')"><svg class="icon"><use href="#i-home"></use></svg> Dhanam Home</button>
-    <button class="hub-tab" id="ht-car" onclick="switchHub('car')"><svg class="icon"><use href="#i-car"></use></svg> Dhanam Car</button>
-    <button class="hub-tab" id="ht-sip" onclick="switchHub('sip')"><svg class="icon"><use href="#i-trend-up"></use></svg> Dhanam Grow</button>
-    <button class="hub-tab" id="ht-worth" onclick="switchHub('worth')"><svg class="icon"><use href="#i-coin"></use></svg> Dhanam Worth</button>
+    <button class="hub-tab active" id="ht-landing" onclick="switchHub('landing')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg> Home</button>
+    <button class="hub-tab" id="ht-apartment" onclick="switchHub('apartment')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg> Dhanam Home</button>
+    <button class="hub-tab" id="ht-car" onclick="switchHub('car')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg> Dhanam Car</button>
+    <button class="hub-tab" id="ht-sip" onclick="switchHub('sip')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Dhanam Grow</button>
+    <button class="hub-tab" id="ht-worth" onclick="switchHub('worth')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Dhanam Worth</button>
   </div>
 </nav>
 
@@ -693,42 +707,42 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="hub-content active" id="hub-landing">
 <div class="main">
 
-<div class="section-title"><svg class="icon"><use href="#i-home"></use></svg> Welcome to Dhanam</div>
+<div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg> Welcome to Dhanam</div>
 <p class="landing-intro">What do you want to do? Everything updates live as you type. Nothing is ever sent anywhere — anything you choose to save stays on this device.</p>
 
 <div class="tile-grid">
   <button class="tile" onclick="switchHub('sip')">
-    <span class="tile-icon"><svg class="icon"><use href="#i-trend-up"></use></svg></span>
+    <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg></span>
     <span class="tile-title">Grow My Money</span>
     <span class="tile-tool">Dhanam Grow</span>
     <span class="tile-desc">SIP planner — monthly, step-up & lumpsum investment growth.</span>
   </button>
   <button class="tile" onclick="switchHub('worth')">
-    <span class="tile-icon"><svg class="icon"><use href="#i-coin"></use></svg></span>
+    <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span>
     <span class="tile-title">Know My Net Worth</span>
     <span class="tile-tool">Dhanam Worth</span>
     <span class="tile-desc">Track assets, loans & investments in one place — saved on this device.</span>
   </button>
   <button class="tile" onclick="switchHub('apartment')">
-    <span class="tile-icon"><svg class="icon"><use href="#i-home"></use></svg></span>
+    <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg></span>
     <span class="tile-title">Plan a Home Purchase</span>
     <span class="tile-tool">Dhanam Home</span>
     <span class="tile-desc">Property cost breakdown, stamp duty, registration & GST estimator.</span>
   </button>
   <button class="tile" onclick="openLoanCalc()">
-    <span class="tile-icon"><svg class="icon"><use href="#i-bank"></use></svg></span>
+    <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bank"></use></svg></span>
     <span class="tile-title">Finance My Home</span>
     <span class="tile-tool">Dhanam Home · Loan Analysis</span>
     <span class="tile-desc">EMI scenarios, prepayment projections & Buy-vs-SIP comparison.</span>
   </button>
   <button class="tile" onclick="openDisbCalc()">
-    <span class="tile-icon"><svg class="icon"><use href="#i-coin"></use></svg></span>
+    <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span>
     <span class="tile-title">Buying Under Construction?</span>
     <span class="tile-tool">Dhanam Home · Pre-EMI Calculator</span>
     <span class="tile-desc">Pre-EMI interest across a staged disbursement schedule.</span>
   </button>
   <button class="tile" onclick="switchHub('car')">
-    <span class="tile-icon"><svg class="icon"><use href="#i-car"></use></svg></span>
+    <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg></span>
     <span class="tile-title">Optimize My Company Car</span>
     <span class="tile-tool">Dhanam Car</span>
     <span class="tile-desc">Company car lease tax perquisite, plus car loan & resale value.</span>
@@ -742,7 +756,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="main">
 
 <!-- ===== QUICK CALC ===== -->
-<div class="section-title"><svg class="icon"><use href="#i-bolt"></use></svg> Quick Estimate</div>
+<div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg> Quick Estimate</div>
 <div class="quick-calc-card">
   <div class="qc-top">
     <span class="qc-badge">Instant estimate</span>
@@ -797,23 +811,23 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <!-- ===== ACTION BUTTONS ===== -->
 <div class="action-row">
   <button class="action-btn" id="btn-detail" onclick="toggleSection('detail')">
-    <span class="ab-icon"><svg class="icon"><use href="#i-bar-chart"></use></svg></span>
+    <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg></span>
     <span class="ab-label">Detailed Cost Analysis</span>
     <span class="ab-arrow">▼</span>
   </button>
   <button class="action-btn" id="btn-loan" onclick="toggleSection('loan')">
-    <span class="ab-icon"><svg class="icon"><use href="#i-bank"></use></svg></span>
+    <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bank"></use></svg></span>
     <span class="ab-label">Loan Analysis</span>
     <span class="ab-arrow">▼</span>
   </button>
   <button class="action-btn" id="btn-disb" onclick="toggleSection('disb')">
-    <span class="ab-icon"><svg class="icon"><use href="#i-construction"></use></svg></span>
+    <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-construction"></use></svg></span>
     <span class="ab-label">Loan Disbursement (Pre-EMI)</span>
     <span class="ab-arrow">▼</span>
   </button>
   <div class="action-utils">
-    <button class="btn btn-secondary" onclick="exportSnapshot()"><svg class="icon"><use href="#i-camera"></use></svg> Export</button>
-    <button class="btn btn-secondary" onclick="resetAll()"><svg class="icon"><use href="#i-reset"></use></svg> Reset</button>
+    <button class="btn btn-secondary" onclick="exportSnapshot()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-camera"></use></svg> Export</button>
+    <button class="btn btn-secondary" onclick="resetAll()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-reset"></use></svg> Reset</button>
   </div>
 </div>
 
@@ -823,7 +837,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <!-- Property Base -->
   <div class="panel-card">
     <div class="panel-card-header">
-      <span><svg class="icon"><use href="#i-building"></use></svg></span>
+      <span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-building"></use></svg></span>
       <span class="pch-title">Property Base</span>
       <span class="pch-tag">From Quick Estimate</span>
     </div>
@@ -843,7 +857,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
   <!-- Additional Features -->
   <div class="panel-card">
-    <div class="panel-card-header"><span><svg class="icon"><use href="#i-sparkle"></use></svg></span><span class="pch-title">Additional Features</span></div>
+    <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-sparkle"></use></svg></span><span class="pch-title">Additional Features</span></div>
     <div class="panel-card-body" style="padding:0;">
       <div class="cf-group" style="margin:0;border:none;border-radius:0;">
 
@@ -891,7 +905,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
   <!-- Additional Charges -->
   <div class="panel-card">
-    <div class="panel-card-header"><span><svg class="icon"><use href="#i-clipboard"></use></svg></span><span class="pch-title">Additional Charges</span></div>
+    <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg></span><span class="pch-title">Additional Charges</span></div>
     <div class="panel-card-body" style="padding:0;">
       <div class="cf-group" style="margin:0;border:none;border-radius:0;">
 
@@ -978,7 +992,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <!-- Government Charges -->
   <div class="panel-card">
     <div class="panel-card-header">
-      <span><svg class="icon"><use href="#i-bank"></use></svg></span>
+      <span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bank"></use></svg></span>
       <span class="pch-title">Government Charges</span>
       <span class="pch-tag" id="d-govt-uc-tag" style="display:none;">Under Construction</span>
     </div>
@@ -1080,9 +1094,9 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   </div>
 
   <div class="btn-row">
-    <button class="btn btn-secondary" onclick="exportDetailExcel()"><svg class="icon"><use href="#i-bar-chart"></use></svg> Export Detail Excel</button>
-    <button class="btn btn-secondary" onclick="exportSnapshot('detail')"><svg class="icon"><use href="#i-camera"></use></svg> Save as Image</button>
-    <button class="btn btn-secondary" id="btn-combined-from-detail" onclick="exportCombinedExcel()" style="display:none;"><svg class="icon"><use href="#i-clipboard"></use></svg> Export Combined</button>
+    <button class="btn btn-secondary" onclick="exportDetailExcel()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg> Export Detail Excel</button>
+    <button class="btn btn-secondary" onclick="exportSnapshot('detail')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-camera"></use></svg> Save as Image</button>
+    <button class="btn btn-secondary" id="btn-combined-from-detail" onclick="exportCombinedExcel()" style="display:none;"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg> Export Combined</button>
   </div>
 </div><!-- /section-detail -->
 
@@ -1152,7 +1166,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
   <!-- Principal vs. interest over the tenure (R4) -->
   <div class="panel-card" id="l-chart-card" style="display:none;">
-    <div class="panel-card-header"><span><svg class="icon"><use href="#i-bar-chart"></use></svg></span><span class="pch-title">Principal vs. Interest — 20-Year Tenure</span></div>
+    <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg></span><span class="pch-title">Principal vs. Interest — 20-Year Tenure</span></div>
     <div class="panel-card-body">
       <div class="chart-legend">
         <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Cumulative principal paid</span>
@@ -1185,7 +1199,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <!-- Advanced Loan Analysis -->
   <div class="adv-section" id="adv-section">
     <div class="adv-header" onclick="toggleAdv()">
-      <span style="font-size:16px;"><svg class="icon"><use href="#i-rocket"></use></svg></span>
+      <span style="font-size:16px;"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-rocket"></use></svg></span>
       <span class="adv-title">Advanced: Extra Payments Projection</span>
       <span class="adv-arrow">▼</span>
     </div>
@@ -1230,7 +1244,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <!-- Buy vs SIP section -->
   <div class="sip-section" id="sip-section">
     <div class="sip-header" onclick="toggleSIP()">
-      <span style="font-size:16px;"><svg class="icon"><use href="#i-trend-up"></use></svg></span>
+      <span style="font-size:16px;"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg></span>
       <span class="sip-title">Buy vs. SIP: What if you invested instead?</span>
       <span class="sip-arrow">▼</span>
     </div>
@@ -1275,8 +1289,8 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   </div>
 
   <div class="btn-row">
-    <button class="btn btn-secondary" onclick="exportLoanExcel()"><svg class="icon"><use href="#i-bar-chart"></use></svg> Export Loan Excel</button>
-    <button class="btn btn-secondary" id="btn-combined-from-loan" onclick="exportCombinedExcel()" style="display:none;"><svg class="icon"><use href="#i-clipboard"></use></svg> Export Combined</button>
+    <button class="btn btn-secondary" onclick="exportLoanExcel()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg> Export Loan Excel</button>
+    <button class="btn btn-secondary" id="btn-combined-from-loan" onclick="exportCombinedExcel()" style="display:none;"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg> Export Combined</button>
   </div>
 </div><!-- /section-loan -->
 
@@ -1284,7 +1298,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="section-panel" id="section-disb">
 
   <div class="panel-card">
-    <div class="panel-card-header"><span><svg class="icon"><use href="#i-construction"></use></svg></span><span class="pch-title">Loan &amp; Tenure</span><span class="pch-tag">Live</span></div>
+    <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-construction"></use></svg></span><span class="pch-title">Loan &amp; Tenure</span><span class="pch-tag">Live</span></div>
     <div class="panel-card-body">
       <div class="grid-3">
         <div class="field">
@@ -1313,19 +1327,19 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   </div>
 
   <div class="panel-card">
-    <div class="panel-card-header"><span><svg class="icon"><use href="#i-calendar"></use></svg></span><span class="pch-title">Disbursement Tranches</span><span class="pch-tag">Live</span></div>
+    <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg></span><span class="pch-title">Disbursement Tranches</span><span class="pch-tag">Live</span></div>
     <div class="panel-card-body">
       <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">
         Add each stage the builder/bank releases funds — as a % of the sanctioned loan, and the month it's disbursed. During this phase, pre-EMI interest is charged only on the amount disbursed so far.
       </p>
       <div id="disb-tranche-rows"></div>
-      <button class="btn btn-secondary" onclick="disbAddTranche()"><svg class="icon"><use href="#i-plus"></use></svg> Add Tranche</button>
+      <button class="btn btn-secondary" onclick="disbAddTranche()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-plus"></use></svg> Add Tranche</button>
       <div class="disb-warn" id="disb-warn"></div>
     </div>
   </div>
 
   <div class="panel-card">
-    <div class="panel-card-header"><span><svg class="icon"><use href="#i-bar-chart"></use></svg></span><span class="pch-title">Disbursement Schedule</span><span class="pch-tag">Live</span></div>
+    <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg></span><span class="pch-title">Disbursement Schedule</span><span class="pch-tag">Live</span></div>
     <div class="panel-card-body">
       <table class="disb-schedule-table">
         <thead><tr><th>Stage</th><th>Cumulative Disbursed</th><th>Pre-EMI Interest / mo</th></tr></thead>
@@ -1335,7 +1349,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   </div>
 
   <div class="panel-card">
-    <div class="panel-card-header"><span><svg class="icon"><use href="#i-coin"></use></svg></span><span class="pch-title">Summary</span><span class="pch-tag">Live</span></div>
+    <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span><span class="pch-title">Summary</span><span class="pch-tag">Live</span></div>
     <div class="panel-card-body">
       <div class="loan-stat"><span class="ls-lbl">Total Pre-EMI Interest Paid</span><span class="ls-val red" id="disb-total-preemi">—</span></div>
       <div class="loan-stat"><span class="ls-lbl">EMI after Final Disbursement</span><span class="ls-val big" id="disb-emi">—</span></div>
@@ -1353,9 +1367,9 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="hub-content" id="hub-car">
   <div class="main">
 
-    <div class="section-title"><svg class="icon"><use href="#i-car"></use></svg> Company Car Lease — Tax Analysis</div>
+    <div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg> Company Car Lease — Tax Analysis</div>
     <div class="panel-card">
-      <div class="panel-card-header"><span><svg class="icon"><use href="#i-briefcase"></use></svg></span><span class="pch-title">Salary &amp; Car Policy Inputs</span><span class="pch-tag">Live</span></div>
+      <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-briefcase"></use></svg></span><span class="pch-title">Salary &amp; Car Policy Inputs</span><span class="pch-tag">Live</span></div>
       <div class="panel-card-body">
         <div class="grid-3">
           <div class="field highlight">
@@ -1409,11 +1423,38 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       </div>
     </div>
 
-    <div id="car-scenario-cards" class="loan-grid" style="margin-bottom:14px;"></div>
-    <div id="car-summary" style="margin-bottom:14px;"></div>
+    <!-- Hero answer — whichever of Baseline / Carve-out A / Additive B
+         currently wins (R45, Phase 10a). Live/dynamic: recomputed on every
+         renderCarCalc() call from the exact aAdv/bAdv comparison the old
+         car-summary-box's "Best option" line used, just promoted above the
+         cards instead of buried under them. -->
+    <div class="total-card" id="car-hero">
+      <div class="total-label" id="car-hero-label">Best Option</div>
+      <div class="total-value" id="car-hero-value">—</div>
+      <div class="total-cr" id="car-hero-note"></div>
+      <div class="total-sub">
+        <div class="total-sub-item"><div class="ts-lbl">Perquisite Value</div><div class="ts-val mono" id="car-hero-perq">—</div></div>
+      </div>
+    </div>
+
+    <!-- Full 3-card comparison — collapsed by default (R45, Phase 10a). The
+         old car-summary-box (perquisite + all three effective-net lines +
+         "Best option" verdict) was dropped rather than folded in here: every
+         one of its numbers is now either in the hero above or already on the
+         card it restated, so keeping it too would state the same figures a
+         third time. -->
+    <div class="collapse-card" id="car-compare-card">
+      <div class="collapse-header" onclick="toggleCard('car-compare-card')">
+        <span class="collapse-title">Compare all three scenarios</span>
+        <span class="collapse-arrow">▼</span>
+      </div>
+      <div class="collapse-body">
+        <div id="car-scenario-cards" class="loan-grid"></div>
+      </div>
+    </div>
 
     <div class="panel-card" style="margin-bottom:28px;">
-      <div class="panel-card-header"><span><svg class="icon"><use href="#i-info"></use></svg></span><span class="pch-title">Important Notes &amp; Caveats</span></div>
+      <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></span><span class="pch-title">Important Notes &amp; Caveats</span></div>
       <div class="panel-card-body">
         <ul style="font-size:12px;color:var(--text-dim);line-height:2;padding-left:16px;">
           <li>Perquisite per the Income-tax Rules, 2026 (in force 1 Apr 2026): ≤1600cc or electric = ₹5,000/mo · &gt;1600cc = ₹7,000/mo · company driver = +₹3,000/mo. These replaced the long-standing ₹1,800/₹2,400/₹900 figures under the Income-tax Rules, 1962 — roughly a 3× increase, so a car package that looked worthwhile under the old table may not under this one.</li>
@@ -1427,20 +1468,20 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       </div>
     </div>
 
-    <div class="section-title"><svg class="icon"><use href="#i-scope"></use></svg> Compare Cars — ICE vs EV Under Lease</div>
+    <div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-scope"></use></svg> Compare Cars — ICE vs EV Under Lease</div>
 
     <div class="panel-card">
-      <div class="panel-card-header"><span><svg class="icon"><use href="#i-car"></use></svg></span><span class="pch-title">Your Shortlist</span><span class="pch-tag">Live</span></div>
+      <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg></span><span class="pch-title">Your Shortlist</span><span class="pch-tag">Live</span></div>
       <div class="panel-card-body">
         <p class="note-text" style="margin-bottom:12px;">Enter the cars you're actually considering — on-road price and mileage/efficiency from a dealer quote, not a brochure figure. A car only counts once both its price and mileage/efficiency are filled in.</p>
         <div id="cc-rows"></div>
-        <button class="btn btn-secondary" onclick="ccAddCar()"><svg class="icon"><use href="#i-plus"></use></svg> Add car</button>
+        <button class="btn btn-secondary" onclick="ccAddCar()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-plus"></use></svg> Add car</button>
       </div>
     </div>
 
     <div class="collapse-card" id="cc-assumptions-card">
       <div class="collapse-header" onclick="toggleCard('cc-assumptions-card')">
-        <span class="collapse-title"><svg class="icon"><use href="#i-clipboard"></use></svg> Assumptions</span>
+        <span class="collapse-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg> Assumptions</span>
         <span class="collapse-arrow">▼</span>
       </div>
       <div class="collapse-body">
@@ -1543,7 +1584,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     </div>
 
     <div class="panel-card" id="cc-breakeven-card" style="display:none;margin-bottom:14px;">
-      <div class="panel-card-header"><span><svg class="icon"><use href="#i-bolt"></use></svg></span><span class="pch-title">Breakeven — Annual km</span></div>
+      <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg></span><span class="pch-title">Breakeven — Annual km</span></div>
       <div class="panel-card-body">
         <div class="field" style="max-width:320px;margin-bottom:12px;">
           <label>Reference ICE Car</label>
@@ -1555,7 +1596,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
     <div class="collapse-card" id="cc-chart-card" style="display:none;">
       <div class="collapse-header" onclick="toggleChartCard('cc-chart-card', renderCCChart)">
-        <span class="collapse-title"><svg class="icon"><use href="#i-bar-chart"></use></svg> Net cost vs. annual km driven</span>
+        <span class="collapse-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg> Net cost vs. annual km driven</span>
         <span class="collapse-arrow">▼</span>
       </div>
       <div class="collapse-body">
@@ -1567,7 +1608,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <div id="cc-results" style="margin-bottom:14px;"></div>
 
     <div class="panel-card" style="margin-bottom:28px;">
-      <div class="panel-card-header"><span><svg class="icon"><use href="#i-info"></use></svg></span><span class="pch-title">Important Notes &amp; Caveats</span></div>
+      <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></span><span class="pch-title">Important Notes &amp; Caveats</span></div>
       <div class="panel-card-body">
         <ul style="font-size:12px;color:var(--text-dim);line-height:2;padding-left:16px;">
           <li>Prices, names and mileage/efficiency are exactly what you typed — nothing here is verified against a dealer quote or a catalog.</li>
@@ -1583,7 +1624,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       </div>
     </div>
 
-    <div class="section-title"><svg class="icon"><use href="#i-bank"></use></svg> Car Buying — Loan Analysis</div>
+    <div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bank"></use></svg> Car Buying — Loan Analysis</div>
     <div class="loan-top">
       <div class="loan-inputs-grid">
         <div class="loan-field">
@@ -1602,9 +1643,33 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       <div id="cb-derived" class="cb-derived-box"></div>
     </div>
 
-    <div id="cb-cards" class="loan-grid" style="margin-bottom:14px;"></div>
+    <!-- Hero answer — opinionated default: 5-year tenure (R46, Phase 10b),
+         mirroring the home-loan panel's hero pattern (l-hero) but with a
+         car-appropriate default — the shortest of the 3/5/7 options offered
+         and the closest to a typical car-loan term, unlike the 20-year
+         default that made sense for a home loan. -->
+    <div class="total-card" id="cb-hero" style="display:none;">
+      <div class="total-label">Your 5-Year EMI</div>
+      <div class="total-value" id="cb-hero-emi">—</div>
+      <div class="total-cr" id="cb-hero-note"></div>
+      <div class="total-sub">
+        <div class="total-sub-item"><div class="ts-lbl">Total Interest</div><div class="ts-val mono" id="cb-hero-interest">—</div></div>
+        <div class="total-sub-item"><div class="ts-lbl">Total Paid</div><div class="ts-val mono" id="cb-hero-total">—</div></div>
+      </div>
+    </div>
+
+    <!-- 3/5/7-year comparison — collapsed by default (R46, Phase 10b) -->
+    <div class="collapse-card" id="cb-compare-card" style="display:none;">
+      <div class="collapse-header" onclick="toggleCard('cb-compare-card')">
+        <span class="collapse-title">Compare 3 / 5 / 7-year tenures</span>
+        <span class="collapse-arrow">▼</span>
+      </div>
+      <div class="collapse-body">
+        <div id="cb-cards" class="loan-grid"></div>
+      </div>
+    </div>
     <div id="cb-depreciation" class="panel-card" style="margin-bottom:28px;display:none;">
-      <div class="panel-card-header"><span><svg class="icon"><use href="#i-trend-down"></use></svg></span><span class="pch-title">Estimated Resale Value (IRDAI Depreciation)</span></div>
+      <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-down"></use></svg></span><span class="pch-title">Estimated Resale Value (IRDAI Depreciation)</span></div>
       <div class="panel-card-body">
         <!-- Static sibling of cb-depr-body, not inside its innerHTML (R20,
              Phase 3c): cb-depr-body's table is rebuilt on every keystroke,
@@ -1623,17 +1688,17 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <!-- ===== SIP PLANNER HUB ===== -->
 <div class="hub-content" id="hub-sip">
   <div class="main">
-    <div class="section-title"><svg class="icon"><use href="#i-trend-up"></use></svg> Dhanam Grow — SIP Planner</div>
+    <div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Dhanam Grow — SIP Planner</div>
     <div class="sip-planner-tabs">
-      <button class="sip-planner-tab active" id="spt-monthly" onclick="switchSIPPlannerTab('monthly')"><svg class="icon"><use href="#i-coin"></use></svg> Monthly SIP</button>
-      <button class="sip-planner-tab" id="spt-stepup" onclick="switchSIPPlannerTab('stepup')"><svg class="icon"><use href="#i-trend-up"></use></svg> Step-up SIP</button>
-      <button class="sip-planner-tab" id="spt-lumpsum" onclick="switchSIPPlannerTab('lumpsum')"><svg class="icon"><use href="#i-coin"></use></svg> Lumpsum</button>
+      <button class="sip-planner-tab active" id="spt-monthly" onclick="switchSIPPlannerTab('monthly')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Monthly SIP</button>
+      <button class="sip-planner-tab" id="spt-stepup" onclick="switchSIPPlannerTab('stepup')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Step-up SIP</button>
+      <button class="sip-planner-tab" id="spt-lumpsum" onclick="switchSIPPlannerTab('lumpsum')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Lumpsum</button>
     </div>
 
     <!-- Monthly SIP -->
     <div id="spt-content-monthly">
       <div class="panel-card">
-        <div class="panel-card-header"><span><svg class="icon"><use href="#i-coin"></use></svg></span><span class="pch-title">Monthly SIP Calculator</span></div>
+        <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span><span class="pch-title">Monthly SIP Calculator</span></div>
         <div class="panel-card-body">
           <div class="grid-3">
             <div class="field highlight">
@@ -1663,7 +1728,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="panel-card">
-        <div class="panel-card-header"><span><svg class="icon"><use href="#i-trend-up"></use></svg></span><span class="pch-title">Corpus Growth Curve</span></div>
+        <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg></span><span class="pch-title">Corpus Growth Curve</span></div>
         <div class="panel-card-body">
           <div class="chart-legend">
             <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Corpus</span>
@@ -1674,7 +1739,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="panel-card">
-        <div class="panel-card-header"><span><svg class="icon"><use href="#i-calendar"></use></svg></span><span class="pch-title">Corpus at Milestones</span></div>
+        <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg></span><span class="pch-title">Corpus at Milestones</span></div>
         <div class="panel-card-body" style="padding:0;">
           <table class="milestone-table">
             <thead><tr><th>Year</th><th>Invested (₹)</th><th>Corpus (₹)</th><th>Gains (₹)</th></tr></thead>
@@ -1687,7 +1752,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <!-- Step-up SIP -->
     <div id="spt-content-stepup" style="display:none;">
       <div class="panel-card">
-        <div class="panel-card-header"><span><svg class="icon"><use href="#i-trend-up"></use></svg></span><span class="pch-title">Step-up SIP (Annual Increase)</span></div>
+        <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg></span><span class="pch-title">Step-up SIP (Annual Increase)</span></div>
         <div class="panel-card-body">
           <div class="grid-2" style="margin-bottom:12px;">
             <div class="field highlight">
@@ -1723,7 +1788,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="panel-card">
-        <div class="panel-card-header"><span><svg class="icon"><use href="#i-trend-up"></use></svg></span><span class="pch-title">Corpus Growth Curve</span></div>
+        <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg></span><span class="pch-title">Corpus Growth Curve</span></div>
         <div class="panel-card-body">
           <div class="chart-legend">
             <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Step-up corpus</span>
@@ -1735,7 +1800,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="panel-card">
-        <div class="panel-card-header"><span><svg class="icon"><use href="#i-calendar"></use></svg></span><span class="pch-title">Year-by-year Milestones</span></div>
+        <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg></span><span class="pch-title">Year-by-year Milestones</span></div>
         <div class="panel-card-body" style="padding:0;">
           <table class="milestone-table">
             <thead><tr><th>Year</th><th>SIP/mo (₹)</th><th>Invested (₹)</th><th>Corpus (₹)</th></tr></thead>
@@ -1748,7 +1813,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <!-- Lumpsum -->
     <div id="spt-content-lumpsum" style="display:none;">
       <div class="panel-card">
-        <div class="panel-card-header"><span><svg class="icon"><use href="#i-coin"></use></svg></span><span class="pch-title">Lumpsum Investment Calculator</span></div>
+        <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span><span class="pch-title">Lumpsum Investment Calculator</span></div>
         <div class="panel-card-body">
           <div class="grid-3">
             <div class="field highlight">
@@ -1777,7 +1842,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="panel-card">
-        <div class="panel-card-header"><span><svg class="icon"><use href="#i-trend-up"></use></svg></span><span class="pch-title">Growth Curve</span></div>
+        <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg></span><span class="pch-title">Growth Curve</span></div>
         <div class="panel-card-body">
           <div class="chart-legend">
             <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Value</span>
@@ -1788,7 +1853,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="panel-card">
-        <div class="panel-card-header"><span><svg class="icon"><use href="#i-calendar"></use></svg></span><span class="pch-title">Growth at Milestones</span></div>
+        <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg></span><span class="pch-title">Growth at Milestones</span></div>
         <div class="panel-card-body" style="padding:0;">
           <table class="milestone-table">
             <thead><tr><th>Year</th><th>Value (₹)</th><th>Gain (₹)</th><th>Multiplier</th></tr></thead>
@@ -1805,7 +1870,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="hub-content" id="hub-worth">
 <div class="main" id="worth-main">
 
-<div class="section-title"><svg class="icon"><use href="#i-coin"></use></svg> Dhanam Worth</div>
+<div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Dhanam Worth</div>
 <p class="landing-intro">What you own, minus what you owe. Saved only on this device — never sent anywhere.</p>
 
 <div class="total-card">
@@ -1833,7 +1898,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
      up or down?", this answers "what shape has it been?" (2d / R3) -->
 <div class="collapse-card" id="w-trend-card" style="display:none;">
   <div class="collapse-header" onclick="toggleChartCard('w-trend-card', renderWorthTrend)">
-    <span class="collapse-title"><svg class="icon"><use href="#i-trend-down"></use></svg> Net worth over time</span>
+    <span class="collapse-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-down"></use></svg> Net worth over time</span>
     <span class="collapse-arrow">▼</span>
   </div>
   <div class="collapse-body">
@@ -1843,12 +1908,12 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 </div>
 
 <div class="panel-card">
-  <div class="panel-card-header"><span><svg class="icon"><use href="#i-coin"></use></svg></span><span class="pch-title">Assets — what you own</span><span class="pch-total mono w-amt" id="w-assets-sub">—</span></div>
+  <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span><span class="pch-title">Assets — what you own</span><span class="pch-total mono w-amt" id="w-assets-sub">—</span></div>
   <div class="panel-card-body" style="padding:0;" id="w-assets-rows"></div>
 </div>
 
 <div class="panel-card">
-  <div class="panel-card-header"><span><svg class="icon"><use href="#i-receipt"></use></svg></span><span class="pch-title">Liabilities — what you owe</span><span class="pch-total mono w-amt" id="w-liab-sub">—</span></div>
+  <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-receipt"></use></svg></span><span class="pch-title">Liabilities — what you owe</span><span class="pch-total mono w-amt" id="w-liab-sub">—</span></div>
   <div class="panel-card-body" style="padding:0;" id="w-liab-rows"></div>
 </div>
 
@@ -1856,7 +1921,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
      saved balance sheet forward, so Worth is the app's anchor rather than a
      seventh calculator. -->
 <div class="panel-card" id="w-proj-card" style="display:none;">
-  <div class="panel-card-header"><span><svg class="icon"><use href="#i-scope"></use></svg></span><span class="pch-title">Projected Net Worth</span></div>
+  <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-scope"></use></svg></span><span class="pch-title">Projected Net Worth</span></div>
   <div class="panel-card-body">
     <p class="note-text" style="margin-bottom:12px;">Assumes your investments (all assets except property) grow at the rate below with your monthly savings added in, debts amortize at the rate/years below, and property value stays flat. A projection, not a promise.</p>
     <div class="grid-2">
@@ -1891,16 +1956,16 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 </div>
 
 <div class="panel-card">
-  <div class="panel-card-header"><span><svg class="icon"><use href="#i-lock"></use></svg></span><span class="pch-title">Your data</span></div>
+  <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg></span><span class="pch-title">Your data</span></div>
   <div class="panel-card-body">
     <p class="note-text" id="w-saved-at">Nothing saved yet — enter a value above and it's kept on this device.</p>
     <p class="note-text" id="w-install-nudge" style="display:none;">Tip: install Dhanam to your home screen. Browsers can clear data for sites you haven't opened in a while — installed apps keep theirs.</p>
     <div class="btn-row">
-      <button class="btn btn-secondary" onclick="toggleHideAmounts()" id="w-hide-btn"><svg class="icon"><use href="#i-eye-off"></use></svg><span id="w-hide-btn-label">Hide amounts</span></button>
-      <button class="btn btn-secondary" onclick="exportWorthExcel()"><svg class="icon"><use href="#i-bar-chart"></use></svg> Export Excel</button>
-      <button class="btn btn-secondary" onclick="exportWorthBackup()"><svg class="icon"><use href="#i-download"></use></svg> Download backup</button>
-      <button class="btn btn-secondary" onclick="el('w-import-file').click()"><svg class="icon"><use href="#i-upload"></use></svg> Restore backup</button>
-      <button class="btn btn-secondary" onclick="eraseWorthData()"><svg class="icon"><use href="#i-trash"></use></svg> Erase my data</button>
+      <button class="btn btn-secondary" onclick="toggleHideAmounts()" id="w-hide-btn"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg><span id="w-hide-btn-label">Hide amounts</span></button>
+      <button class="btn btn-secondary" onclick="exportWorthExcel()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg> Export Excel</button>
+      <button class="btn btn-secondary" onclick="exportWorthBackup()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-download"></use></svg> Download backup</button>
+      <button class="btn btn-secondary" onclick="el('w-import-file').click()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-upload"></use></svg> Restore backup</button>
+      <button class="btn btn-secondary" onclick="eraseWorthData()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Erase my data</button>
     </div>
     <input type="file" id="w-import-file" accept="application/json,.json" style="display:none;" onchange="importWorthBackup(this.files[0])">
     <p class="note-text">A backup is a plain JSON file you keep. It's the way to move your figures to another device — Dhanam has no account and no server, so nothing syncs on its own.</p>
@@ -2072,6 +2137,16 @@ let ccCars = [
   { type: 'EV', name: '', price: 0, eff: 0, bigEngine: false },
 ];
 let ccBuilt = false;
+// Per-card disclosure state for the ranked result list (R47, Phase 10c) —
+// independent per row (keyed by the row's stable index into ccCars, `r.i`
+// from ccComputedRows()), not an accordion. Default is "rank-1 open, ranks
+// 2+ closed"; a user's explicit toggle overrides that default and survives
+// future re-renders (renderCarCompare() rewrites #cc-results' innerHTML on
+// nearly every keystroke elsewhere on the page, so the open/closed state has
+// to live here, not just as a CSS class on a DOM node that keeps getting
+// discarded). See ccToggleDetail() below.
+let ccForceOpen = new Set();
+let ccForceClosed = new Set();
 
 // Modes for amenities / corpus / infra (sqft or lump)
 const MODES = { amenities: 'sqft', corpus: 'sqft', infra: 'sqft' };
@@ -2668,7 +2743,7 @@ function renderLoans() {
       <div class="loan-stat"><span class="ls-lbl">Total Interest</span><span class="ls-val red">${inCr(totalInterest)}</span></div>
       <div class="loan-stat"><span class="ls-lbl">Total Amount Paid</span><span class="ls-val">${inCr(totalPaid + own)}</span></div>
       <div class="yr-break">
-        <div class="yr-break-title"><svg class="icon"><use href="#i-calendar"></use></svg> At 5-Year Mark</div>
+        <div class="yr-break-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg> At 5-Year Mark</div>
         <div class="loan-stat"><span class="ls-lbl">Principal Paid</span><span class="ls-val">${inCr(y5.principalPaid)}</span></div>
         <div class="loan-stat"><span class="ls-lbl">Interest Paid</span><span class="ls-val red">${inCr(y5.interestPaid)}</span></div>
         <div class="loan-stat"><span class="ls-lbl">Balance Remaining</span><span class="ls-val">${inCr(y5.balance)}</span></div>
@@ -2769,7 +2844,7 @@ function renderAdvLoan() {
       <div class="loan-stat"><span class="ls-lbl">With extra total interest</span><span class="ls-val" style="color:var(--green)">${inCr(adv.totalInterest)}</span></div>
       <div class="loan-stat"><span class="ls-lbl">Interest saved</span><span class="ls-val" style="color:var(--green)">${inCr(Math.max(0, normal.totalInterest - adv.totalInterest))}</span></div>
       <div class="yr-break">
-        <div class="yr-break-title"><svg class="icon"><use href="#i-calendar"></use></svg> At 5-Year Mark (with extra)</div>
+        <div class="yr-break-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg> At 5-Year Mark (with extra)</div>
         <div class="loan-stat"><span class="ls-lbl">Principal Paid</span><span class="ls-val">${inCr(adv.y5Principal)}</span></div>
         <div class="loan-stat"><span class="ls-lbl">Interest Paid</span><span class="ls-val red">${inCr(adv.y5Interest)}</span></div>
       </div>`;
@@ -3851,7 +3926,7 @@ function renderSIPComparison() {
           <div class="loan-stat"><span class="ls-lbl">Interest cost</span><span class="ls-val red">${inCr(totalInterest)}</span></div>
           <div class="loan-stat"><span class="ls-lbl">SIP corpus</span><span class="ls-val" style="color:var(--accent)">${inCr(corpus)}</span></div>
           <div class="loan-stat verdict-row">
-            <span class="ls-lbl">${sipWins ? '<svg class="icon"><use href="#i-trend-up"></use></svg> SIP wins by' : '<svg class="icon"><use href="#i-building"></use></svg> Buying saves'}</span>
+            <span class="ls-lbl">${sipWins ? '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> SIP wins by' : '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-building"></use></svg> Buying saves'}</span>
             <span class="ls-val" style="color:${sipWins ? 'var(--green)' : 'var(--accent)'}">${inCr(Math.abs(advantage))}</span>
           </div>
           ${breakeven !== null ? `<div class="note-text" style="padding:3px 0;">Property needs ≥${breakeven}% p.a. growth to match SIP</div>` : ''}
@@ -3884,7 +3959,7 @@ function renderSIPComparison() {
       <div class="loan-stat"><span class="ls-lbl">Total invested</span><span class="ls-val red">${inCr(totalPaid)}</span></div>
       <div class="loan-stat"><span class="ls-lbl">SIP corpus</span><span class="ls-val" style="color:var(--accent)">${inCr(corpus)}</span></div>
       <div class="loan-stat verdict-row">
-        <span class="ls-lbl">${sipWins ? '<svg class="icon"><use href="#i-trend-up"></use></svg> SIP wins by' : '<svg class="icon"><use href="#i-building"></use></svg> Buying saves'}</span>
+        <span class="ls-lbl">${sipWins ? '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> SIP wins by' : '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-building"></use></svg> Buying saves'}</span>
         <span class="ls-val" style="color:${sipWins ? 'var(--green)' : 'var(--accent)'}">${inCr(Math.abs(advantage))}</span>
       </div>
       ${breakeven !== null ? `<div class="note-text" style="padding:3px 0;">Property needs ≥${breakeven}% p.a. growth to match SIP</div>` : ''}`;
@@ -4191,35 +4266,32 @@ function renderCarCalc() {
     buildCard(scenA, 'Carve-out A', 'carveout', false) +
     buildCard(scenB, 'Additive B', 'additive', false);
 
+  // Hero — whichever scenario currently wins (R45, Phase 10a). This is the
+  // exact same aAdv/bAdv comparison the old car-summary-box's "Best option"
+  // line made — reused here, not recomputed a second way — just promoted to
+  // the top of the section and stated in words as well as a number, per the
+  // Phase 10 brief. Live/dynamic: recalculated on every renderCarCalc() call,
+  // so it always tracks whichever option wins at the current inputs.
   const aAdv = (scenA.monthlyTakeHome) - baseNetPostCar;
   const bAdv = (scenB.monthlyTakeHome) - baseNetPostCar;
-  let best = 'Baseline (own car)';
-  if (aAdv > 0 && aAdv >= bAdv) best = `Carve-out A (saves ${fmt(aAdv)}/mo)`;
-  else if (bAdv > 0) best = `Additive B (saves ${fmt(bAdv)}/mo)`;
-
-  el('car-summary').innerHTML = `<div class="car-summary-box">
-    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--text-mid);margin-bottom:12px;">Scenario Comparison</div>
-    <div class="car-summary-row">
-      <span class="car-summary-lbl">Perquisite value (personal use)</span>
-      <span class="car-summary-val" style="color:var(--text-dim)">${fmt(perqMonthly)}/mo · ${fmt(perqAnnual)}/yr</span>
-    </div>
-    <div class="car-summary-row">
-      <span class="car-summary-lbl">Baseline — effective net (post car cost)</span>
-      <span class="car-summary-val">${fmt(baseNetPostCar)}/mo</span>
-    </div>
-    <div class="car-summary-row">
-      <span class="car-summary-lbl">Carve-out A — effective net</span>
-      <span class="car-summary-val" style="color:${aAdv >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(scenA.monthlyTakeHome)}/mo (${aAdv >= 0 ? '+' : ''}${fmt(aAdv)} vs baseline)</span>
-    </div>
-    <div class="car-summary-row">
-      <span class="car-summary-lbl">Additive B — effective net</span>
-      <span class="car-summary-val" style="color:${bAdv >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(scenB.monthlyTakeHome)}/mo (${bAdv >= 0 ? '+' : ''}${fmt(bAdv)} vs baseline)</span>
-    </div>
-    <div class="car-summary-row" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
-      <span class="car-summary-lbl" style="font-weight:600;color:var(--text)"><svg class="icon"><use href="#i-trophy"></use></svg> Best option</span>
-      <span class="car-summary-val" style="color:var(--accent);font-weight:600">${best}</span>
-    </div>
-  </div>`;
+  let heroLabel, heroValue, heroNote;
+  if (aAdv > 0 && aAdv >= bAdv) {
+    heroLabel = 'Best Option — Carve-out A';
+    heroValue = scenA.monthlyTakeHome;
+    heroNote = `Carve-out A saves you ${fmt(aAdv)}/mo over owning the car yourself`;
+  } else if (bAdv > 0) {
+    heroLabel = 'Best Option — Additive B';
+    heroValue = scenB.monthlyTakeHome;
+    heroNote = `Additive B saves you ${fmt(bAdv)}/mo over owning the car yourself`;
+  } else {
+    heroLabel = 'Best Option — Baseline (Own Car)';
+    heroValue = baseNetPostCar;
+    heroNote = 'Owning the car yourself beats both lease structures at your current inputs';
+  }
+  set('car-hero-label', heroLabel);
+  set('car-hero-value', fmt(heroValue) + '/mo');
+  set('car-hero-note', heroNote);
+  set('car-hero-perq', `${fmt(perqMonthly)}/mo`);
 }
 
 // =====================================================================
@@ -4242,24 +4314,43 @@ function renderCarLoan() {
   // so it must not sit behind this early return (a 100%-down-payment car has
   // loan === 0 but still has a resale curve worth showing).
   if (!loan || !rate) {
+    hide('cb-hero');
+    hide('cb-compare-card');
     el('cb-cards').innerHTML = '';
   } else {
     const tenures = [3, 5, 7];
     const r = rate / 12 / 100;
-
-    el('cb-cards').innerHTML = tenures.map(yr => {
+    // Shared by the hero (5-year, R46/Phase 10b) and the 3/5/7 grid so both
+    // always agree bit-for-bit — same formula, computed once per tenure.
+    function tenureStats(yr) {
       const n = yr * 12;
       const emi = loan * r * Math.pow(1+r, n) / (Math.pow(1+r, n) - 1);
       const total = emi * n;
       const interest = total - loan;
-      const intPct = (interest / loan * 100).toFixed(1);
+      return { yr, n, emi, total, interest };
+    }
+
+    // Hero — opinionated default: 5-year tenure (R2 pattern applied here as
+    // R46/Phase 10b). Live/dynamic like every other hero in this app: it
+    // recomputes on every renderCarLoan() call from the current price/rate.
+    const hero = tenureStats(5);
+    show('cb-hero');
+    set('cb-hero-emi', fmt(hero.emi) + '/mo');
+    set('cb-hero-note', `5-year loan @ ${rate}% p.a. — compare 3 & 7 years below`);
+    set('cb-hero-interest', fmt(hero.interest));
+    set('cb-hero-total', fmt(hero.total));
+
+    show('cb-compare-card');
+    el('cb-cards').innerHTML = tenures.map(yr => {
+      const t = tenureStats(yr);
+      const intPct = (t.interest / loan * 100).toFixed(1);
       return `<div class="car-card">
-        <div class="car-card-title">${yr}-Year Loan</div>
+        <div class="car-card-title">${t.yr}-Year Loan</div>
         <div class="car-stat"><span class="car-stat-lbl">Loan Amount</span><span class="car-stat-val">${fmt(loan)}</span></div>
         <div class="car-stat"><span class="car-stat-lbl">Interest Rate</span><span class="car-stat-val">${rate}% p.a.</span></div>
-        <div class="car-stat"><span class="car-stat-lbl">Monthly EMI</span><span class="car-stat-val big">${fmt(emi)}</span></div>
-        <div class="car-stat"><span class="car-stat-lbl">Total Paid (${n} EMIs)</span><span class="car-stat-val">${fmt(total)}</span></div>
-        <div class="car-stat"><span class="car-stat-lbl">Total Interest</span><span class="car-stat-val red">${fmt(interest)}</span></div>
+        <div class="car-stat"><span class="car-stat-lbl">Monthly EMI</span><span class="car-stat-val big">${fmt(t.emi)}</span></div>
+        <div class="car-stat"><span class="car-stat-lbl">Total Paid (${t.n} EMIs)</span><span class="car-stat-val">${fmt(t.total)}</span></div>
+        <div class="car-stat"><span class="car-stat-lbl">Total Interest</span><span class="car-stat-val red">${fmt(t.interest)}</span></div>
         <div class="car-stat"><span class="car-stat-lbl">Interest % of Loan</span><span class="car-stat-val red">${intPct}%</span></div>
       </div>`;
     }).join('');
@@ -4306,6 +4397,21 @@ function renderCarLoan() {
 // section. This block is the DOM-coupled half: reading cc-* inputs, the
 // ccCars shortlist, and rendering the hero/breakeven/chart/result cards.
 
+// A row that's been started (any field touched) but doesn't yet pass the
+// price>0 && eff>0 guard gets a same-row explanation of what's missing —
+// the guard itself was already correct (R39's blank-row rule), what was
+// missing was telling the user *where* to look. Returns '' for a genuinely
+// untouched row, so the two fresh rows on first open stay quiet.
+function ccRowHintText(c) {
+  const started = !!(c.name || c.price > 0 || c.eff > 0);
+  if (!started) return '';
+  const missing = [];
+  if (!(c.price > 0)) missing.push('on-road price');
+  if (!(c.eff > 0)) missing.push(c.type === 'EV' ? 'efficiency' : 'mileage');
+  if (!missing.length) return '';
+  return `Add ${missing.join(' and ')} to include this car in the comparison`;
+}
+
 function ccRowHtml(c, i) {
   const isEV = c.type === 'EV';
   return `<div class="cc-row">
@@ -4336,6 +4442,7 @@ function ccRowHtml(c, i) {
         onchange="ccCars[${i}].bigEngine = this.checked; renderCarCompare();"> &gt;1600cc</label>
     </div>` : ''}
     <button class="disb-tr-remove" onclick="ccRemoveCar(${i})" ${ccCars.length <= 1 ? 'disabled' : ''} title="Remove car">✕</button>
+    <div class="cc-row-hint" id="cc-row-hint-${i}">${xesc(ccRowHintText(c))}</div>
   </div>`;
 }
 
@@ -4361,6 +4468,11 @@ function ccAddCar() {
 function ccRemoveCar(i) {
   if (ccCars.length <= 1) return;
   ccCars.splice(i, 1);
+  // Removing a row shifts every later index down by one, which would
+  // otherwise misattribute the R47 per-card open/closed state to the wrong
+  // car; clearing both sets just falls back to the rank-1-open default.
+  ccForceOpen.clear();
+  ccForceClosed.clear();
   renderCCRows();
   renderCarCompare();
 }
@@ -4429,6 +4541,10 @@ function buildCC() {
 // (import/erase) — unlike renderCCRows(), it's fine here because it always
 // runs alongside a genuine data replacement, not a keystroke.
 function hydrateCC() {
+  // A full data replace (import/erase) makes any existing R47 per-card
+  // open/closed state meaningless, same reasoning as ccRemoveCar().
+  ccForceOpen.clear();
+  ccForceClosed.clear();
   const saved = DS && DS.carCompare;
   if (saved && Array.isArray(saved.cars) && saved.cars.length) {
     ccCars = saved.cars.map(c => ({
@@ -4468,6 +4584,21 @@ function persistCC() {
   saveState();
 }
 
+// Per-card disclosure toggle for the ranked result list (R47, Phase 10c).
+// Flips both the visible class (instant feedback, no full re-render needed)
+// and the tracked override state, so the choice survives the next
+// renderCarCompare() call — which rewrites #cc-results' innerHTML on nearly
+// every keystroke elsewhere in the section. Independent per card: toggling
+// one id's Set membership never touches any other card's.
+function ccToggleDetail(i) {
+  const node = el('cc-detail-' + i);
+  if (!node) return;
+  const willOpen = !node.classList.contains('open');
+  node.classList.toggle('open', willOpen);
+  if (willOpen) { ccForceOpen.add(i); ccForceClosed.delete(i); }
+  else { ccForceClosed.add(i); ccForceOpen.delete(i); }
+}
+
 function ccVerdict(km) {
   if (km === null) return { text: 'Never breaks even at these assumptions', cls: '' };
   if (km <= 0) return { text: 'Already cheaper today', cls: 'green' };
@@ -4476,6 +4607,11 @@ function ccVerdict(km) {
 
 function renderCarCompare() {
   buildCC();
+
+  // Per-row "what's missing" hint — updated here (a text-only write, never
+  // an innerHTML rebuild) so it stays live on every keystroke without
+  // touching the input the user is currently typing into.
+  ccCars.forEach((c, i) => set('cc-row-hint-' + i, ccRowHintText(c)));
 
   const rows = ccComputedRows();
 
@@ -4502,23 +4638,40 @@ function renderCarCompare() {
     set('cc-hero-gap', '');
   }
 
-  // ── Ranked result cards, stacked (not a grid — R39) ──────────────────
+  // ── Ranked result cards, stacked (not a grid — R39). Compact by default:
+  // rank badge, name, one hero number (net cost), one supporting line
+  // (EMI · cost/km) — the rest sits behind a per-card disclosure toggle
+  // (R47, Phase 10c). Rank-1 defaults open, ranks 2+ default closed —
+  // independent per-card state (ccForceOpen/ccForceClosed, declared near
+  // ccCars), not an accordion: opening one card never closes another, the
+  // same carve-out CLAUDE.md documents for hub-apartment's nested
+  // loan/advanced/SIP compare-grid .collapse-cards. ─────────────────────
   el('cc-results').innerHTML = rows.map((r, rank) => {
     const isRank1 = rank === 0;
     const vsCheapest = r.result.netCost - cheapest.result.netCost;
+    const isOpen = ccForceOpen.has(r.i) || (isRank1 && !ccForceClosed.has(r.i));
     return `<div class="cc-rank-card ${isRank1 ? 'rank-1' : ''}">
-      <div class="cc-rank-badge">${isRank1 ? '<svg class="icon"><use href="#i-trophy"></use></svg> Cheapest' : `Rank ${rank + 1}`}</div>
+      <div class="cc-rank-badge">${isRank1 ? '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trophy"></use></svg> Cheapest' : `Rank ${rank + 1}`}</div>
       <div class="cc-rank-title">${xesc(r.car.name) || (r.car.type === 'EV' ? 'Unnamed EV' : 'Unnamed ICE car')}</div>
       <div class="cc-rank-type">${r.car.type}${r.car.type === 'ICE' && r.car.bigEngine ? ' · >1600cc' : ''} · ${fmt(r.car.price)} on-road</div>
       <div class="car-stat"><span class="car-stat-lbl">Net Cost (before resale credit)</span><span class="car-stat-val big">${fmt(r.result.netCost)}</span></div>
-      <div class="car-stat"><span class="car-stat-lbl">Resale credit (car you own after)</span><span class="car-stat-val" style="color:var(--green)">−${fmt(r.result.resaleValue)}</span></div>
-      <div class="car-stat"><span class="car-stat-lbl">Net cost after resale credit</span><span class="car-stat-val accent">${fmt(r.result.netCostAfterResale)}</span></div>
-      <div class="car-divider"></div>
-      <div class="car-stat"><span class="car-stat-lbl">Raw Cash Outflow</span><span class="car-stat-val">${fmt(r.result.rawOutflow)}</span></div>
-      <div class="car-stat"><span class="car-stat-lbl">EMI / month</span><span class="car-stat-val">${fmt(r.result.emi)}</span></div>
-      <div class="car-stat"><span class="car-stat-lbl">Tax Saved (${r.years}yr, signed)</span><span class="car-stat-val ${r.result.taxSaved < 0 ? 'red' : ''}">${fmt(r.result.taxSaved)}</span></div>
-      <div class="car-stat"><span class="car-stat-lbl">Blended Cost / km</span><span class="car-stat-val">₹${r.result.costPerKm.toFixed(2)}</span></div>
-      ${!isRank1 ? `<div class="car-divider"></div><div class="car-stat"><span class="car-stat-lbl">vs. cheapest</span><span class="car-stat-val red">+${fmt(vsCheapest)}</span></div>` : ''}
+      <div class="cc-rank-sub">${fmt(r.result.emi)}/mo · ₹${r.result.costPerKm.toFixed(2)}/km</div>
+      <div class="collapse-card cc-detail-card ${isOpen ? 'open' : ''}" id="cc-detail-${r.i}">
+        <div class="collapse-header" onclick="ccToggleDetail(${r.i})">
+          <span class="collapse-title">Full breakdown</span>
+          <span class="collapse-arrow">▼</span>
+        </div>
+        <div class="collapse-body">
+          <div class="car-stat"><span class="car-stat-lbl">Resale credit (car you own after)</span><span class="car-stat-val" style="color:var(--green)">−${fmt(r.result.resaleValue)}</span></div>
+          <div class="car-stat"><span class="car-stat-lbl">Net cost after resale credit</span><span class="car-stat-val accent">${fmt(r.result.netCostAfterResale)}</span></div>
+          <div class="car-divider"></div>
+          <div class="car-stat"><span class="car-stat-lbl">Raw Cash Outflow</span><span class="car-stat-val">${fmt(r.result.rawOutflow)}</span></div>
+          <div class="car-stat"><span class="car-stat-lbl">EMI / month</span><span class="car-stat-val">${fmt(r.result.emi)}</span></div>
+          <div class="car-stat"><span class="car-stat-lbl">Tax Saved (${r.years}yr, signed)</span><span class="car-stat-val ${r.result.taxSaved < 0 ? 'red' : ''}">${fmt(r.result.taxSaved)}</span></div>
+          <div class="car-stat"><span class="car-stat-lbl">Blended Cost / km</span><span class="car-stat-val">₹${r.result.costPerKm.toFixed(2)}</span></div>
+          ${!isRank1 ? `<div class="car-divider"></div><div class="car-stat"><span class="car-stat-lbl">vs. cheapest</span><span class="car-stat-val red">+${fmt(vsCheapest)}</span></div>` : ''}
+        </div>
+      </div>
     </div>`;
   }).join('');
 
