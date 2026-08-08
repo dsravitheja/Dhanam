@@ -136,7 +136,14 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', 'Segoe U
 .header-text { display: flex; flex-direction: column; }
 .header h1 { font-family:'Playfair Display',serif; font-size:clamp(20px,4vw,30px); font-weight:700; color:var(--accent); letter-spacing:.02em; line-height:1.2; }
 .header p { color:var(--text-dim); font-size:12.5px; margin-top:3px; font-weight:400; letter-spacing:.01em; }
-@media(max-width:480px){ .header-logo { width:42px; height:42px; } }
+@media(max-width:480px){
+  .header-logo { width:42px; height:42px; }
+  /* Reserve room for the absolutely-positioned .header-about-link (R22) —
+     it's out of flow, so without this the header-text's natural (unwrapped)
+     width can run right underneath it at narrow viewports. Forces the h1/p
+     to wrap a line earlier instead of visually colliding with the link. */
+  .header-inner { padding-right:74px; }
+}
 
 /* ── MAIN ────────────────────────────────── */
 .main { max-width: 960px; margin: 0 auto; padding: 22px 16px 80px; }
@@ -419,6 +426,16 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .toast { position:fixed; bottom:24px; right:24px; background:var(--surface2); border:1px solid var(--accent); border-radius:8px; padding:12px 20px; font-size:13px; color:var(--text); transform:translateY(80px); opacity:0; transition:all .3s; z-index:9999; pointer-events:none; max-width:300px; }
 .toast.show { transform:translateY(0); opacity:1; }
 .note-text { font-size:11px; color:var(--text-dim); padding:4px 0; }
+
+/* ── ABOUT PAGE PROVENANCE LIST (R22/6b) ───
+   A stacked label/value/date list rather than a table — the provenance
+   entries are dated prose sentences, not short numeric cells, and a 3-column
+   table squeezes that into unreadably narrow columns at 375px. */
+.provenance-row { padding:10px 0; border-bottom:1px solid var(--border-subtle); }
+.provenance-row:last-child { border-bottom:none; }
+.provenance-term { font-size:12.5px; font-weight:600; color:var(--text); }
+.provenance-value { font-size:12px; color:var(--text-mid); margin-top:3px; line-height:1.55; }
+.provenance-date { font-size:11px; color:var(--text-dim); margin-top:3px; line-height:1.5; }
 .remember-row { display:flex; align-items:center; gap:11px; margin-top:14px; padding-top:13px; border-top:1px solid var(--border-subtle); flex-wrap:wrap; }
 .remember-lbl { font-size:12px; color:var(--text-mid); font-weight:500; }
 
@@ -496,7 +513,29 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 }
 
 /* ── HUB NAVIGATION ──────────────────────── */
-.hub-nav { background:var(--surface); border-bottom:2px solid var(--border); padding:0 16px; position:sticky; top:0; z-index:100; overflow-x:auto; }
+/* R10: scroll-shadow affordance so a narrow phone can see there's more to
+   scroll — the classic "double background-image" trick (css-tricks),
+   applied directly to .hub-nav since it's the scrolling element itself
+   (overflow-x:auto below). Two "cover" gradients (background-attachment:
+   local) scroll together with the tab row and hide the shadow once you've
+   scrolled all the way to that edge; two "shadow" gradients (attachment:
+   scroll) stay fixed to the viewport so they read as an edge fade. This is
+   background-image only — no extra element, so there is nothing to give
+   pointer-events:none to and nothing that can block a tap on the last
+   visible tab. */
+.hub-nav {
+  background:
+    linear-gradient(to right, var(--surface) 30%, rgba(0,0,0,0)),
+    linear-gradient(to left, var(--surface) 30%, rgba(0,0,0,0)) 100% 0,
+    linear-gradient(to right, rgba(0,0,0,.4), rgba(0,0,0,0)),
+    linear-gradient(to left, rgba(0,0,0,.4), rgba(0,0,0,0)) 100% 0;
+  background-repeat:no-repeat;
+  background-color:var(--surface);
+  background-size:24px 100%, 24px 100%, 10px 100%, 10px 100%;
+  background-position:0 0, 100% 0, 0 0, 100% 0;
+  background-attachment:local, local, scroll, scroll;
+  border-bottom:2px solid var(--border); padding:0 16px; position:sticky; top:0; z-index:100; overflow-x:auto;
+}
 .hub-nav-inner { max-width:960px; margin:0 auto; display:flex; }
 .hub-tab { padding:13px 20px; font-family:'Inter','Segoe UI',system-ui,sans-serif; font-size:13px; font-weight:600; color:var(--text-dim); background:transparent; border:none; border-bottom:2px solid transparent; cursor:pointer; transition:all .15s; white-space:nowrap; margin-bottom:-2px; }
 .hub-tab:hover:not(:disabled) { color:var(--text); }
@@ -507,6 +546,26 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 /* ── HEADER BRAND (click to return home) ─── */
 .header-inner.clickable { cursor:pointer; }
+
+/* ── HEADER ABOUT LINK (R22/6b) ────────────
+   A sibling of .header-inner, not a child — sitting outside the clickable
+   div means it never needs event.stopPropagation() to avoid triggering the
+   parent's switchHub('landing'). Deliberately not a sixth .hub-tab: R10's
+   nav-overflow problem is already tight on narrow phones, and this link is
+   reachable from every hub anyway since .header is persistent chrome, not
+   part of the scrolling .hub-nav row (see TASK-PARALLEL-EXECUTION.md's
+   Cluster A reasoning). */
+.header-about-link {
+  position:absolute; top:18px; right:20px; z-index:2;
+  display:flex; align-items:center; gap:5px;
+  background:transparent; border:1px solid var(--border); border-radius:20px;
+  padding:5px 12px; font-family:'Inter','Segoe UI',system-ui,sans-serif;
+  font-size:11px; font-weight:600; color:var(--text-dim); cursor:pointer;
+  transition:color .15s, border-color .15s;
+}
+.header-about-link:hover { color:var(--accent); border-color:var(--hl-border); }
+.header-about-link:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+@media(max-width:480px){ .header-about-link { top:12px; right:12px; padding:4px 9px; font-size:10px; } }
 
 /* ── LANDING PAGE ─────────────────────────── */
 .landing-intro { color:var(--text-mid); font-size:13.5px; margin-bottom:20px; }
@@ -528,6 +587,15 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .tile.disabled:hover { transform:none; border-color:var(--border); box-shadow:none; }
 .tile-badge { font-size:9px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--text-dim); background:var(--surface2); border:1px solid var(--border); border-radius:4px; padding:2px 6px; margin-left:auto; }
 
+/* R22/6b + R25/6e: the landing footer — one place that satisfies both the
+   About page's "reachable from the landing page" requirement and 6e's
+   "visible contact link on the landing page", rather than two separate
+   footers. Plain text links, no new hue, no card chrome. */
+.landing-footer { display:flex; flex-wrap:wrap; gap:8px 24px; justify-content:center; margin-top:28px; padding-top:18px; border-top:1px solid var(--border); }
+.landing-footer-link { display:inline-flex; align-items:center; gap:5px; background:none; border:none; padding:4px; font-family:inherit; font-size:12px; font-weight:500; color:var(--text-dim); text-decoration:none; cursor:pointer; transition:color .15s; }
+.landing-footer-link:hover { color:var(--accent); }
+.landing-footer-link:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
 /* ── BUY vs SIP SECTION ──────────────────── */
 .sip-section { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:14px; }
 .sip-header { display:flex; align-items:center; gap:10px; padding:13px 18px; cursor:pointer; user-select:none; }
@@ -537,6 +605,13 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .sip-section.open .sip-arrow { transform:rotate(180deg); }
 .sip-body { display:none; border-top:1px solid var(--border); padding:16px 18px; }
 .sip-section.open .sip-body { display:block; }
+/* R24's 6d-i comparison caveat — neutral disclosure, not a red/green
+   financial-delta signal, so it borrows the same left-border-accent shape
+   the Worth change tile uses for its neutral "no change" state (--text-dim),
+   not gold (reserved for hero/emphasis, palette rule 2) or red (reserved
+   for a real cost, palette rule 4). */
+.sip-caveat { font-size:12px; line-height:1.7; color:var(--text-mid); background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--text-dim); border-radius:8px; padding:10px 14px; margin-bottom:14px; }
+.sip-caveat strong { color:var(--text); }
 .sip-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:14px; }
 @media(max-width:640px){ .sip-grid { grid-template-columns:1fr; } }
 .sip-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
@@ -695,6 +770,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       <p>Your personal financial hub · Home · Car · Grow · Worth</p>
     </div>
   </div>
+  <button type="button" class="header-about-link" onclick="switchHub('about')" title="About Dhanam / how this works"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg> About</button>
 </div>
 
 <!-- ===== HUB NAVIGATION ===== -->
@@ -752,6 +828,17 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <span class="tile-tool">Dhanam Car</span>
     <span class="tile-desc">Company car lease tax perquisite, plus car loan & resale value.</span>
   </button>
+  <button class="tile" onclick="openPrepayCalc()">
+    <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-rocket"></use></svg></span>
+    <span class="tile-title">Should I Prepay My Loan?</span>
+    <span class="tile-tool">Dhanam Home · Loan Analysis</span>
+    <span class="tile-desc">Extra-payment projections, and what a SIP would earn instead.</span>
+  </button>
+</div>
+
+<div class="landing-footer">
+  <button type="button" class="landing-footer-link" onclick="switchHub('about')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg> About · How this works</button>
+  <a class="landing-footer-link" href="mailto:dsravitheja@gmail.com">Have feedback? Email us</a>
 </div>
 
 </div>
@@ -1030,6 +1117,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
         <div class="field" id="d-gst-field" style="display:none;">
           <label>GST on Construction (%)</label>
+          <!-- GST rate for under-construction residential property, no input
+               tax credit — current GST law; the GST Council moved real
+               estate to this rate (from 12%/8% with ITC) effective
+               2019-04-01. Cited in the About page's provenance list (R22). -->
           <input type="number" id="d-gst" value="5" step="0.5" oninput="calcDetail()">
           <span class="field-hint">Under-construction: 5%</span>
         </div>
@@ -1275,6 +1366,12 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         If instead of buying, you invested the same EMI amount monthly in a SIP — how much corpus would you accumulate?
         Compare across 3 return scenarios for each loan tenure.
       </p>
+      <!-- R24's 6d-i: this is the panel the tile above leads with, so the
+           caveat has to sit where a reader who only looks at the hero and
+           nothing else will still see it — above #sip-hero, not inside the
+           closed-by-default #sip-compare-card. Copy only, no calc.js
+           change; see CLAUDE.md's Dhanam Grow / prepayment sections. -->
+      <div class="sip-caveat"><strong>Read this before the number below:</strong> prepaying — or simply not taking — the loan returns your loan's interest rate, guaranteed, with no tax on it. The SIP side is not guaranteed: actual market returns can fall short of whatever rate is assumed here, and any gain is taxed when you redeem it. This comparison also leaves out the loan side's own tax benefits — the Section 24 interest deduction, and 80C on principal under the old regime — so neither figure below is the whole picture. Treat it as a rough, pre-tax sketch, not a verdict.</div>
       <!-- Hero answer for this section too (R2) -->
       <div class="total-card" id="sip-hero" style="margin:0 0 12px;">
         <div class="total-label">SIP vs. Buying — 20 Years @ 12% CAGR</div>
@@ -2005,10 +2102,156 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 </div>
 </div><!-- /hub-worth -->
 
+<!-- ===== ABOUT ===== -->
+<!-- R22/6b. Reachable from the persistent header link and the landing-page
+     footer (both call switchHub('about')) — deliberately NOT wired into
+     .hub-nav, so it doesn't add a 6th scrolling tab on top of R10's already-
+     tight nav row. switchHub() already no-ops safely on a tab-less hub (its
+     `if (btn) ...` guard), so nothing there needed to change. This page's
+     job is provenance and scope, not instructions — see TASK-UX-REDESIGN.md's
+     6b section for the reasoning (Carroll & Rosson's "paradox of the active
+     user": people skip documentation, so what belongs here is "can I trust
+     this / where do the numbers come from / what does it do with my data",
+     not a how-to tour. -->
+<div class="hub-content" id="hub-about">
+<div class="main">
+
+<div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg> About Dhanam</div>
+
+<div class="panel-card">
+  <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg></span><span class="pch-title">What this is</span></div>
+  <div class="panel-card-body">
+    <p style="font-size:13px;color:var(--text);line-height:1.7;">
+      Dhanam is a personal financial calculator for Indian users — property cost and home-loan planning, company car lease tax analysis, car loan and depreciation, and SIP (mutual fund) investment planning. It runs entirely in this browser tab as a static page: nothing is installed on a server, there's no company behind it processing your numbers, and every figure on screen is a live calculation from whatever you type in.
+    </p>
+    <p style="font-size:13px;color:var(--text);line-height:1.7;margin-top:10px;">
+      <strong>This is not financial, tax, or investment advice.</strong> It's a calculator for exploring scenarios with your own numbers — it doesn't know your full financial picture, and nothing on this site should be read as a recommendation of what to do with your money.
+    </p>
+  </div>
+</div>
+
+<div class="panel-card">
+  <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg></span><span class="pch-title">Privacy</span></div>
+  <div class="panel-card-body">
+    <p style="font-size:13px;color:var(--text);line-height:1.7;">
+      Nothing you type is ever sent anywhere. This is checkable, not just claimed: open your browser's developer tools, switch to the Network tab, and use the app — you'll see no request leave this page. (The one exception is the app's own offline-caching service worker asking this same site for its own files, so the app still works with no signal — that's the app loading itself, not sending anything about you.)
+    </p>
+    <ul style="font-size:12px;color:var(--text-dim);line-height:2;padding-left:16px;margin-top:8px;">
+      <li>No accounts, no login, no password.</li>
+      <li>No bank or broker connections — every figure is hand-typed by you.</li>
+      <li>No sync between devices. A backup file you download and re-import yourself is the only way data moves between them.</li>
+      <li>No analytics, no tracking pixels, no error-reporting service.</li>
+      <li>No recommendation engine — nothing ranks or suggests a "best" financial product for you.</li>
+    </ul>
+    <p style="font-size:13px;color:var(--text);line-height:1.7;margin-top:10px;">
+      Anything you choose to save (a Dhanam Worth balance sheet, a Compare Cars shortlist, a "remembered" loan input) is stored in this browser's local storage, on this device only. Download Backup, Restore Backup and Erase My Data (in Dhanam Worth) are the only ways data leaves, re-enters, or is deleted — there is no other channel.
+    </p>
+  </div>
+</div>
+
+<div class="panel-card">
+  <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-scope"></use></svg></span><span class="pch-title">Where the numbers come from</span></div>
+  <div class="panel-card-body">
+    <p class="note-text" style="margin-bottom:10px;">
+      Every statutory figure and market default in Dhanam is listed below with the date it was last checked. None of these are predictions or endorsements — they're editable starting points seeded with a plausible number so the app shows something real on arrival. Replace any of them with your own figure; the app recalculates live either way.
+    </p>
+    <!-- A stacked list, not a table — a 3-column table forces long prose
+         values into narrow squeezed columns at 375px (checked, and it reads
+         badly), where this degrades to one readable block per row instead. -->
+    <div class="provenance-list">
+      <div class="provenance-row">
+        <div class="provenance-term">Motor-car perquisite (Dhanam Car)</div>
+        <div class="provenance-value">₹5,000/mo (≤1.6L or electric) · ₹7,000/mo (&gt;1.6L) · +₹3,000/mo with a chauffeur</div>
+        <div class="provenance-date">As of: Income-tax Rules, 2026 — in force 1 Apr 2026</div>
+      </div>
+      <div class="provenance-row">
+        <div class="provenance-term">Income tax — new regime</div>
+        <div class="provenance-value">Standard slabs; §87A rebate to ₹12L taxable, with marginal relief tapering to ≈₹12.71L</div>
+        <div class="provenance-date">As of: FY2025-26, as stated in Dhanam Car's caveats</div>
+      </div>
+      <div class="provenance-row">
+        <div class="provenance-term">Income tax — old regime</div>
+        <div class="provenance-value">₹2.5L/₹5L/₹10L slab thresholds; §87A rebate to ₹5L (a real cliff in law, unlike the new regime)</div>
+        <div class="provenance-date">As of: as coded — not separately dated in-app; verify against the current Finance Act</div>
+      </div>
+      <div class="provenance-row">
+        <div class="provenance-term">Motor insurance depreciation (car resale/IDV)</div>
+        <div class="provenance-value">IRDAI schedule — 20% in year 1, then 15%/yr</div>
+        <div class="provenance-date">As of: the standard, long-standing IRDAI table — no recent change tracked</div>
+      </div>
+      <div class="provenance-row">
+        <div class="provenance-term">Stamp duty + registration (Dhanam Home)</div>
+        <div class="provenance-value">9-state table, e.g. Telangana 4%/0.5%, Karnataka 5%/1%, Maharashtra 6%/1% — full list in the state selector</div>
+        <div class="provenance-date">As of: 2026-08-08 — indicative single figures only, not exhaustive or authoritative; edit the fields directly if yours differs</div>
+      </div>
+      <div class="provenance-row">
+        <div class="provenance-term">GST on under-construction property</div>
+        <div class="provenance-value">5%, no input tax credit</div>
+        <div class="provenance-date">As of: current GST law — the GST Council moved real estate to this rate (from 12%/8% with ITC) effective 2019-04-01</div>
+      </div>
+      <div class="provenance-row">
+        <div class="provenance-term">Home loan default rate (Dhanam Home)</div>
+        <div class="provenance-value">8.75% p.a.</div>
+        <div class="provenance-date">As of: a starting point — replace with your own lender's quote</div>
+      </div>
+      <div class="provenance-row">
+        <div class="provenance-term">Car loan default rate (Car Buying)</div>
+        <div class="provenance-value">9.5% p.a.</div>
+        <div class="provenance-date">As of: a starting point — replace with your own quote</div>
+      </div>
+      <div class="provenance-row">
+        <div class="provenance-term">SIP CAGR default (all three Dhanam Grow tabs)</div>
+        <div class="provenance-value">12% p.a.</div>
+        <div class="provenance-date">As of: a starting point — markets don't guarantee any return; use your own assumption</div>
+      </div>
+      <div class="provenance-row">
+        <div class="provenance-term">Dhanam Worth projection defaults</div>
+        <div class="provenance-value">10% CAGR (investable assets) · 9% (debt interest rate)</div>
+        <div class="provenance-date">As of: starting points, not forecasts</div>
+      </div>
+      <div class="provenance-row">
+        <div class="provenance-term">Compare Cars tier-2 assumptions (lease rate, residual %, maintenance, insurance, IDV depreciation, marginal tax rate)</div>
+        <div class="provenance-value">Individually editable in the section's own Assumptions card</div>
+        <div class="provenance-date">As of: petrol/home/public-charging prices dated Aug 2026 in-app; the rest are starting points</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel-card">
+  <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-down"></use></svg></span><span class="pch-title">Known gaps</span></div>
+  <div class="panel-card-body">
+    <ul style="font-size:12px;color:var(--text-dim);line-height:2;padding-left:16px;">
+      <li>Every corpus/gain figure in Dhanam Grow, and every SIP-side figure in Dhanam Home's Buy-vs-SIP and prepay-vs-SIP comparisons, is <strong>pre-tax</strong>. Building a correct post-tax version needs per-installment holding-period tracking that the current SIP engine doesn't keep — a real restructure, not a quick add — and a precisely-wrong post-tax number would be worse than an honest, stated gap. For now this is disclosed rather than modelled; see the caveat above the Buy-vs-SIP hero for the short version.</li>
+      <li>Dhanam Grow's flat monthly SIP calculation and its step-up SIP calculation disagree by about 1%, even at 0% step-up, because they use different interest-crediting conventions internally (one compounds like an annuity-due, the other month-by-month like an ordinary annuity). It's a known, measured gap, not a bug we haven't found — and it's why the app never plots those two as two lines on the same chart.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="panel-card">
+  <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-briefcase"></use></svg></span><span class="pch-title">Build &amp; contact</span></div>
+  <div class="panel-card-body">
+    <p class="note-text">Build <span id="about-build-stamp">—</span>. Dhanam works offline and caches its own files — if a change you were told about isn't showing up, reload the page and check this number moved.</p>
+    <p class="note-text" style="margin-top:6px;">Found something that looks wrong, or have a suggestion? <a href="mailto:dsravitheja@gmail.com" style="color:var(--accent);">dsravitheja@gmail.com</a> — mention what you were doing and what looked off; that's more useful than "it's broken."</p>
+  </div>
+</div>
+
+</div>
+</div><!-- /hub-about -->
+
 <div class="toast" id="toast"></div>
 
 <script src="calc.js"></script>
 <script>
+// R45/6e-ii: a human-readable build stamp, shown on the About page. Deliberately
+// distinct from sw.js's CACHE string — that one is bumped purely to bust old
+// caches and means nothing to a user; this one is what makes "I still see the
+// bug" diagnosable on a cache-first PWA (a tester can be looking at a stale
+// cached shell without knowing it). Bump this BY HAND alongside sw.js's CACHE
+// version whenever a user-visible change ships — the two are not derived from
+// one another, so both need editing.
+const BUILD_STAMP = '2026-08-08';
+
 // =====================================================================
 // UTILITIES
 // =====================================================================
@@ -3492,6 +3735,27 @@ function openLoanCalc() {
   el('section-loan').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// R24/6d — deep-link straight to the one externally-validated use case
+// (prepayment planning), not just the loan panel it lives inside. Modeled
+// on openLoanCalc()/openDisbCalc(): routes through the same toggleSection()
+// call so it inherits R14's accordion + "second click doesn't collapse"
+// behaviour, no second code path. adv-section is a nested collapse-card
+// deliberately OUTSIDE that accordion (see CLAUDE.md) — opening it here
+// must not, and does not, touch sip-section or any other nested card the
+// user might already have open.
+function openPrepayCalc() {
+  switchHub('apartment');
+  if (!el('section-loan').classList.contains('open')) {
+    toggleSection('loan');
+  } else {
+    renderLoans();
+  }
+  if (!el('adv-section').classList.contains('open')) {
+    toggleAdv();
+  }
+  el('adv-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function openDisbCalc() {
   switchHub('apartment');
   if (!el('section-disb').classList.contains('open')) {
@@ -4277,6 +4541,7 @@ if ('serviceWorker' in navigator) {
 // leaving them blank until a state is ever actively picked.
 applyPropertyState(false);
 updateQuick();
+set('about-build-stamp', BUILD_STAMP); // R45/6e-ii — hub-about isn't render*-driven, so just stamp it once at load
 
 // Hydrate persisted state *after* the first render, never before — a bad
 // blob must not be able to block first paint (§2.3 M2b).
