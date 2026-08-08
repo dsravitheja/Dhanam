@@ -1,0 +1,50 @@
+# Phase 12 Report — Wave 1: About page, prepayment tile, nav fix (Cluster A)
+
+*Completed: 2026-08-08 · Executed from `TASK-PARALLEL-EXECUTION.md`'s Wave 1 plan, run immediately after Wave 0 (`PHASE-11-REPORT.md`). Unlike Wave 0, this ran as **one sequential agent, not split** — the plan's own §2 "Cluster A" analysis flagged that the About page (R22/6b), the prepayment tile (R24/6d), and the nav-tab overflow fix (R10's remaining sub-item) all touch the same ~200-line landing/nav region of `index.html`, and worse, share a *content* decision (does the About page get a tile, a footer link, or something else — and does that choice also solve the nav-overflow problem?) that three independent agents would each answer differently.*
+
+---
+
+## The architectural decision (made once, before delegating)
+
+Rather than let the implementing agent re-derive Cluster A's open question, the decision was made up front and handed to the agent as a constraint, not a choice: **no sixth nav tab.** The About page is reached two ways instead — a small, persistent "ⓘ About" link in the header (`.header-about-link`, a sibling of the clickable logo area, visible on every hub since `.header` sits outside the horizontally-scrolling `.hub-nav` row), and a new landing-page footer with two links ("About · How this works" and a plain `mailto:` "Have feedback?" link). The footer does double duty — it's simultaneously 6b's "reachable from the landing page" requirement and 6e's "visible contact link on the landing page" requirement, so it exists once rather than as two overlapping footers. This kept R10's separate nav-tab-overflow item to a pure visual fix (a scroll-shadow affordance) rather than a structural one, since tab count never changed.
+
+## What shipped
+
+**About page (R22/6b).** A new `hub-about`, not wired into `.hub-nav`. Five panel-cards: what Dhanam is (with the "not financial, tax, or investment advice" line), privacy (a checkable claim — "open devtools, watch the Network tab" — true because R5 already removed the app's only off-origin request, verified again in QA below), a dated provenance list (11 rows: motor-car perquisite, both tax regimes, IRDAI depreciation, `PROPERTY_STATES`, GST, the four rate defaults, Worth's projection defaults, Compare Cars' tier-2 group), known gaps (B6's ~1% SIP timing-convention disagreement; every corpus/gain figure being pre-tax, referencing R32's just-landed "state-and-don't-model" assessment in its own words), and a build stamp + contact email. The provenance list follows 6b's "disown the defaults" instruction literally — it states what each default is and that it's replaceable, never why it was chosen, since explaining the reasoning would itself read as an endorsement.
+
+The provenance table started as a 3-column table but was rebuilt as a stacked `.provenance-row`/`-term`/`-value`/`-date` list after the implementing agent caught, from an actual 375px screenshot rather than just a "no horizontal scroll" check passing, that the table squeezed its dated-prose values into unreadable columns. One dating comment was added to the previously-undated `d-gst` field (GST on under-construction property, citing the 2019-04-01 GST Council rate change) so the About page's citation of it has something real in the code to point at.
+
+Two provenance entries — old-regime income tax's exact effective date, and IRDAI's depreciation table's — are marked "as coded, not separately dated in-app; verify against the current Finance Act" rather than a fabricated date, since the agent wasn't confident of the exact commencement dates for either. Worth sourcing precisely in a follow-up if this becomes public-facing rather than beta.
+
+**Nav-tab overflow affordance (R10's last open sub-item).** A pure-CSS scroll-shadow on `.hub-nav`: two gradients that scroll with the tab row (hiding themselves once fully scrolled to that edge) plus two that stay fixed to the viewport (reading as an edge fade). Background-image only — no extra DOM element sits over the tabs, so there's nothing that can block a tap on the last one. Verified in a headless browser that scrolling the nav fully and tapping the last tab still activates that hub.
+
+**Prepayment landing tile + `openPrepayCalc()` (R24/6d).** A 7th landing tile, "Should I Prepay My Loan?", deep-linking through the same `toggleSection('loan')` path `openLoanCalc()` uses (inheriting the R14 accordion and "second click doesn't collapse" behavior with no second code path), then additionally opening the nested `adv-section` ("Advanced: Extra Payments Projection") idempotently and scrolling *that* into view — the actual destination the tile promises, not just the outer panel.
+
+**The comparison caveat (6d-i, shipped together with the tile above, not after it).** A `.sip-caveat` block sits directly above `#sip-hero` inside `sip-section`'s "Buy vs. SIP" panel — the one surface in the app that actually juxtaposes a guaranteed pre-tax number against an uncertain, taxed one (`adv-section` itself shows no SIP comparison, so it needed no caveat of its own). States the loan side's guarantee and tax-free status, the SIP side's uncertainty and tax exposure on redemption, and the mirror-image omission (Section 24 interest deduction, 80C principal under the old regime) in one line each — with no specific tax rate printed anywhere, per the spec's own instruction that rates belong only in 6b's provenance list.
+
+**Build stamp (R45/6e-ii).** `const BUILD_STAMP = '2026-08-08';`, shown on the About page, explicitly distinct from `sw.js`'s `CACHE` string and bumped by hand alongside it — not derived from it, so both need editing on a future ship. Per 6e-i's already-recorded sequencing decision, **the feedback composer was not built** — only the stamp and a plain contact link, as planned for the beta stage.
+
+`sw.js`'s `CACHE` bumped `apt-cost-v15` → `apt-cost-v16`.
+
+---
+
+## Integration notes
+
+The implementing agent hit the same stale-worktree-base trap every agent in this repo has hit so far (`6134c6e`, missing both Phase 10 and all of Wave 0) — caught and corrected before writing any code, per its brief's explicit warning that this had become "a near-certainty, not an edge case" after two prior occurrences. The merge onto `claude/phase-9-compare-cars` was a single clean fast-forward-style merge with **zero conflicts** (Wave 1 branched from Wave 0's actual tip once corrected, and no other work landed in between).
+
+Two issues were found and fixed by the agent itself before reporting done, both from actually looking at screenshots rather than trusting logic-only checks: the header About link visually collided with the header subtitle at 375px (fixed with a small `padding-right` reservation on `.header-inner` in that breakpoint), and the provenance table's column squeeze noted above.
+
+## Verification
+
+- `node tests.js` → 65/65, unchanged (only `index.html`/`sw.js` touched).
+- No duplicate DOM ids; `<div>`/`<table>`/`<tr>`/`<td>`/`<ul>`/`<li>`/`<button>`/`<span>` tags all balanced (662/662 divs, checked independently of the implementing agent's own count).
+- Inline `<script>` parses (`new Function()`).
+- `svg.icon`/`aria-hidden` count gap (86 vs 87) matches the pre-existing gap from before this wave plus the wave's own 9 new icon usages in equal proportion — not a new discrepancy, not investigated further (same pre-existing one-off case flagged in `PHASE-11-REPORT.md`).
+- Independently scanned every added line for recommendation-shaped language ("you should," "we recommend," "the best option/choice/way is") — zero matches.
+- CLAUDE.md updated: `hub-about`'s placement reasoning, the nav scroll-shadow, the About page's provenance-list shape, the build stamp's bump discipline, `openPrepayCalc()`'s pattern, the `.sip-caveat` placement rule, and manual-checklist items 42–44.
+- `TASK-UX-REDESIGN.md` updated: R10 marked fully shipped; R22/6b, R24/6d, 6d-i, and R45/6e-ii marked shipped in both the summary table and their full-spec sections; R25's row split (contact link shipped, orientation line + composer still open) since 6e itself is only partially done.
+- **Browser QA (real Chromium via Playwright, 41 automated assertions + manual screenshot review at 1280px and 375px, zero console errors throughout): PASS, no failures.** Header About link works from all 5 hubs with no double-navigation and no visual collision with the header title at 375px; landing footer's two links both resolve correctly; About page's provenance dates, known-gaps text, build stamp, and privacy claim all verified present and worded correctly, with an actual live Network-tab check confirming zero off-origin requests; the prepayment tile opens `section-loan` + `adv-section` and survives a second click; the `.sip-caveat` is visible immediately on opening "Buy vs. SIP" with no tax rate in it; the nav scroll-shadow renders at both scroll edges and doesn't block a tap on the last tab; live recalculation confirmed on the car and Grow hubs. Full transcript and screenshots retained by the QA agent; not reproduced here.**
+
+## What's still open after this wave
+
+Per `TASK-PARALLEL-EXECUTION.md`'s wave plan: **Wave 2** — R8's accessibility sweep first (the widest-reaching item left: clickable `<div>`s → `<button>`s with `aria-expanded`, `role="tablist"`/`aria-selected` on hub nav and SIP planner tabs, ≥44px touch targets, visible `:focus-visible` everywhere, covering Phase 2's newer controls too), then R23/6c's inline `ⓘ` term-definition sweep second, built on R8's now-established focus/ARIA pattern rather than inventing a second one. **Wave 3** (R31/7a) remains gated on **B10** (post-tax default, still unanswered) — it no longer needs to wait on 6b's *existence*, since 6b shipped this wave and its provenance list is exactly what R31's tax-rate disclosure needs to point at. Also still open, not gated on anything: R25's dismissible first-run orientation line, and 6f (the beta protocol itself — an owner activity, not an agent task, meant to run *during* Phase 6 rather than after it).
