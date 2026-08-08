@@ -593,6 +593,33 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .disb-tr-remove:hover { background:rgba(224,112,112,.2); }
 .disb-tr-remove:disabled { opacity:.3; cursor:not-allowed; }
 .disb-warn { display:none; font-size:12px; color:var(--red); background:rgba(224,112,112,.08); border:1px solid rgba(224,112,112,.3); border-radius:8px; padding:8px 12px; margin-top:10px; }
+
+/* ── COMPARE CARS (Phase 9) ──────────────── */
+.cc-row { display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid var(--border-subtle); }
+.cc-row:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0; }
+.cc-field { display:flex; flex-direction:column; gap:5px; flex:1 1 110px; min-width:100px; }
+.cc-field-name { flex:1 1 170px; }
+.cc-field label { font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.07em; font-weight:500; }
+.cc-field input, .cc-field select { font-family:'DM Mono',monospace; font-size:14px; color:var(--text); background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:9px 10px; outline:none; width:100%; }
+.cc-field input:focus, .cc-field select:focus { border-color:var(--accent); }
+.cc-field-check { flex:0 0 auto; padding-bottom:9px; }
+.cc-field-check label { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-mid); white-space:nowrap; cursor:pointer; }
+.cc-row-hint { flex:1 0 100%; font-size:11px; color:var(--text-mid); margin-top:2px; }
+.cc-rank-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; margin-bottom:12px; }
+.cc-rank-card.rank-1 {
+  border-color:var(--accent);
+  background:linear-gradient(135deg,var(--hero-grad-1) 0%,var(--hero-grad-2) 100%);
+}
+.cc-rank-badge { display:inline-flex; align-items:center; gap:5px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:3px 10px; border-radius:5px; margin-bottom:10px; background:rgba(255,255,255,.08); color:var(--text-mid); }
+.cc-rank-card.rank-1 .cc-rank-badge { background:rgba(201,168,76,.18); color:var(--accent); }
+.cc-rank-title { font-family:'Playfair Display',serif; font-size:17px; font-weight:700; color:var(--text); }
+.cc-rank-type { font-size:11px; color:var(--text-dim); margin-bottom:10px; }
+.cc-be-row { display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-bottom:1px solid var(--border-subtle); gap:12px; flex-wrap:wrap; }
+.cc-be-row:last-child { border-bottom:none; }
+.cc-be-name { font-size:13px; color:var(--text); font-weight:500; }
+.cc-be-verdict { font-size:13px; font-family:'DM Mono',monospace; color:var(--text); }
+.cc-be-verdict.green { color:var(--green); }
+@media(max-width:480px){ .cc-field { flex:1 1 90px; } }
 .disb-schedule-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:4px; }
 .disb-schedule-table th { text-align:left; padding:6px 12px; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); border-bottom:1px solid var(--border); }
 .disb-schedule-table td { padding:6px 12px; border-bottom:1px solid var(--border-subtle); font-family:'DM Mono',monospace; }
@@ -1364,7 +1391,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin-top:14px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);cursor:pointer;">
             <input type="checkbox" id="car-big-engine" onchange="renderCarCalc()" style="accent-color:var(--accent);width:16px;height:16px;">
-            Engine &gt; 1600cc
+            Engine &gt; 1600cc <span style="color:var(--text-dim)">(leave off for electric)</span>
           </label>
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);cursor:pointer;">
             <input type="checkbox" id="car-has-driver" onchange="renderCarCalc()" style="accent-color:var(--accent);width:16px;height:16px;">
@@ -1390,13 +1417,169 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       <div class="panel-card-header"><span><svg class="icon"><use href="#i-info"></use></svg></span><span class="pch-title">Important Notes &amp; Caveats</span></div>
       <div class="panel-card-body">
         <ul style="font-size:12px;color:var(--text-dim);line-height:2;padding-left:16px;">
-          <li>Perquisite per IT Rule 3(2): ≤1600cc = ₹1,800/mo · &gt;1600cc = ₹2,400/mo · company driver = +₹900/mo.</li>
+          <li>Perquisite per the Income-tax Rules, 2026 (in force 1 Apr 2026): ≤1600cc or electric = ₹5,000/mo · &gt;1600cc = ₹7,000/mo · company driver = +₹3,000/mo. These replaced the long-standing ₹1,800/₹2,400/₹900 figures under the Income-tax Rules, 1962 — roughly a 3× increase, so a car package that looked worthwhile under the old table may not under this one.</li>
           <li>Old regime includes standard deduction (₹50,000) + 80C (₹1.5L) only. HRA, 80D excluded for simplicity.</li>
           <li>New regime (FY2025-26): standard deduction ₹75,000; rebate u/s 87A for taxable ≤ ₹12L, with marginal relief up to ≈₹12.71L.</li>
           <li>EPF is taken from the amount you enter, not derived from salary — real EPF applies to Basic + DA only, which this app has no way to infer from total fixed pay. The same figure is used in all three scenarios, since a car carve-out comes out of allowances rather than Basic.</li>
           <li>Carve-out (A): your CTC reduces by car package; employer pays EMI/fuel/driver. Your take-home reduces but no car expense.</li>
           <li>Additive (B): car is on top of your CTC; full salary retained; only perquisite value added to taxable income.</li>
           <li>Consult a CA for personalised tax planning before restructuring your salary.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section-title"><svg class="icon"><use href="#i-scope"></use></svg> Compare Cars — ICE vs EV Under Lease</div>
+
+    <div class="panel-card">
+      <div class="panel-card-header"><span><svg class="icon"><use href="#i-car"></use></svg></span><span class="pch-title">Your Shortlist</span><span class="pch-tag">Live</span></div>
+      <div class="panel-card-body">
+        <p class="note-text" style="margin-bottom:12px;">Enter the cars you're actually considering — on-road price and mileage/efficiency from a dealer quote, not a brochure figure. A car only counts once both its price and mileage/efficiency are filled in.</p>
+        <div id="cc-rows"></div>
+        <button class="btn btn-secondary" onclick="ccAddCar()"><svg class="icon"><use href="#i-plus"></use></svg> Add car</button>
+      </div>
+    </div>
+
+    <div class="collapse-card" id="cc-assumptions-card">
+      <div class="collapse-header" onclick="toggleCard('cc-assumptions-card')">
+        <span class="collapse-title"><svg class="icon"><use href="#i-clipboard"></use></svg> Assumptions</span>
+        <span class="collapse-arrow">▼</span>
+      </div>
+      <div class="collapse-body">
+        <div class="grid-3">
+          <div class="field">
+            <label>Lease Interest Rate (% p.a.)</label>
+            <input type="number" id="cc-lease-rate" value="10" step="0.25" min="0" oninput="renderCarCompare()">
+          </div>
+          <div class="field">
+            <label>Residual / Buyout (%)</label>
+            <input type="number" id="cc-residual-pct" value="10" step="1" min="0" max="90" oninput="renderCarCompare()">
+            <span class="field-hint">Paid at lease end to own the car</span>
+          </div>
+          <div class="field">
+            <label>Lease Tenure</label>
+            <select id="cc-years" onchange="renderCarCompare()">
+              <option value="3">3 years</option>
+              <option value="4" selected>4 years</option>
+              <option value="5">5 years</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Marginal Tax Rate (%)</label>
+            <input type="number" id="cc-marginal-rate" value="31.2" step="0.1" min="0" max="45" oninput="renderCarCompare()">
+            <span class="field-hint">30% slab + 4% cess at defaults (new regime)</span>
+          </div>
+          <div class="field">
+            <label>Company Driver Provided</label>
+            <select id="cc-has-driver" onchange="renderCarCompare()">
+              <option value="0" selected>No</option>
+              <option value="1">Yes</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Petrol Price (₹/litre)</label>
+            <input type="number" id="cc-petrol" value="117" step="1" min="0" oninput="renderCarCompare()">
+            <span class="field-hint">As of Hyderabad, Aug 2026 — reprice for your city/date</span>
+          </div>
+          <div class="field">
+            <label>Home Charging (₹/unit)</label>
+            <input type="number" id="cc-home-rate" value="8" step="0.5" min="0" oninput="renderCarCompare()">
+            <span class="field-hint">Blended slab rate, as of Aug 2026</span>
+          </div>
+          <div class="field">
+            <label>Public Fast-Charging (₹/unit)</label>
+            <input type="number" id="cc-public-rate" value="20" step="0.5" min="0" oninput="renderCarCompare()">
+            <span class="field-hint">As of Aug 2026</span>
+          </div>
+          <div class="field">
+            <label>Annual City Driving (km)</label>
+            <input type="number" id="cc-city-km" value="8000" step="500" min="0" oninput="renderCarCompare()">
+          </div>
+          <div class="field">
+            <label>Annual Highway Driving (km)</label>
+            <input type="number" id="cc-hwy-km" value="4000" step="500" min="0" oninput="renderCarCompare()">
+          </div>
+          <div class="field">
+            <label>ICE Highway Mileage ×</label>
+            <input type="number" id="cc-ice-hwy-mult" value="1.35" step="0.05" min="0.5" oninput="renderCarCompare()">
+            <span class="field-hint">Highway kmpl vs. city kmpl</span>
+          </div>
+          <div class="field">
+            <label>EV Highway Efficiency ×</label>
+            <input type="number" id="cc-ev-hwy-mult" value="1.15" step="0.05" min="0.5" oninput="renderCarCompare()">
+            <span class="field-hint">Highway kWh/100km vs. city (aero drag)</span>
+          </div>
+          <div class="field">
+            <label>ICE Annual Maintenance (₹)</label>
+            <input type="number" id="cc-ice-maint" value="9000" step="500" min="0" oninput="renderCarCompare()">
+          </div>
+          <div class="field">
+            <label>EV Annual Maintenance (₹)</label>
+            <input type="number" id="cc-ev-maint" value="4500" step="500" min="0" oninput="renderCarCompare()">
+          </div>
+          <div class="field">
+            <label>ICE Insurance (% of price, yr 1)</label>
+            <input type="number" id="cc-ice-ins" value="3.0" step="0.1" min="0" oninput="renderCarCompare()">
+          </div>
+          <div class="field">
+            <label>EV Insurance (% of price, yr 1)</label>
+            <input type="number" id="cc-ev-ins" value="3.8" step="0.1" min="0" oninput="renderCarCompare()">
+            <span class="field-hint">Higher — battery cover</span>
+          </div>
+          <div class="field">
+            <label>Annual IDV Depreciation (%)</label>
+            <input type="number" id="cc-dep-rate" value="15" step="1" min="0" max="50" oninput="renderCarCompare()">
+            <span class="field-hint">Used to decay the insurance base year over year</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note-text" id="cc-empty" style="padding:16px 2px;">Add at least one car above — with both price and mileage/efficiency filled in — to see a comparison.</div>
+
+    <div class="total-card" id="cc-hero" style="display:none;">
+      <div class="total-label">Cheapest Option (Net Cost, Before Resale Credit)</div>
+      <div class="total-value" id="cc-hero-name">—</div>
+      <div class="total-cr" id="cc-hero-cost"></div>
+      <div class="total-cr" id="cc-hero-gap"></div>
+    </div>
+
+    <div class="panel-card" id="cc-breakeven-card" style="display:none;margin-bottom:14px;">
+      <div class="panel-card-header"><span><svg class="icon"><use href="#i-bolt"></use></svg></span><span class="pch-title">Breakeven — Annual km</span></div>
+      <div class="panel-card-body">
+        <div class="field" style="max-width:320px;margin-bottom:12px;">
+          <label>Reference ICE Car</label>
+          <select id="cc-ref-ice" onchange="renderCarCompare()"></select>
+        </div>
+        <div id="cc-breakeven-rows"></div>
+      </div>
+    </div>
+
+    <div class="collapse-card" id="cc-chart-card" style="display:none;">
+      <div class="collapse-header" onclick="toggleChartCard('cc-chart-card', renderCCChart)">
+        <span class="collapse-title"><svg class="icon"><use href="#i-bar-chart"></use></svg> Net cost vs. annual km driven</span>
+        <span class="collapse-arrow">▼</span>
+      </div>
+      <div class="collapse-body">
+        <div id="cc-chart"></div>
+        <div class="chart-caption" id="cc-chart-caption"></div>
+      </div>
+    </div>
+
+    <div id="cc-results" style="margin-bottom:14px;"></div>
+
+    <div class="panel-card" style="margin-bottom:28px;">
+      <div class="panel-card-header"><span><svg class="icon"><use href="#i-info"></use></svg></span><span class="pch-title">Important Notes &amp; Caveats</span></div>
+      <div class="panel-card-body">
+        <ul style="font-size:12px;color:var(--text-dim);line-height:2;padding-left:16px;">
+          <li>Prices, names and mileage/efficiency are exactly what you typed — nothing here is verified against a dealer quote or a catalog.</li>
+          <li>The resale credit uses the IRDAI insurance depreciation schedule (20% year 1, 15%/yr after) as a proxy for what the car is worth after the lease — that's an insurance schedule, not a resale-price prediction, and it's one ICE-shaped curve applied to EVs too (battery health and faster model turnover aren't modelled separately).</li>
+          <li>Ranking and the gold "cheapest" highlight use net cost <strong>before</strong> the resale credit — the after-resale figure is shown on every card, it just doesn't drive the rank.</li>
+          <li>Insurance is one flat rate per vehicle type (ICE vs EV), not a per-model quote.</li>
+          <li>The city:highway driving split and its multipliers are global — every car is assumed driven the same way, with no per-car override.</li>
+          <li>Unlike the spreadsheet this section is based on, there's no "EV driven more because it feels free" multiplier — annual km is the same figure for every car, so the ₹/km figures stay comparable across ICE and EV.</li>
+          <li>Perquisite per the Income-tax Rules, 2026 (in force 1 Apr 2026): ≤1600cc or electric = ₹5,000/mo · &gt;1600cc = ₹7,000/mo · company driver = +₹3,000/mo — the same table the lease analysis above uses.</li>
+          <li>Marginal tax rate is a single number you enter here, not derived from a slab calculation — it doesn't pick up the Section 87A relief the salary panel above applies.</li>
+          <li>Consult a CA and get dealer quotes before acting on this comparison.</li>
         </ul>
       </div>
     </div>
@@ -1885,6 +2068,11 @@ let detailOpened = false;
 let loanOpened = false;
 let disbOpened = false;
 let disbTranches = [ { pct: 50, month: 0 }, { pct: 50, month: 12 } ];
+let ccCars = [
+  { type: 'ICE', name: '', price: 0, eff: 0, bigEngine: false },
+  { type: 'EV', name: '', price: 0, eff: 0, bigEngine: false },
+];
+let ccBuilt = false;
 
 // Modes for amenities / corpus / infra (sqft or lump)
 const MODES = { amenities: 'sqft', corpus: 'sqft', infra: 'sqft' };
@@ -1915,7 +2103,10 @@ let storageUnreadable = false; // state present but corrupt/foreign-version -> s
 let storageFailed = false;     // a write was rejected (quota / private mode) -> never claim it saved
 
 function blankState() {
-  return { v: STORE_VER, lastSaved: null, rememberInputs: false, loan: null, worth: null, history: [] };
+  // carCompare: additive key (Phase 9 / R43) — an old blob missing it just
+  // defaults to null via loadState()'s Object.assign(blankState(), s), no
+  // STORE_VER bump needed (CLAUDE.md's "schema is flat and additive" rule).
+  return { v: STORE_VER, lastSaved: null, rememberInputs: false, loan: null, worth: null, carCompare: null, history: [] };
 }
 
 function loadState() {
@@ -3104,7 +3295,7 @@ function switchHub(tab) {
   if (content) content.classList.add('active');
   if (btn) btn.classList.add('active');
   if (tab === 'sip') { updateSIPPlanner(); updateStepupSIP(); updateLumpsum(); }
-  if (tab === 'car') { renderCarCalc(); renderCarLoan(); }
+  if (tab === 'car') { renderCarCalc(); renderCarLoan(); renderCarCompare(); }
   if (tab === 'worth') renderWorth();
 }
 
@@ -3454,6 +3645,12 @@ function importWorthBackup(file) {
     if (rememberingInputs()) { el('l-remember').checked = true; hydrateLoanInputs(); }
     updateRememberHint();
     renderWorth();
+    // Compare Cars persists by design too (B11) — round-trip its shortlist
+    // the same way, regardless of whether hub-car has ever been opened this
+    // session (ccBuilt only guards the *first* build, not a full state swap).
+    ccBuilt = true;
+    hydrateCC();
+    renderCarCompare();
     showToast('Backup restored');
   };
   reader.onerror = () => showToast("Couldn't read that file");
@@ -3477,6 +3674,10 @@ function eraseWorthData() {
   el('l-remember').checked = false;
   updateRememberHint();
   renderWorth();
+  // Compare Cars shortlist is tier-1 too (B11) — erase means erase.
+  ccBuilt = true;
+  hydrateCC();
+  renderCarCompare();
   showToast('All saved data erased from this device');
 }
 
@@ -4096,6 +4297,318 @@ function renderCarLoan() {
     deprEl.style.display = 'none';
     clearChart('cb-depr-chart');
   }
+}
+
+// =====================================================================
+// DHANAM CAR — COMPARE CARS (ICE vs EV under a company lease), Phase 9
+// =====================================================================
+// calcRunningCost / calcInsuranceTotal / calcLeaseNetCost / calcBreakevenKm
+// and calcEMI's fv argument all live in calc.js — see CLAUDE.md's Testing
+// section. This block is the DOM-coupled half: reading cc-* inputs, the
+// ccCars shortlist, and rendering the hero/breakeven/chart/result cards.
+
+// A row that's been started (any field touched) but doesn't yet pass the
+// price>0 && eff>0 guard gets a same-row explanation of what's missing —
+// the guard itself was already correct (R39's blank-row rule), what was
+// missing was telling the user *where* to look. Returns '' for a genuinely
+// untouched row, so the two fresh rows on first open stay quiet.
+function ccRowHintText(c) {
+  const started = !!(c.name || c.price > 0 || c.eff > 0);
+  if (!started) return '';
+  const missing = [];
+  if (!(c.price > 0)) missing.push('on-road price');
+  if (!(c.eff > 0)) missing.push(c.type === 'EV' ? 'efficiency' : 'mileage');
+  if (!missing.length) return '';
+  return `Add ${missing.join(' and ')} to include this car in the comparison`;
+}
+
+function ccRowHtml(c, i) {
+  const isEV = c.type === 'EV';
+  return `<div class="cc-row">
+    <div class="cc-field" style="flex:0 0 84px;">
+      <label>Type</label>
+      <select onchange="ccCars[${i}].type = this.value; ccCars[${i}].bigEngine = false; renderCCRows(); renderCarCompare();">
+        <option value="ICE" ${!isEV ? 'selected' : ''}>ICE</option>
+        <option value="EV" ${isEV ? 'selected' : ''}>EV</option>
+      </select>
+    </div>
+    <div class="cc-field cc-field-name">
+      <label>Name</label>
+      <input type="text" value="${xesc(c.name)}" placeholder="e.g. Creta / Nexon EV"
+        oninput="ccCars[${i}].name = this.value; renderCarCompare();">
+    </div>
+    <div class="cc-field">
+      <label>On-Road Price (₹)</label>
+      <input type="number" value="${c.price || ''}" min="0" step="1000"
+        oninput="ccCars[${i}].price = parseFloat(this.value) || 0; renderCarCompare();">
+    </div>
+    <div class="cc-field">
+      <label>${isEV ? 'Efficiency (kWh/100km)' : 'Mileage (kmpl)'}</label>
+      <input type="number" value="${c.eff || ''}" min="0" step="0.1"
+        oninput="ccCars[${i}].eff = parseFloat(this.value) || 0; renderCarCompare();">
+    </div>
+    ${!isEV ? `<div class="cc-field-check">
+      <label><input type="checkbox" ${c.bigEngine ? 'checked' : ''} style="accent-color:var(--accent);width:15px;height:15px;"
+        onchange="ccCars[${i}].bigEngine = this.checked; renderCarCompare();"> &gt;1600cc</label>
+    </div>` : ''}
+    <button class="disb-tr-remove" onclick="ccRemoveCar(${i})" ${ccCars.length <= 1 ? 'disabled' : ''} title="Remove car">✕</button>
+    <div class="cc-row-hint" id="cc-row-hint-${i}">${xesc(ccRowHintText(c))}</div>
+  </div>`;
+}
+
+// Rebuilds the row inputs' innerHTML — on add/remove/hydrate, and on a row's
+// own Type dropdown (which needs it: the Mileage/Efficiency label text and
+// the >1600cc checkbox are baked into ccRowHtml() at render time). Never
+// called from a text/number field's oninput, for the same reason
+// renderDisbTranches() stays off renderLoanDisb()'s call path (D6/Phase 0):
+// rewriting innerHTML on every keystroke drops focus mid-type. A <select>
+// onchange is a discrete, already-committed choice, not a keystroke — there's
+// no focus to lose by rebuilding here.
+function renderCCRows() {
+  el('cc-rows').innerHTML = ccCars.map(ccRowHtml).join('');
+}
+
+function ccAddCar() {
+  if (ccCars.length >= 5) { showToast('Up to 5 cars at a time'); return; }
+  ccCars.push({ type: 'ICE', name: '', price: 0, eff: 0, bigEngine: false });
+  renderCCRows();
+  renderCarCompare();
+}
+
+function ccRemoveCar(i) {
+  if (ccCars.length <= 1) return;
+  ccCars.splice(i, 1);
+  renderCCRows();
+  renderCarCompare();
+}
+
+function ccAssumptions() {
+  return {
+    annualRate: v('cc-lease-rate'),
+    residualPct: v('cc-residual-pct') / 100,
+    years: v('cc-years') || 4,
+    marginalRate: v('cc-marginal-rate') / 100,
+    hasDriver: el('cc-has-driver').value === '1',
+    petrolPrice: v('cc-petrol'),
+    homeRate: v('cc-home-rate'),
+    publicRate: v('cc-public-rate'),
+    cityKm: v('cc-city-km'),
+    hwyKm: v('cc-hwy-km'),
+    iceHwyMult: v('cc-ice-hwy-mult') || 1,
+    evHwyMult: v('cc-ev-hwy-mult') || 1,
+    iceMaint: v('cc-ice-maint'),
+    evMaint: v('cc-ev-maint'),
+    iceIns: v('cc-ice-ins') / 100,
+    evIns: v('cc-ev-ins') / 100,
+    depRate: v('cc-dep-rate') / 100,
+  };
+}
+
+// Filtered, computed, and ranked. The filter is the R39/workbook-§8 guard —
+// a row counts only if BOTH its raw price and raw efficiency are > 0 (never
+// a derived/truthy check), so a blank row can never fall through into a
+// branch that silently ranks it "cheapest". Ranking is on netCost BEFORE the
+// resale credit (owner decision, B12, 2026-08-07) — netCostAfterResale is
+// still computed and shown on every card, it just doesn't drive the sort,
+// the hero, or the gold rank-1 highlight.
+function ccComputedRows() {
+  const a = ccAssumptions();
+  const rows = ccCars
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => c.price > 0 && c.eff > 0)
+    .map(({ c, i }) => {
+      const isEV = c.type === 'EV';
+      const result = calcLeaseNetCost({
+        price: c.price, annualRate: a.annualRate, residualPct: a.residualPct, years: a.years,
+        bigEngine: !isEV && c.bigEngine, hasDriver: a.hasDriver, marginalRate: a.marginalRate,
+        type: c.type, efficiency: c.eff,
+        cityKm: a.cityKm, hwyKm: a.hwyKm, petrolPrice: a.petrolPrice, iceHwyMult: a.iceHwyMult,
+        homeRate: a.homeRate, publicRate: a.publicRate, evHwyMult: a.evHwyMult,
+        maintAnnual: isEV ? a.evMaint : a.iceMaint,
+        insRate: isEV ? a.evIns : a.iceIns,
+        depRate: a.depRate,
+      });
+      const perKm = calcRunningCost(c.type, c.eff, a).perKm;
+      return { i, car: c, result, perKm, years: a.years };
+    });
+  rows.sort((x, y) => x.result.netCost - y.result.netCost);
+  return rows;
+}
+
+function buildCC() {
+  if (ccBuilt) return;
+  ccBuilt = true;
+  hydrateCC();
+}
+
+// Reads DS.carCompare (or resets to the two-blank-row default) and rebuilds
+// the row markup. Called on first-ever build AND on a full state swap
+// (import/erase) — unlike renderCCRows(), it's fine here because it always
+// runs alongside a genuine data replacement, not a keystroke.
+function hydrateCC() {
+  const saved = DS && DS.carCompare;
+  if (saved && Array.isArray(saved.cars) && saved.cars.length) {
+    ccCars = saved.cars.map(c => ({
+      type: c.type === 'EV' ? 'EV' : 'ICE',
+      name: typeof c.name === 'string' ? c.name : '',
+      price: +c.price || 0,
+      eff: +c.eff || 0,
+      bigEngine: !!c.bigEngine,
+    }));
+  } else {
+    ccCars = [
+      { type: 'ICE', name: '', price: 0, eff: 0, bigEngine: false },
+      { type: 'EV', name: '', price: 0, eff: 0, bigEngine: false },
+    ];
+  }
+  if (saved && saved.cityKm) el('cc-city-km').value = saved.cityKm;
+  if (saved && saved.hwyKm) el('cc-hwy-km').value = saved.hwyKm;
+  renderCCRows();
+}
+
+// Tier-1 only (R43): the user's own cars, plus the two facts about how *they*
+// drive. Every assumption on the collapse-card beside it — lease rate,
+// residual %, petrol/charging prices, maintenance, insurance, depreciation,
+// marginal rate — is tier-2 and must never reach this object, or a saved
+// ₹117/litre would silently outlive reality (CLAUDE.md's persistence rules).
+// Persists only once there's real content, so a first empty visit can't seed
+// a bogus baseline — same rule renderWorth() follows for DS.worth.
+function persistCC() {
+  const anyContent = ccCars.some(c => c.name || c.price > 0 || c.eff > 0);
+  if (!anyContent) return;
+  if (!DS) DS = blankState();
+  DS.carCompare = {
+    cars: ccCars.map(c => ({ type: c.type, name: c.name, price: c.price, eff: c.eff, bigEngine: c.bigEngine })),
+    cityKm: v('cc-city-km') || null,
+    hwyKm: v('cc-hwy-km') || null,
+  };
+  saveState();
+}
+
+function ccVerdict(km) {
+  if (km === null) return { text: 'Never breaks even at these assumptions', cls: '' };
+  if (km <= 0) return { text: 'Already cheaper today', cls: 'green' };
+  return { text: `Needs ${Math.ceil(km).toLocaleString('en-IN')} more km/yr`, cls: '' };
+}
+
+function renderCarCompare() {
+  buildCC();
+
+  // Per-row "what's missing" hint — updated here (a text-only write, never
+  // an innerHTML rebuild) so it stays live on every keystroke without
+  // touching the input the user is currently typing into.
+  ccCars.forEach((c, i) => set('cc-row-hint-' + i, ccRowHintText(c)));
+
+  const rows = ccComputedRows();
+
+  if (!rows.length) {
+    show('cc-empty');
+    hide('cc-hero');
+    hide('cc-breakeven-card');
+    hide('cc-chart-card');
+    clearChart('cc-chart');
+    el('cc-results').innerHTML = '';
+    return;
+  }
+  hide('cc-empty');
+
+  // ── Hero: cheapest by netCost (pre-resale-credit, B12) ──────────────
+  const cheapest = rows[0];
+  show('cc-hero');
+  set('cc-hero-name', cheapest.car.name || (cheapest.car.type === 'EV' ? 'Unnamed EV' : 'Unnamed ICE car'));
+  set('cc-hero-cost', `${fmt(cheapest.result.netCost)} over ${cheapest.years} years`);
+  if (rows.length > 1) {
+    const gap = rows[1].result.netCost - cheapest.result.netCost;
+    set('cc-hero-gap', `${fmt(gap)} cheaper than the next option`);
+  } else {
+    set('cc-hero-gap', '');
+  }
+
+  // ── Ranked result cards, stacked (not a grid — R39) ──────────────────
+  el('cc-results').innerHTML = rows.map((r, rank) => {
+    const isRank1 = rank === 0;
+    const vsCheapest = r.result.netCost - cheapest.result.netCost;
+    return `<div class="cc-rank-card ${isRank1 ? 'rank-1' : ''}">
+      <div class="cc-rank-badge">${isRank1 ? '<svg class="icon"><use href="#i-trophy"></use></svg> Cheapest' : `Rank ${rank + 1}`}</div>
+      <div class="cc-rank-title">${xesc(r.car.name) || (r.car.type === 'EV' ? 'Unnamed EV' : 'Unnamed ICE car')}</div>
+      <div class="cc-rank-type">${r.car.type}${r.car.type === 'ICE' && r.car.bigEngine ? ' · >1600cc' : ''} · ${fmt(r.car.price)} on-road</div>
+      <div class="car-stat"><span class="car-stat-lbl">Net Cost (before resale credit)</span><span class="car-stat-val big">${fmt(r.result.netCost)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Resale credit (car you own after)</span><span class="car-stat-val" style="color:var(--green)">−${fmt(r.result.resaleValue)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Net cost after resale credit</span><span class="car-stat-val accent">${fmt(r.result.netCostAfterResale)}</span></div>
+      <div class="car-divider"></div>
+      <div class="car-stat"><span class="car-stat-lbl">Raw Cash Outflow</span><span class="car-stat-val">${fmt(r.result.rawOutflow)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">EMI / month</span><span class="car-stat-val">${fmt(r.result.emi)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Tax Saved (${r.years}yr, signed)</span><span class="car-stat-val ${r.result.taxSaved < 0 ? 'red' : ''}">${fmt(r.result.taxSaved)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Blended Cost / km</span><span class="car-stat-val">₹${r.result.costPerKm.toFixed(2)}</span></div>
+      ${!isRank1 ? `<div class="car-divider"></div><div class="car-stat"><span class="car-stat-lbl">vs. cheapest</span><span class="car-stat-val red">+${fmt(vsCheapest)}</span></div>` : ''}
+    </div>`;
+  }).join('');
+
+  // ── Breakeven-km hero (9d) — needs at least one ICE and one EV row ───
+  const iceRows = rows.filter(r => r.car.type === 'ICE');
+  const evRows = rows.filter(r => r.car.type === 'EV');
+  if (!iceRows.length || !evRows.length) {
+    hide('cc-breakeven-card');
+  } else {
+    show('cc-breakeven-card');
+    const refSelect = el('cc-ref-ice');
+    const prevRefI = refSelect.value ? parseInt(refSelect.value) : null;
+    refSelect.innerHTML = iceRows.map(r =>
+      `<option value="${r.i}">${xesc(r.car.name) || 'Unnamed ICE car'}</option>`).join('');
+    // Keep the user's chosen reference car selected across re-renders if it's
+    // still in the list; otherwise fall back to the first ICE row.
+    refSelect.value = iceRows.some(r => r.i === prevRefI) ? prevRefI : iceRows[0].i;
+    const refRow = iceRows.find(r => r.i === parseInt(refSelect.value)) || iceRows[0];
+    const iceFixed = refRow.result.netCost - refRow.result.runningTotal;
+
+    el('cc-breakeven-rows').innerHTML = evRows.map(ev => {
+      const evFixed = ev.result.netCost - ev.result.runningTotal;
+      const km = calcBreakevenKm(evFixed, ev.perKm, iceFixed, refRow.perKm, ev.years);
+      const verdict = ccVerdict(km);
+      return `<div class="cc-be-row">
+        <span class="cc-be-name">${xesc(ev.car.name) || 'Unnamed EV'} vs. ${xesc(refRow.car.name) || 'Unnamed ICE car'}</span>
+        <span class="cc-be-verdict ${verdict.cls}">${verdict.text}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Crossover chart (9e) — always recomputed, same as renderWorthTrend();
+  // renderChart()'s ResizeObserver (R11) handles the redraw correctly once
+  // the collapse card is actually opened, even though it's computed here
+  // whether open or not. ──────────────────────────────────────────────
+  show('cc-chart-card');
+  renderCCChart();
+
+  persistCC();
+}
+
+// Self-contained (no params, matches the toggleChartCard(id, redraw) contract
+// used by w-trend-card) — recomputes rows itself so it can be the collapse
+// card's "first open" redraw callback as well as being called inline above.
+function renderCCChart() {
+  const rows = ccComputedRows();
+  if (!rows.length) { clearChart('cc-chart'); return; }
+
+  const years = rows[0].years;
+  const kmSweep = [];
+  for (let km = 0; km <= 30000; km += 2000) kmSweep.push(km);
+
+  // Gold marks the cheapest car (matching its rank-1 card); every other line
+  // uses a neutral shade — no new hues, and green/red stay reserved for a
+  // real financial delta (palette rules 1/3/4), not generic line coloring.
+  const neutrals = ['var(--text)', 'var(--text-mid)', 'var(--text-dim)', 'var(--border)'];
+  let neutralIdx = 0;
+  const series = rows.map((r, idx) => {
+    const fixed = r.result.netCost - r.result.runningTotal;
+    const color = idx === 0 ? 'var(--accent)' : neutrals[neutralIdx++ % neutrals.length];
+    return { values: kmSweep.map(km => fixed + r.perKm * km * years), color, area: false };
+  });
+  renderChart('cc-chart', series, { ariaLabel: 'Net cost versus annual km driven, one line per car' });
+
+  const allVals = series.reduce((a, s) => a.concat(s.values), []);
+  const lo = Math.min(...allVals), hi = Math.max(...allVals);
+  el('cc-chart-caption').innerHTML =
+    `<span>0 km/yr</span><span>${inCr(lo)} – ${inCr(hi)}</span><span>${kmSweep[kmSweep.length - 1].toLocaleString('en-IN')} km/yr</span>`;
 }
 </script>
 </body>
