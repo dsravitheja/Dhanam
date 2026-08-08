@@ -25,16 +25,16 @@ Catch a wrong EMI, tax, SIP, or depreciation number **before** it reaches a real
 
 These 8 functions are **pure** — they take arguments and return values, with no `document.getElementById`/DOM reads or writes inside them. That makes them testable in isolation, which is what makes this task cheap. (Approximate current locations in `index.html`, confirm exact lines before editing.)
 
-| Function | ~Line | What it computes |
-|---|---|---|
-| `calcEMI(P, annualRate, years)` | 1686 | Standard EMI formula |
-| `loanAtYear(P, annualRate, totalYears, checkYear)` | 1693 | Balance/principal/interest at a point in tenure |
-| `simulateLoan(P, annualRate, totalYears, extraEmiPerYear, extraLumpsumPerYear)` | 1710 | Amortization with prepayments |
-| `calcSIP(monthly, annualCagr, years)` | 2458 | SIP future value (annuity formula) |
-| `calcStepupSIP(startMonthly, annualStepupPct, annualCagr, years)` | 2597 | SIP with annual step-up, month-by-month simulation |
-| `calcIncomeTax(annualTaxable, regime)` | 2681 | New/old regime slabs + cess + 87A rebate |
-| `calcPerquisite(bigEngine, hasDriver)` | 2708 | Company car perquisite lookup (IT Rule 3(2)) |
-| `calcCarDepreciation(price, years)` | 2826 | IRDAI-schedule resale estimate |
+| Function                                                                        | ~Line | What it computes                                   |
+| ------------------------------------------------------------------------------- | ----- | -------------------------------------------------- |
+| `calcEMI(P, annualRate, years)`                                                 | 1686  | Standard EMI formula                               |
+| `loanAtYear(P, annualRate, totalYears, checkYear)`                              | 1693  | Balance/principal/interest at a point in tenure    |
+| `simulateLoan(P, annualRate, totalYears, extraEmiPerYear, extraLumpsumPerYear)` | 1710  | Amortization with prepayments                      |
+| `calcSIP(monthly, annualCagr, years)`                                           | 2458  | SIP future value (annuity formula)                 |
+| `calcStepupSIP(startMonthly, annualStepupPct, annualCagr, years)`               | 2597  | SIP with annual step-up, month-by-month simulation |
+| `calcIncomeTax(annualTaxable, regime)`                                          | 2681  | New/old regime slabs + cess + 87A rebate           |
+| `calcPerquisite(bigEngine, hasDriver)`                                          | 2708  | Company car perquisite lookup (IT Rule 3(2))       |
+| `calcCarDepreciation(price, years)`                                             | 2826  | IRDAI-schedule resale estimate                     |
 
 ### Explicitly out of scope for this task
 
@@ -45,22 +45,28 @@ These 8 functions are **pure** — they take arguments and return values, with n
 All three options are technically workable. **A is recommended** because it's the cheapest and also happens to be the first small step of the "light modularization" already flagged as optional future work in `ARCHITECTURE-ANALYSIS.md` — one change serves two purposes. State a choice (or a variant) before the executing agent starts.
 
 ### Option A — Extract the 8 pure functions into `calc.js` (recommended)
+
 Move just those 8 function bodies out of the inline `<script>` into a new sibling file, `calc.js`, loaded by `index.html` via `<script src="calc.js"></script>` in the same position. Add a small guarded export at the bottom of `calc.js` so the *identical* file can also be `require()`d from plain Node with no npm install:
+
 ```js
 if (typeof module !== 'undefined') module.exports = { calcEMI, loanAtYear, simulateLoan, calcSIP, calcStepupSIP, calcIncomeTax, calcPerquisite, calcCarDepreciation };
 ```
+
 Then:
+
 - `tests.js` — a plain Node script (`node tests.js`, zero installs) that `require('./calc.js')` and runs the assertions below, printing PASS/FAIL per case, exiting non-zero on any failure (so it's CI-ready later if wanted).
 - Optionally, `tests.html` — loads `calc.js` via a normal `<script>` tag and renders the same assertions as a visual pass/fail list in a browser, for the times the owner doesn't have Node open (matches CLAUDE.md's browser-first workflow).
 
 *Cost:* mechanically relocate 8 function bodies (must not alter their logic), update `CLAUDE.md`'s file list and add a short "Testing" section.
 
 ### Option B — Test the inline code in place, no `index.html` changes
+
 Write `tests.html` that fetches the raw text of `index.html` and regex-extracts the 8 function source blocks to `eval`, testing the actual shipped code without moving anything.
 
 *Cost:* fragile — extraction breaks silently if a function's formatting changes; can't easily run headlessly/in CI; doesn't reduce the global-state collision risk `ARCHITECTURE-ANALYSIS.md` flags. Only pick this if touching `index.html`'s structure at all is unacceptable right now.
 
 ### Option C — Headless browser against the real, unmodified `index.html`
+
 Use a dev-only npm dependency (e.g. Playwright) to load `index.html` as a real browser would, fill inputs, and read rendered output — testing the full stack including the DOM-coupled render functions currently out of scope above, and the cross-hub sync behavior (e.g., quick-calc total flowing into the loan panel).
 
 *Cost:* this would be the app's first-ever dependency of any kind (dev-only, never shipped) and needs Node + `npm install` set up. Heavier, but the only option that can eventually also cover the render functions and the CLAUDE.md-documented tranche invariants automatically. Worth it only if the owner is comfortable crossing the "zero dependencies, ever" line even for tooling.
@@ -70,46 +76,55 @@ Use a dev-only npm dependency (e.g. Playwright) to load `index.html` as a real b
 Wherever a case says "verify independently" — **do not trust hand-computed figures in this brief.** Cross-check any absolute rupee value against Excel's `PMT` function or a reputable bank/IT-department EMI or tax calculator before writing it into an assertion. Wrong expected values are worse than no test.
 
 **`calcEMI`**
+
 - Zero-rate branch is exact, not approximate: `calcEMI(1200000, 0, 10)` must equal `1200000 / 120` exactly.
 - Reference case: `calcEMI(1000000, 10, 1)` — verify the expected EMI independently (a commonly-cited textbook answer is in the ~₹87,900s for this input; confirm the precise value yourself rather than trusting that range).
 - Monotonicity: for fixed `P`/`rate`, `calcEMI(P,rate,15) > calcEMI(P,rate,20) > calcEMI(P,rate,30)`.
 
 **`loanAtYear`**
+
 - At `checkYear === totalYears`: `balance` ≈ 0 and `principalPaid` ≈ `P` (within a rupee of rounding).
 - At `checkYear === 0`: `balance` ≈ `P`, `principalPaid` ≈ 0, `interestPaid` ≈ 0.
 - Identity: `principalPaid + balance ≈ P` at any `checkYear`.
 
 **`simulateLoan`**
+
 - `simulateLoan(P, rate, years, 0, 0)`: `actualMonths ≈ years*12`, `monthsSaved ≈ 0`, and `totalInterest` matches `calcEMI(P,rate,years)*years*12 - P`.
 - Adding extra payments strictly reduces `actualMonths` and `totalInterest` versus the no-extra case (monotonic improvement).
 - Large `extraLumpsumPerYear` (e.g., equal to `P`) pays the loan off within the first year or two — confirm it terminates quickly and doesn't run to the `safetyLimit`.
 - Confirm the function always terminates (never hits `safetyLimit`) for ordinary inputs.
 
 **`calcSIP`**
+
 - Zero-rate branch is exact: `calcSIP(10000, 0, 10)` must equal `10000 * 120` exactly.
 - `calcSIP(0, 12, 20)` === 0.
 - Monotonic in both `years` and `cagr`.
 
 **`calcStepupSIP`**
+
 - **Cross-check worth investigating, not assuming:** with `annualStepupPct = 0`, this function should conceptually reduce to the same corpus as `calcSIP(monthly, cagr, years)`. While reading the code, I noticed `calcStepupSIP` compounds as `balance = balance*(1+r) + currentSIP` (contribution credited *after* that period's growth — an ordinary annuity), whereas `calcSIP`'s closed-form includes an extra `*(1+r)` factor (annuity-due — contribution grows immediately). These are two different timing conventions and may **not** actually agree, even at 0% step-up. Write this test, see what it reports, and treat any mismatch as a real finding to resolve (either the two SIP paths are inconsistently modeled and should be aligned, or there's a reason they intentionally differ — but that reason isn't currently documented anywhere). Do not assume either function is "correct" going in.
 
 **`calcIncomeTax`**
+
 - `calcIncomeTax(0, 'new')` === 0; `calcIncomeTax(-100000, 'new')` === 0 (guard clause).
 - New regime 87A cliff: `calcIncomeTax(1200000, 'new')` === 0, `calcIncomeTax(1200001, 'new')` > 0 — confirm this cliff-edge jump is intentional per current tax rules (it's a real, well-known feature of the 87A rebate, not obviously a bug, but worth asserting explicitly since cliff edges are where off-by-one errors hide).
 - Old regime 87A cliff: `calcIncomeTax(500000, 'old')` === 0, `calcIncomeTax(500001, 'old')` > 0.
 
 **`calcPerquisite`** (exact lookup table, per IT Rule 3(2) as coded — high confidence, should be exact)
+
 - `calcPerquisite(false, false)` === 1800
 - `calcPerquisite(true, false)` === 2400
 - `calcPerquisite(false, true)` === 2700
 - `calcPerquisite(true, true)` === 3300
 
 **`calcCarDepreciation`**
+
 - `calcCarDepreciation(price, 1)` === `price * 0.80` exactly (year-1 loop doesn't execute).
 - `calcCarDepreciation(price, 2)` === `price * 0.80 * 0.85` exactly.
 - Monotonically decreasing as `years` increases; `calcCarDepreciation(0, 5)` === 0.
 
 ### Cross-hub invariants already documented in CLAUDE.md (note only — out of scope unless Option C is chosen)
+
 CLAUDE.md's manual checklist already specifies two precise, provably-correct invariants for the loan-disbursement calculator (a single 100%-at-month-0 tranche must equal the plain `calcEMI` panel exactly; a 50/50 split at 9% must produce first-year pre-EMI interest of exactly `0.5 × loan × 0.09`). These involve `renderLoanDisb`, which is DOM-coupled and out of scope per above — they stay manual-only unless Option C's headless-browser infrastructure gets built.
 
 ## Acceptance criteria

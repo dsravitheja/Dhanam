@@ -18,11 +18,11 @@
 
 **D2 — Contrast failures (fixed).** Measured actual contrast ratios (WCAG relative-luminance formula) rather than guessing:
 
-| Color | vs `--surface` | vs `--surface2` | Verdict (need ≥4.5:1) |
-|---|---|---|---|
-| old `--text-dim` `#7a8a7e` | 4.55 | **4.03** | fails on surface2 |
-| hardcoded `#555` (hint text) | 2.22 | 1.97 | fails everywhere |
-| new `--text-dim` `#8a9a8e` | 5.59 | **4.96** | passes everywhere |
+| Color                        | vs `--surface` | vs `--surface2` | Verdict (need ≥4.5:1) |
+| ---------------------------- | -------------- | --------------- | --------------------- |
+| old `--text-dim` `#7a8a7e`   | 4.55           | **4.03**        | fails on surface2     |
+| hardcoded `#555` (hint text) | 2.22           | 1.97            | fails everywhere      |
+| new `--text-dim` `#8a9a8e`   | 5.59           | **4.96**        | passes everywhere     |
 
 `--text-dim` was raised to `#8a9a8e`, and every hardcoded `#555` (`.field-hint`, `.note-text`, `.br-calc`, one inline style, and the PNG-export canvas text) now uses it. Confirmed in the running app: computed style of `.field-hint` reads `rgb(138, 154, 142)` = `#8a9a8e`.
 
@@ -36,14 +36,14 @@
 
 **Landing tiles** — reordered and reframed as goals, tool identity kept as a subline so every tile maps unambiguously to a destination:
 
-| Order | Headline (goal) | Subline (tool) | Destination |
-|---|---|---|---|
-| 1 | Grow My Money | Dhanam Grow | `hub-sip` |
-| 2 | Know My Net Worth *(soon)* | Dhanam Worth | disabled |
-| 3 | Plan a Home Purchase | Dhanam Home | `hub-apartment` |
-| 4 | Finance My Home | Dhanam Home · Loan Analysis | `openLoanCalc()` → `section-loan` |
-| 5 | Buying Under Construction? | Dhanam Home · Pre-EMI Calculator | `openDisbCalc()` → `section-disb` (new) |
-| 6 | Optimize My Company Car | Dhanam Car | `hub-car` |
+| Order | Headline (goal)            | Subline (tool)                   | Destination                             |
+| ----- | -------------------------- | -------------------------------- | --------------------------------------- |
+| 1     | Grow My Money              | Dhanam Grow                      | `hub-sip`                               |
+| 2     | Know My Net Worth *(soon)* | Dhanam Worth                     | disabled                                |
+| 3     | Plan a Home Purchase       | Dhanam Home                      | `hub-apartment`                         |
+| 4     | Finance My Home            | Dhanam Home · Loan Analysis      | `openLoanCalc()` → `section-loan`       |
+| 5     | Buying Under Construction? | Dhanam Home · Pre-EMI Calculator | `openDisbCalc()` → `section-disb` (new) |
+| 6     | Optimize My Company Car    | Dhanam Car                       | `hub-car`                               |
 
 **One interpretation call worth flagging:** the brief said "Grow first, Worth second, Home, Car, then loan tooling last," which read literally would interleave Car *between* the three Home-related tiles (property cost / loan / pre-EMI) and the loan tooling. I judged that splitting up three tiles that all land in the same hub would hurt scannability more than it helped strict priority-ordering, so I kept all three Home tiles adjacent and put Car after them. If you'd rather have Car sit before "Finance My Home" and "Buying Under Construction?", that's a one-block copy move, not a structural change — say the word.
 
@@ -65,6 +65,7 @@ Extracted the 8 pure functions (`calcEMI`, `loanAtYear`, `simulateLoan`, `calcSI
 Both currently report **39/39 passing.**
 
 **Rigor notes, per the brief's instruction not to trust hand-computed figures:**
+
 - `calcEMI` is validated against an independent bisection oracle (a from-scratch month-by-month simulation that solves for the EMI which drains the loan to exactly zero — it does not use the closed-form annuity formula at all, so it would catch a bug in the formula itself, not just a regression). Result: exact match to the cent for both test cases (₹87,915.89 for a textbook 10L/10%/1yr loan, ₹44,185.54 for 50L/8.75%/20yr).
 - `calcIncomeTax` cases use hand-verified slab arithmetic (simple enough to check by hand with high confidence, unlike compounding formulas): ₹15L taxable at new-regime slabs → exactly ₹1,09,200; ₹10L taxable at old-regime slabs → exactly ₹1,17,000. Both confirmed exact.
 - `calcPerquisite` and `calcCarDepreciation` are exact-value assertions (deterministic lookup / documented formula, no compounding).

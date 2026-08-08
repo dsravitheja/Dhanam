@@ -19,10 +19,12 @@ Per the task brief's explicit reuse note ("R3 and R4 are the same problem — wr
 That stretch has a catch I initially got wrong and caught in review (see below): if the viewBox width doesn't match the container's actual pixel width, the stretch is non-uniform and dots render as ellipses. So callers go through **`renderChart(targetId, series, opts)`**, which measures the host and sets the viewBox to match — filling the container *and* drawing at 1:1. `toggleChartCard()` handles the collapsed-card case, where a hidden host would otherwise measure 0.
 
 Two edge cases the acceptance criteria called out by name, both handled inside the helper itself so every call site gets them for free:
+
 - **A single data point** draws one dot, no path — a chart with one point has no "shape" to show, and a degenerate zero-length `<path>` would either be invisible or throw.
 - **A long series** (120 history entries is the Worth history cap) only dots the last point instead of all 120, so the chart stays legible instead of a wall of circles; the line and filled area still draw across the full length.
 
 Three call sites:
+
 - **Worth trend chart (R3)** — `renderWorthTrend()`, a `.collapse-card` closed by default (per D4 and the existing change-tile design: the tile answers "am I up or down," the chart answers "what shape has it been"). Absent entirely with zero history; with exactly one point it shows a "not enough history yet" message instead of an empty chart box; two or more points get a real gold line/area chart captioned with the first/last dates and the value range.
 - **SIP corpus growth curve (R4, Dhanam Grow)** — added to the Monthly SIP tab between the hero result card and the milestone table: corpus (gold, filled) vs. amount invested (dim grey, unfilled line) year by year, reusing the exact `calcSIP` calls the hero and milestones already make.
 - **Principal-vs-interest chart (R4, loan panel)** — a new panel-card in `section-loan` showing cumulative principal (gold) vs. cumulative interest (red) paid, year by year over the 20-year hero tenure, reusing `loanAtYear` the same way the existing scenario cards do.
