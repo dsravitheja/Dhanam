@@ -394,6 +394,11 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .adv-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px; }
 .adv-card-title { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--text-mid); margin-bottom:10px; }
 
+/* Wide tables scroll horizontally inside their own container rather than
+   overflowing the page body (R10) — same rule the Charts section already
+   applies to chart hosts. */
+.table-scroll { overflow-x:auto; }
+
 /* Payment schedule */
 .pay-table { width:100%; border-collapse:collapse; font-size:12px; }
 .pay-table th { text-align:left; padding:6px 10px; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); border-bottom:1px solid var(--border); }
@@ -827,7 +832,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   </button>
   <div class="action-utils">
     <button class="btn btn-secondary" onclick="exportSnapshot()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-camera"></use></svg> Export</button>
-    <button class="btn btn-secondary" onclick="resetAll()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-reset"></use></svg> Reset</button>
+    <button class="btn btn-secondary" onclick="resetAll()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-reset"></use></svg> Reset Home Inputs</button>
   </div>
 </div>
 
@@ -1085,10 +1090,12 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <span class="collapse-arrow">▼</span>
       </div>
       <div class="collapse-body">
+        <div class="table-scroll">
         <table class="pay-table">
           <thead><tr><th>Milestone</th><th>%</th><th>Amount</th></tr></thead>
           <tbody id="d-pay-tbody"></tbody>
         </table>
+        </div>
       </div>
     </div>
   </div>
@@ -1341,10 +1348,12 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <div class="panel-card">
     <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg></span><span class="pch-title">Disbursement Schedule</span><span class="pch-tag">Live</span></div>
     <div class="panel-card-body">
+      <div class="table-scroll">
       <table class="disb-schedule-table">
         <thead><tr><th>Stage</th><th>Cumulative Disbursed</th><th>Pre-EMI Interest / mo</th></tr></thead>
         <tbody id="disb-tranche-table"></tbody>
       </table>
+      </div>
     </div>
   </div>
 
@@ -1741,10 +1750,12 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       <div class="panel-card">
         <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg></span><span class="pch-title">Corpus at Milestones</span></div>
         <div class="panel-card-body" style="padding:0;">
+          <div class="table-scroll">
           <table class="milestone-table">
             <thead><tr><th>Year</th><th>Invested (₹)</th><th>Corpus (₹)</th><th>Gains (₹)</th></tr></thead>
             <tbody id="sp-milestones"></tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>
@@ -1802,10 +1813,12 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       <div class="panel-card">
         <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg></span><span class="pch-title">Year-by-year Milestones</span></div>
         <div class="panel-card-body" style="padding:0;">
+          <div class="table-scroll">
           <table class="milestone-table">
             <thead><tr><th>Year</th><th>SIP/mo (₹)</th><th>Invested (₹)</th><th>Corpus (₹)</th></tr></thead>
             <tbody id="su-milestones"></tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>
@@ -1855,10 +1868,12 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       <div class="panel-card">
         <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg></span><span class="pch-title">Growth at Milestones</span></div>
         <div class="panel-card-body" style="padding:0;">
+          <div class="table-scroll">
           <table class="milestone-table">
             <thead><tr><th>Year</th><th>Value (₹)</th><th>Gain (₹)</th><th>Multiplier</th></tr></thead>
             <tbody id="ls-milestones"></tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>
@@ -4319,12 +4334,15 @@ function renderCarLoan() {
     el('cb-cards').innerHTML = '';
   } else {
     const tenures = [3, 5, 7];
-    const r = rate / 12 / 100;
     // Shared by the hero (5-year, R46/Phase 10b) and the 3/5/7 grid so both
     // always agree bit-for-bit — same formula, computed once per tenure.
+    // Uses the shared calcEMI() (calc.js) rather than an inline formula
+    // (R10) — fv is omitted (defaults to 0), which is the exact original
+    // 3-argument code path, so this is numerically identical to the
+    // formula it replaces.
     function tenureStats(yr) {
       const n = yr * 12;
-      const emi = loan * r * Math.pow(1+r, n) / (Math.pow(1+r, n) - 1);
+      const emi = calcEMI(loan, rate, yr);
       const total = emi * n;
       const interest = total - loan;
       return { yr, n, emi, total, interest };
@@ -4361,7 +4379,7 @@ function renderCarLoan() {
   if (price > 0) {
     deprEl.style.display = '';
     const tableYears = [1, 2, 3, 5, 7];
-    deprBody.innerHTML = `<table class="depr-table">
+    deprBody.innerHTML = `<div class="table-scroll"><table class="depr-table">
       <thead><tr><th>Year</th><th>Est. Resale Value</th><th>Depreciation from New</th><th>Value Lost</th></tr></thead>
       <tbody>
         ${tableYears.map(y => {
@@ -4371,7 +4389,7 @@ function renderCarLoan() {
           return `<tr><td>Year ${y}</td><td>${fmt(resale)}</td><td>${pct}% lost</td><td style="color:var(--red)">${fmt(lost)}</td></tr>`;
         }).join('')}
       </tbody>
-    </table>
+    </table></div>
     <p style="font-size:11px;color:var(--text-dim);margin-top:8px;">Based on IRDAI schedule: 20% year 1, 15%/yr thereafter. Actual resale varies by brand, condition, and market.</p>`;
     // Resale curve (R13, x-axis fixed under R17) — chartSvg spaces points by
     // index, not by value, so plotting the table's [1,2,3,5,7] years directly
