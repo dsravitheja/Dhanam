@@ -1697,11 +1697,49 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
     <div class="note-text" id="cc-empty" style="padding:16px 2px;">Add at least one car above — with both price and mileage/efficiency filled in — to see a comparison.</div>
 
+    <!-- R50/Phase 13: default-off disclosure. Sits above #cc-hero (not inside
+         a collapsed card) for the same reason the Buy-vs-SIP .sip-caveat does
+         (CLAUDE.md) — someone who reads only the hero must still see it. -->
+    <div class="sip-caveat" id="cc-caveat" style="display:none;">This ranking counts money out the door and ignores what the car is worth afterwards, which favours cheaper cars over ones that hold their value better. <strong>Cumulative Cost vs. Car Value</strong> below shows both curves — the gap between them, revealed on demand, is the resale-adjusted figure.</div>
+
     <div class="total-card" id="cc-hero" style="display:none;">
-      <div class="total-label">Cheapest Option (Net Cost, Before Resale Credit)</div>
+      <div class="total-label">Cheapest Option (Net Cash Cost)</div>
       <div class="total-value" id="cc-hero-name">—</div>
       <div class="total-cr" id="cc-hero-cost"></div>
       <div class="total-cr" id="cc-hero-gap"></div>
+    </div>
+
+    <!-- R51/R52, Phase 13: default-open cost-vs-value chart + resale reveal.
+         A .panel-card (not a .collapse-card, unlike cc-chart-card below it) —
+         this is the default view, not a drill-down. Its chart host
+         (#cc-owncurve-chart) is a STATIC sibling here, never regenerated
+         inside #cc-results' innerHTML template — that template rewrites on
+         nearly every keystroke elsewhere in this section (assumptions, other
+         rows), and a chart host recreated that often would tear down and
+         rebuild a ResizeObserver every keypress (the exact R20 anti-pattern;
+         modeled on cb-depr-chart's static-sibling fix). -->
+    <div class="panel-card" id="cc-owncurve-card" style="display:none;margin-bottom:14px;">
+      <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg></span><span class="pch-title">Cumulative Cost vs. Car Value</span></div>
+      <div class="panel-card-body">
+        <div class="field" style="max-width:320px;margin-bottom:12px;">
+          <label>Car</label>
+          <select id="cc-owncurve-select" onchange="ccOwnCurveIdx = parseInt(this.value); renderCCOwnCurve();"></select>
+        </div>
+        <div class="chart-legend">
+          <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Cumulative cost</span>
+          <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--text-dim)"></span>Car value (IRDAI schedule)</span>
+        </div>
+        <div id="cc-owncurve-chart"></div>
+        <div class="chart-caption" id="cc-owncurve-caption"></div>
+        <p class="note-text" id="cc-owncurve-note" style="margin-top:6px;"></p>
+        <div style="margin-top:14px;">
+          <button class="btn btn-secondary" id="cc-reveal-btn" onclick="ccToggleReveal()" type="button">Reveal resale-adjusted net cost (forecast)</button>
+          <div class="car-stat" id="cc-reveal-figure" style="display:none;margin-top:10px;">
+            <span class="car-stat-lbl">Net cost after resale credit — a forecast, not part of the ranking above</span>
+            <span class="car-stat-val accent" id="cc-reveal-value">—</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="panel-card" id="cc-breakeven-card" style="display:none;margin-bottom:14px;">
@@ -1733,8 +1771,9 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       <div class="panel-card-body">
         <ul style="font-size:12px;color:var(--text-dim);line-height:2;padding-left:16px;">
           <li>Prices, names and mileage/efficiency are exactly what you typed — nothing here is verified against a dealer quote or a catalog.</li>
-          <li>The resale credit uses the IRDAI insurance depreciation schedule (20% year 1, 15%/yr after) as a proxy for what the car is worth after the lease — that's an insurance schedule, not a resale-price prediction, and it's one ICE-shaped curve applied to EVs too (battery health and faster model turnover aren't modelled separately).</li>
-          <li>Ranking and the gold "cheapest" highlight use net cost <strong>before</strong> the resale credit — the after-resale figure is shown on every card, it just doesn't drive the rank.</li>
+          <li><strong>The ranking, the hero, and every result card show net cash cost only — money out the door.</strong> They deliberately don't credit what the car is worth afterwards, because that value is a forecast and cash spent is a fact. "Cumulative Cost vs. Car Value" above plots both, and its reveal button shows the resale-adjusted figure for whichever car you've selected there — a forecast, not a second ranking.</li>
+          <li>That forecast comes from the IRDAI insurance depreciation schedule (20% year 1, 15%/yr after) — an insured-declared-value table for pricing insurance, not a market resale prediction — applied as one ICE-shaped curve to EVs too (battery health and faster model turnover aren't modelled separately). Treat the revealed figure as a rough anchor, not a quote.</li>
+          <li>Because resale value scales with price and the ranking ignores it, this default systematically favours cheaper cars over ones that hold their value better — at 5 years the schedule leaves a ₹12L car ₹5.01L and a ₹30L car ₹12.53L, a ₹7.5L difference in unrecognised asset. Use the reveal if that matters to your decision.</li>
           <li>Insurance is one flat rate per vehicle type (ICE vs EV), not a per-model quote.</li>
           <li>The city:highway driving split and its multipliers are global — every car is assumed driven the same way, with no per-car override.</li>
           <li>Unlike the spreadsheet this section is based on, there's no "EV driven more because it feels free" multiplier — annual km is the same figure for every car, so the ₹/km figures stay comparable across ICE and EV.</li>
@@ -1796,9 +1835,16 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
              Phase 3c): cb-depr-body's table is rebuilt on every keystroke,
              which was destroying and recreating this chart's host node each
              time and forcing renderChart()'s node-identity check to tear
-             down and rebuild a ResizeObserver per character typed. -->
+             down and rebuild a ResizeObserver per character typed. The
+             loan-balance legend item (R53, Phase 13, answering B8) is a
+             static sibling too, just toggled visible/hidden — no loan means
+             no second series, not a flat zero line. -->
+        <div class="chart-legend" id="cb-depr-legend">
+          <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Car value</span>
+          <span class="chart-legend-item" id="cb-depr-legend-loan" style="display:none;"><span class="chart-legend-dot" style="background:var(--red)"></span>Outstanding loan balance</span>
+        </div>
         <div id="cb-depr-chart"></div>
-        <div class="chart-caption"><span>Year 1</span><span>Year 7</span></div>
+        <div class="chart-caption" id="cb-depr-caption"><span>Year 1</span><span>Year 7</span></div>
         <div id="cb-depr-body"></div>
       </div>
     </div>
@@ -2250,7 +2296,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 // cached shell without knowing it). Bump this BY HAND alongside sw.js's CACHE
 // version whenever a user-visible change ships — the two are not derived from
 // one another, so both need editing.
-const BUILD_STAMP = '2026-08-08';
+const BUILD_STAMP = '2026-08-09';
 
 // =====================================================================
 // UTILITIES
@@ -2420,6 +2466,15 @@ let ccBuilt = false;
 // discarded). See ccToggleDetail() below.
 let ccForceOpen = new Set();
 let ccForceClosed = new Set();
+// Cost-vs-value chart + resale reveal (R51/R52, Phase 13). ccOwnCurveIdx is
+// the *selected* row's stable index into ccCars (same `r.i` convention as
+// ccForceOpen/ccForceClosed above), null meaning "not chosen yet, default to
+// rank 1". ccRevealOpen is tier-3 UI state — deliberately a plain JS variable,
+// never written into DS/dhanam.v1 (same rule R25's orientation-line dismissal
+// follows) — so it always starts closed on a fresh load, with no persistence
+// path to even consider.
+let ccOwnCurveIdx = null;
+let ccRevealOpen = false;
 
 // Modes for amenities / corpus / infra (sqft or lump)
 const MODES = { amenities: 'sqft', corpus: 'sqft', infra: 'sqft' };
@@ -4752,6 +4807,42 @@ function renderCarLoan() {
   if (price > 0) {
     deprEl.style.display = '';
     const tableYears = [1, 2, 3, 5, 7];
+
+    // Resale curve (R13, x-axis fixed under R17) — chartSvg spaces points by
+    // index, not by value, so plotting the table's [1,2,3,5,7] years directly
+    // drew the flat years 1-2 as wide as the steep two-year gap from 5 to 7 —
+    // the inverse of the "cliff in years 1-3" shape this chart exists to
+    // show. Plotting every year 1-7 makes index spacing equal to time
+    // spacing; the table's five rows are still exact points on the curve.
+    const chartYears = [1, 2, 3, 4, 5, 6, 7];
+    const valueVals = chartYears.map(y => calcCarDepreciation(price, y));
+
+    // Outstanding loan balance overlay (R53, Phase 13 — answers B8: is the
+    // "underwater" point, where the car is worth less than what's owed on
+    // it, visible?). Same two-rupee-series-on-one-scale shape as R51/R52's
+    // cost-vs-value chart, for one visual language across both: no area
+    // fill (the crossing is the payload, a fill would obscure it), red for
+    // the balance (a real negative financial position, palette rule 4 —
+    // the same justification the Worth hub's negative hero already uses).
+    // Fixed at the 5-year tenure the hero above already leads with (R46) —
+    // there's no separate "chosen tenure" input in this section, so the
+    // balance line agrees with the EMI actually shown, not a different one.
+    // A 100%-down-payment car (loan === 0) must show no balance series at
+    // all, never a flat zero line — this table/chart renders off `price`
+    // alone (R13) and stays that way even with the overlay added.
+    const LOAN_CHART_TENURE = 5;
+    const balanceVals = loan > 0
+      ? chartYears.map(y => loanAtYear(loan, rate, LOAN_CHART_TENURE, y).balance)
+      : null;
+
+    let underwaterNote = '';
+    if (balanceVals) {
+      const idx = chartYears.findIndex((y, i) => balanceVals[i] > valueVals[i]);
+      underwaterNote = idx === -1
+        ? ` At this ${LOAN_CHART_TENURE}-year loan's pace, the outstanding balance never exceeds the car's resale value.`
+        : ` At this ${LOAN_CHART_TENURE}-year loan's pace, the outstanding balance exceeds the car's resale value from year ${chartYears[idx]} onward — you'd owe more than the car is worth.`;
+    }
+
     deprBody.innerHTML = `<div class="table-scroll"><table class="depr-table">
       <thead><tr><th>Year</th><th>Est. Resale Value</th><th>Depreciation from New</th><th>Value Lost</th></tr></thead>
       <tbody>
@@ -4763,20 +4854,21 @@ function renderCarLoan() {
         }).join('')}
       </tbody>
     </table></div>
-    <p style="font-size:11px;color:var(--text-dim);margin-top:8px;">Based on IRDAI schedule: 20% year 1, 15%/yr thereafter. Actual resale varies by brand, condition, and market.</p>`;
-    // Resale curve (R13, x-axis fixed under R17) — chartSvg spaces points by
-    // index, not by value, so plotting the table's [1,2,3,5,7] years directly
-    // drew the flat years 1-2 as wide as the steep two-year gap from 5 to 7 —
-    // the inverse of the "cliff in years 1-3" shape this chart exists to
-    // show. Plotting every year 1-7 makes index spacing equal to time
-    // spacing; the table's five rows are still exact points on the curve.
-    const chartYears = [1, 2, 3, 4, 5, 6, 7];
-    renderChart('cb-depr-chart', [
-      { values: chartYears.map(y => calcCarDepreciation(price, y)), color: 'var(--accent)', area: true },
-    ], { ariaLabel: 'Estimated resale value by year' });
+    <p style="font-size:11px;color:var(--text-dim);margin-top:8px;">Based on IRDAI schedule: 20% year 1, 15%/yr thereafter. Actual resale varies by brand, condition, and market.${underwaterNote}</p>`;
+
+    const series = [{ values: valueVals, color: 'var(--accent)', area: false }];
+    if (balanceVals) series.push({ values: balanceVals, color: 'var(--red)', area: false });
+    renderChart('cb-depr-chart', series, {
+      ariaLabel: balanceVals ? 'Estimated resale value and outstanding loan balance by year' : 'Estimated resale value by year',
+    });
+    el('cb-depr-legend-loan').style.display = balanceVals ? '' : 'none';
+    const allVals = balanceVals ? valueVals.concat(balanceVals) : valueVals;
+    el('cb-depr-caption').innerHTML =
+      `<span>Year 1</span><span>${inCr(Math.min(...allVals))} – ${inCr(Math.max(...allVals))}</span><span>Year 7</span>`;
   } else {
     deprEl.style.display = 'none';
     clearChart('cb-depr-chart');
+    el('cb-depr-legend-loan').style.display = 'none';
   }
 }
 
@@ -4860,10 +4952,13 @@ function ccRemoveCar(i) {
   if (ccCars.length <= 1) return;
   ccCars.splice(i, 1);
   // Removing a row shifts every later index down by one, which would
-  // otherwise misattribute the R47 per-card open/closed state to the wrong
-  // car; clearing both sets just falls back to the rank-1-open default.
+  // otherwise misattribute the R47 per-card open/closed state — and, since
+  // Phase 13, the R51/R52 cost-vs-value chart's selected car — to the wrong
+  // car; clearing all three falls back to their defaults (rank-1-open,
+  // rank-1-selected).
   ccForceOpen.clear();
   ccForceClosed.clear();
+  ccOwnCurveIdx = null;
   renderCCRows();
   renderCarCompare();
 }
@@ -4893,10 +4988,16 @@ function ccAssumptions() {
 // Filtered, computed, and ranked. The filter is the R39/workbook-§8 guard —
 // a row counts only if BOTH its raw price and raw efficiency are > 0 (never
 // a derived/truthy check), so a blank row can never fall through into a
-// branch that silently ranks it "cheapest". Ranking is on netCost BEFORE the
-// resale credit (owner decision, B12, 2026-08-07) — netCostAfterResale is
-// still computed and shown on every card, it just doesn't drive the sort,
-// the hero, or the gold rank-1 highlight.
+// branch that silently ranks it "cheapest". Ranking is on netCost — money out
+// the door — full stop. B12 (2026-08-07, "rank on netCost before the resale
+// credit") is retired as of Phase 13/R50: there is no longer a competing
+// after-resale figure sitting on every card for the ranking to justify
+// itself against, since the resale credit moved behind an explicit reveal
+// (calcCarDepreciation is an IRDAI insured-declared-value schedule, not a
+// market resale predictor — see the Compare Cars section of CLAUDE.md).
+// netCostAfterResale is still computed here and available via
+// ccComputedRows()'s return value; it just isn't shown by default anymore,
+// and never drives the sort, the hero, or the rank-1 gold highlight.
 function ccComputedRows() {
   const a = ccAssumptions();
   const rows = ccCars
@@ -4933,9 +5034,11 @@ function buildCC() {
 // runs alongside a genuine data replacement, not a keystroke.
 function hydrateCC() {
   // A full data replace (import/erase) makes any existing R47 per-card
-  // open/closed state meaningless, same reasoning as ccRemoveCar().
+  // open/closed state, and R51/R52's selected car, meaningless — same
+  // reasoning as ccRemoveCar().
   ccForceOpen.clear();
   ccForceClosed.clear();
+  ccOwnCurveIdx = null;
   const saved = DS && DS.carCompare;
   if (saved && Array.isArray(saved.cars) && saved.cars.length) {
     ccCars = saved.cars.map(c => ({
@@ -5008,7 +5111,10 @@ function renderCarCompare() {
 
   if (!rows.length) {
     show('cc-empty');
+    hide('cc-caveat');
     hide('cc-hero');
+    hide('cc-owncurve-card');
+    clearChart('cc-owncurve-chart');
     hide('cc-breakeven-card');
     hide('cc-chart-card');
     clearChart('cc-chart');
@@ -5017,8 +5123,10 @@ function renderCarCompare() {
   }
   hide('cc-empty');
 
-  // ── Hero: cheapest by netCost (pre-resale-credit, B12) ──────────────
+  // ── Hero: cheapest by netCost — money out the door, full stop (B12
+  // retired, R50) ───────────────────────────────────────────────────
   const cheapest = rows[0];
+  show('cc-caveat');
   show('cc-hero');
   set('cc-hero-name', cheapest.car.name || (cheapest.car.type === 'EV' ? 'Unnamed EV' : 'Unnamed ICE car'));
   set('cc-hero-cost', `${fmt(cheapest.result.netCost)} over ${cheapest.years} years`);
@@ -5028,6 +5136,9 @@ function renderCarCompare() {
   } else {
     set('cc-hero-gap', '');
   }
+
+  // ── Cost-vs-value chart + resale reveal (R51/R52) ───────────────────
+  renderCCOwnCurve();
 
   // ── Ranked result cards, stacked (not a grid — R39). Compact by default:
   // rank badge, name, one hero number (net cost), one supporting line
@@ -5053,9 +5164,6 @@ function renderCarCompare() {
           <span class="collapse-arrow">▼</span>
         </div>
         <div class="collapse-body">
-          <div class="car-stat"><span class="car-stat-lbl">Resale credit (car you own after)</span><span class="car-stat-val" style="color:var(--green)">−${fmt(r.result.resaleValue)}</span></div>
-          <div class="car-stat"><span class="car-stat-lbl">Net cost after resale credit</span><span class="car-stat-val accent">${fmt(r.result.netCostAfterResale)}</span></div>
-          <div class="car-divider"></div>
           <div class="car-stat"><span class="car-stat-lbl">Raw Cash Outflow</span><span class="car-stat-val">${fmt(r.result.rawOutflow)}</span></div>
           <div class="car-stat"><span class="car-stat-lbl">EMI / month</span><span class="car-stat-val">${fmt(r.result.emi)}</span></div>
           <div class="car-stat"><span class="car-stat-lbl">Tax Saved (${r.years}yr, signed)</span><span class="car-stat-val ${r.result.taxSaved < 0 ? 'red' : ''}">${fmt(r.result.taxSaved)}</span></div>
@@ -5102,6 +5210,89 @@ function renderCarCompare() {
   renderCCChart();
 
   persistCC();
+}
+
+// Cost-vs-value chart + resale reveal (R51/R52, Phase 13). Self-contained
+// like renderCCChart() below — recomputes rows itself, which is what lets it
+// be called directly from the car-select's onchange (a discrete committed
+// choice, not a keystroke — same reasoning CLAUDE.md gives for the shortlist
+// row's own Type select) without re-running all of renderCarCompare().
+//
+// One car at a time: ccOwnCurveIdx is the selected row's stable index into
+// ccCars (the same `r.i` convention ccForceOpen/ccForceClosed use), falling
+// back to rank 1 the first time or whenever the previous selection no longer
+// exists (car removed). calcOwnershipCurve() is called with the exact same
+// `o` shape ccComputedRows() builds for calcLeaseNetCost — same assumptions,
+// same car — so the chart's endpoint always agrees with the card above it.
+function renderCCOwnCurve() {
+  const rows = ccComputedRows();
+  if (!rows.length) {
+    hide('cc-owncurve-card');
+    clearChart('cc-owncurve-chart');
+    return;
+  }
+  show('cc-owncurve-card');
+
+  const select = el('cc-owncurve-select');
+  const prevIdx = ccOwnCurveIdx;
+  select.innerHTML = rows.map(r =>
+    `<option value="${r.i}">${xesc(r.car.name) || (r.car.type === 'EV' ? 'Unnamed EV' : 'Unnamed ICE car')}</option>`).join('');
+  ccOwnCurveIdx = rows.some(r => r.i === prevIdx) ? prevIdx : rows[0].i;
+  select.value = ccOwnCurveIdx;
+
+  const row = rows.find(r => r.i === ccOwnCurveIdx) || rows[0];
+  const a = ccAssumptions();
+  const isEV = row.car.type === 'EV';
+  const curve = calcOwnershipCurve({
+    price: row.car.price, annualRate: a.annualRate, residualPct: a.residualPct, years: a.years,
+    bigEngine: !isEV && row.car.bigEngine, hasDriver: a.hasDriver, marginalRate: a.marginalRate,
+    type: row.car.type, efficiency: row.car.eff,
+    cityKm: a.cityKm, hwyKm: a.hwyKm, petrolPrice: a.petrolPrice, iceHwyMult: a.iceHwyMult,
+    homeRate: a.homeRate, publicRate: a.publicRate, evHwyMult: a.evHwyMult,
+    maintAnnual: isEV ? a.evMaint : a.iceMaint,
+    insRate: isEV ? a.evIns : a.iceIns,
+    depRate: a.depRate,
+  });
+
+  renderChart('cc-owncurve-chart', [
+    { values: curve.cumulativeCost, color: 'var(--accent)', area: false },
+    { values: curve.carValue, color: 'var(--text-dim)', area: false },
+  ], { ariaLabel: `Cumulative cost versus car value for ${row.car.name || (isEV ? 'the EV' : 'the ICE car')}, year by year` });
+
+  // Caption states the value range (R19's rule: nothing else on screen shows
+  // these per-year figures) and calls out the final-year step in words — real
+  // (the residual buyout lands there), not a rendering artefact.
+  const N = curve.years.length;
+  const lastCost = curve.cumulativeCost[N - 1];
+  const prevCost = N > 1 ? curve.cumulativeCost[N - 2] : 0;
+  const allVals = curve.cumulativeCost.concat(curve.carValue);
+  const lo = Math.min(...allVals), hi = Math.max(...allVals);
+  el('cc-owncurve-caption').innerHTML =
+    `<span>Year 1</span><span>${inCr(lo)} – ${inCr(hi)}</span><span>Year ${N}</span>`;
+  set('cc-owncurve-note', N > 1
+    ? `Year ${N}'s cost steps sharply, ${inCr(prevCost)} to ${inCr(lastCost)}, because the ${fmt(row.result.residual)} residual buyout lands in that year — not a rendering error.`
+    : `A ${N}-year term is a single point — nothing to plot a crossing against.`);
+
+  // Reveal (R52): tier-3 UI state (ccRevealOpen), never persisted, resets on
+  // reload. The button's label and the figure's own label are both permanent
+  // text — never a bare styled number, so an exported screenshot can't read
+  // this as the ranking's real hero (there is no Compare Cars export today,
+  // but the rule is written down for the first one that lands here).
+  const btn = el('cc-reveal-btn');
+  const fig = el('cc-reveal-figure');
+  if (ccRevealOpen) {
+    btn.textContent = 'Hide resale-adjusted figure';
+    fig.style.display = '';
+    set('cc-reveal-value', fmt(row.result.netCostAfterResale));
+  } else {
+    btn.textContent = 'Reveal resale-adjusted net cost (forecast)';
+    fig.style.display = 'none';
+  }
+}
+
+function ccToggleReveal() {
+  ccRevealOpen = !ccRevealOpen;
+  renderCCOwnCurve();
 }
 
 // Self-contained (no params, matches the toggleChartCard(id, redraw) contract
