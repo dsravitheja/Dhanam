@@ -201,15 +201,55 @@ function calcInsuranceTotal(price, rate, depRate, years) {
   return price * rate * (1 - Math.pow(1 - depRate, years)) / depRate;
 }
 
-// The Compare Cars engine: one car, one tenure, full net-cost breakdown.
-// taxSaved is deliberately signed — an EMI below the perquisite means the
-// carve-out taxes you on more than it saves, and clamping that to 0 would
-// hide a real negative rather than fix a bug (see R39's blank-row guard,
-// which is the actual fix for the workbook's analogous symptom).
-function calcLeaseNetCost(o) {
-  const residual = o.price * o.residualPct;
+// The car-ownership engine: one car, one tenure, one financing mode, full
+// net-cost breakdown. Phase 14 (R55) generalises what used to be
+// calcLeaseNetCost (Phase 9) into three capital layers on top of the same
+// running-cost/maintenance/insurance/depreciation engine — TCO is
+// financing-agnostic; lease/loan/cash only change how the capital and tax
+// terms are computed. Renamed rather than kept as a lease-only alias: this
+// is called from renderCarCompare()/ccComputedRows() and pinned by tests, so
+// every call site was updated deliberately, not shimmed.
+//
+// o.mode: 'lease' | 'loan' | 'cash' (defaults to 'lease' if omitted, so a
+// caller that hasn't been updated to pass mode still gets the exact
+// pre-Phase-14 behavior).
+//   lease: emi = calcEMI(price, rate, N, residual); capital = emi*months + residual;
+//          taxSaved = marginalRate * (emi - calcPerquisite(bigEngine,hasDriver)) * months
+//          — bit-identical to the old calcLeaseNetCost for the same inputs.
+//   loan:  emi = calcEMI(price - downPayment, rate, N, 0); capital = downPayment + emi*months;
+//          taxSaved = 0 — Indian law allows no deduction on a personal car loan;
+//          this is correct, not an omission (see index.html's caveat list).
+//   cash:  emi = 0; capital = price; taxSaved = 0 (same reasoning as loan).
+// All modes: netCost = capital + runningTotal + maintTotal + insTotal - taxSaved;
+//            resaleValue = calcCarDepreciation(price, N) — reveal-only in every
+//            mode (Phase 13's rule), never a default headline line.
+//
+// taxSaved is deliberately signed in lease mode — an EMI below the
+// perquisite means the carve-out taxes you on more than it saves, and
+// clamping that to 0 would hide a real negative rather than fix a bug (see
+// R39's blank-row guard, which is the actual fix for the workbook's
+// analogous symptom).
+function calcOwnershipCost(o) {
+  const mode = o.mode || 'lease';
   const months = o.years * 12;
-  const emi = calcEMI(o.price, o.annualRate, o.years, residual);
+  let emi, capital, taxSaved, residual = 0, downPayment = 0;
+  if (mode === 'loan') {
+    downPayment = o.downPayment || 0;
+    const principal = Math.max(0, o.price - downPayment);
+    emi = calcEMI(principal, o.annualRate, o.years, 0);
+    capital = downPayment + emi * months;
+    taxSaved = 0;
+  } else if (mode === 'cash') {
+    emi = 0;
+    capital = o.price;
+    taxSaved = 0;
+  } else { // lease
+    residual = o.price * o.residualPct;
+    emi = calcEMI(o.price, o.annualRate, o.years, residual);
+    capital = emi * months + residual;
+    const perq = calcPerquisite(o.bigEngine, o.hasDriver);
+    taxSaved = o.marginalRate * (emi - perq) * months;
+  }
   const { annual: runAnnual } = calcRunningCost(o.type, o.efficiency, {
     cityKm: o.cityKm, hwyKm: o.hwyKm, petrolPrice: o.petrolPrice,
     iceHwyMult: o.iceHwyMult, homeRate: o.homeRate, publicRate: o.publicRate,
@@ -218,18 +258,28 @@ function calcLeaseNetCost(o) {
   const runningTotal = runAnnual * o.years;
   const maintTotal = o.maintAnnual * o.years;
   const insTotal = calcInsuranceTotal(o.price, o.insRate, o.depRate, o.years);
-  const perq = calcPerquisite(o.bigEngine, o.hasDriver);
-  const taxSaved = o.marginalRate * (emi - perq) * months;
-  const rawOutflow = emi * months + residual + runningTotal + maintTotal + insTotal;
+  const rawOutflow = capital + runningTotal + maintTotal + insTotal;
   const netCost = rawOutflow - taxSaved;
   const resaleValue = calcCarDepreciation(o.price, o.years);
   const netCostAfterResale = netCost - resaleValue;
   const totalKm = (o.cityKm + o.hwyKm) * o.years;
   const costPerKm = totalKm > 0 ? netCost / totalKm : 0;
   return {
-    emi, months, residual, runningTotal, maintTotal, insTotal, taxSaved,
+    mode, emi, months, capital, residual, downPayment,
+    runningTotal, maintTotal, insTotal, taxSaved,
     rawOutflow, netCost, resaleValue, netCostAfterResale, costPerKm,
   };
+}
+
+// Lumpsum growth at a flat CAGR — P*(1+cagr/100)^years. Extracted for
+// Compare Cars' cash-mode opportunity-cost reveal (B13, Phase 14/R58): what
+// the cash tied up in the car would have been worth if invested instead.
+// The Grow hub's lumpsum tab (updateLumpsum) computes this same formula
+// inline today; it is NOT refactored to call this (out of scope for R55) —
+// this is one implementation for Compare Cars' new use, not yet the only one
+// in the codebase.
+function calcLumpsumGrowth(P, annualCagr, years) {
+  return P * Math.pow(1 + annualCagr / 100, years);
 }
 
 // Annual km at which an EV's net cost drops below a reference ICE car's,
@@ -247,44 +297,67 @@ function calcBreakevenKm(evFixed, evPerKm, iceFixed, icePerKm, years) {
 }
 
 // Cumulative-cost-vs-car-value curve for one car over its full term (Phase 13,
-// R49). Two series on a shared rupee scale: cumulativeCost rises (money spent
-// so far), carValue falls (what the car is worth so far) — the gap between
-// them at year N is exactly `netCostAfterResale`, and cumulativeCost's own
-// endpoint is exactly `netCost`. That's not a coincidence to maintain by
-// hand: both are derived from the same EMI/running/maintenance/insurance/
-// tax-saved terms `calcLeaseNetCost` already uses, just accumulated year by
-// year instead of summed once at the full term.
+// R49; generalised to loan/cash in Phase 14, R55). Two series on a shared
+// rupee scale: cumulativeCost rises (money spent so far), carValue falls
+// (what the car is worth so far) — the gap between them at year N is exactly
+// `netCostAfterResale`, and cumulativeCost's own endpoint is exactly
+// `netCost`. That's not a coincidence to maintain by hand: both are derived
+// from the same capital/running/maintenance/insurance/tax-saved terms
+// `calcOwnershipCost` already uses, just accumulated year by year instead of
+// summed once at the full term.
 //
 // The EMI is computed ONCE at the full term (`o.years`), not re-derived per
-// year by calling calcLeaseNetCost with a shorter `years` — that would price
-// a *different* lease at each point (a 2-year lease's EMI differs from being
-// 2 years into a 4-year one) and the curve would silently stop agreeing with
-// the card's headline number. Only the accumulation (× y) varies by year.
+// year by calling calcOwnershipCost with a shorter `years` — that would price
+// a *different* loan/lease at each point (a 2-year term's EMI differs from
+// being 2 years into a 4-year one) and the curve would silently stop
+// agreeing with the card's headline number. Only the accumulation (× y)
+// varies by year.
 //
-// o = { price, annualRate, years (N), residualPct, type, efficiency,
+// Per-mode capital accumulation at year y (mirrors calcOwnershipCost):
+//   lease: emi*12*y, plus the residual buyout landing entirely in the final year
+//   loan:  downPayment (paid at t=0, so present in full from year 1) + emi*12*y
+//   cash:  price (fully spent at t=0, so a flat term at every year — no EMI)
+// taxSaved only exists in lease mode (o.mode !== 'lease' => 0 throughout).
+//
+// o = { mode ('lease'|'loan'|'cash', defaults 'lease'), price, annualRate,
+//       years (N), residualPct (lease), downPayment (loan), type, efficiency,
 //       cityKm, hwyKm, petrolPrice, iceHwyMult, homeRate, publicRate,
-//       evHwyMult, maintAnnual, insRate, depRate, marginalRate,
+//       evHwyMult, maintAnnual, insRate, depRate, marginalRate (lease),
 //       bigEngine, hasDriver }
 function calcOwnershipCurve(o) {
   const N = o.years;
-  const residual = o.price * o.residualPct;
-  const emi = calcEMI(o.price, o.annualRate, N, residual); // fixed at full term
+  const mode = o.mode || 'lease';
+  let emi = 0, residual = 0, downPayment = 0, perq = 0;
+  if (mode === 'loan') {
+    downPayment = o.downPayment || 0;
+    const principal = Math.max(0, o.price - downPayment);
+    emi = calcEMI(principal, o.annualRate, N, 0); // fixed at full term
+  } else if (mode === 'cash') {
+    emi = 0; // no financing — the whole price is capital, spent at t=0
+  } else { // lease
+    residual = o.price * o.residualPct;
+    emi = calcEMI(o.price, o.annualRate, N, residual); // fixed at full term
+    perq = calcPerquisite(o.bigEngine, o.hasDriver);
+  }
   const { annual: runAnnual } = calcRunningCost(o.type, o.efficiency, {
     cityKm: o.cityKm, hwyKm: o.hwyKm, petrolPrice: o.petrolPrice,
     iceHwyMult: o.iceHwyMult, homeRate: o.homeRate, publicRate: o.publicRate,
     evHwyMult: o.evHwyMult,
   });
-  const perq = calcPerquisite(o.bigEngine, o.hasDriver);
   const years = [], cumulativeCost = [], carValue = [];
   for (let y = 1; y <= N; y++) {
     years.push(y);
+    let capitalAtY;
+    if (mode === 'loan') capitalAtY = downPayment + emi * 12 * y;
+    else if (mode === 'cash') capitalAtY = o.price;
+    else capitalAtY = emi * 12 * y + (y === N ? residual : 0);
+    const taxSavedAtY = mode === 'lease' ? o.marginalRate * (emi - perq) * 12 * y : 0;
     cumulativeCost.push(
-      emi * 12 * y
+      capitalAtY
       + runAnnual * y
       + o.maintAnnual * y
       + calcInsuranceTotal(o.price, o.insRate, o.depRate, y)
-      - o.marginalRate * (emi - perq) * 12 * y
-      + (y === N ? residual : 0)
+      - taxSavedAtY
     );
     carValue.push(calcCarDepreciation(o.price, y));
   }
@@ -298,7 +371,7 @@ if (typeof module !== 'undefined' && module.exports) {
     calcEMI, loanAtYear, simulateLoan,
     calcSIP, calcStepupSIP,
     calcIncomeTax, calcPerquisite, calcCarDepreciation,
-    calcRunningCost, calcInsuranceTotal, calcLeaseNetCost, calcBreakevenKm,
-    calcOwnershipCurve,
+    calcRunningCost, calcInsuranceTotal, calcOwnershipCost, calcBreakevenKm,
+    calcOwnershipCurve, calcLumpsumGrowth,
   };
 }

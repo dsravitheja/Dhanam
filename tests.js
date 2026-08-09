@@ -15,8 +15,8 @@ const {
   calcEMI, loanAtYear, simulateLoan,
   calcSIP, calcStepupSIP,
   calcIncomeTax, calcPerquisite, calcCarDepreciation,
-  calcRunningCost, calcInsuranceTotal, calcLeaseNetCost, calcBreakevenKm,
-  calcOwnershipCurve,
+  calcRunningCost, calcInsuranceTotal, calcOwnershipCost, calcBreakevenKm,
+  calcOwnershipCurve, calcLumpsumGrowth,
 } = require('./calc.js');
 
 let pass = 0, fail = 0;
@@ -422,10 +422,14 @@ function insuranceLoop(price, rate, depRate, years) {
 }
 
 // =====================================================================
-// calcLeaseNetCost
+// calcOwnershipCost (Phase 9's calcLeaseNetCost, generalised across
+// lease/loan/cash modes by Phase 14/R55 — renamed, not shimmed, so every
+// call site below explicitly states mode: 'lease' rather than relying on
+// the function's own default)
 // =====================================================================
 {
   const base = {
+    mode: 'lease',
     price: 2000000, annualRate: 10, residualPct: 0.10, years: 4,
     hasDriver: false, marginalRate: 0.312,
     type: 'ICE', efficiency: 15,
@@ -433,11 +437,11 @@ function insuranceLoop(price, rate, depRate, years) {
     homeRate: 8, publicRate: 20, evHwyMult: 1.15,
     maintAnnual: 9000, insRate: 0.03, depRate: 0.15,
   };
-  const result = calcLeaseNetCost({ ...base, bigEngine: true });
-  ok('calcLeaseNetCost: netCost === rawOutflow - taxSaved (internal consistency)',
+  const result = calcOwnershipCost({ ...base, bigEngine: true });
+  ok('calcOwnershipCost (lease): netCost === rawOutflow - taxSaved (internal consistency)',
     approxEqual(result.netCost, result.rawOutflow - result.taxSaved, 0.01),
     `netCost=${result.netCost.toFixed(2)} rawOutflow-taxSaved=${(result.rawOutflow-result.taxSaved).toFixed(2)}`);
-  ok('calcLeaseNetCost: netCostAfterResale === netCost - resaleValue',
+  ok('calcOwnershipCost (lease): netCostAfterResale === netCost - resaleValue',
     approxEqual(result.netCostAfterResale, result.netCost - result.resaleValue, 0.01));
 
   // Pin: the perquisite must come from calcPerquisite, not a flat/hardcoded
@@ -445,20 +449,59 @@ function insuranceLoop(price, rate, depRate, years) {
   // identical row (same price/EMI/running/maint/insurance, bigEngine=false,
   // as an EV row's perquisite bracket would compute) must differ in netCost
   // by exactly marginalRate * (7000-5000) * months = 2000 * 0.312 * 48 = 29952.
-  const normalPerq = calcLeaseNetCost({ ...base, bigEngine: false });
+  const normalPerq = calcOwnershipCost({ ...base, bigEngine: false });
   const expectedGap = 2000 * base.marginalRate * (base.years * 12);
-  ok('calcLeaseNetCost: perquisite sourced from calcPerquisite — big-engine vs. <=1.6L/EV bracket differ by exactly marginalRate*2000*months (₹29,952 at defaults)',
+  ok('calcOwnershipCost (lease): perquisite sourced from calcPerquisite — big-engine vs. <=1.6L/EV bracket differ by exactly marginalRate*2000*months (₹29,952 at defaults)',
     approxEqual(result.netCost - normalPerq.netCost, expectedGap, 0.01),
     `diff=${(result.netCost-normalPerq.netCost).toFixed(2)} expected=${expectedGap.toFixed(2)}`);
-  ok('calcLeaseNetCost: ₹29,952 pin holds at the stated defaults (31.2% marginal rate, 4yr)',
+  ok('calcOwnershipCost (lease): ₹29,952 pin holds at the stated defaults (31.2% marginal rate, 4yr)',
     approxEqual(expectedGap, 29952, 0.01), `got ${expectedGap}`);
 
   // taxSaved stays signed (not clamped) — a below-perquisite EMI is a real
   // negative, not a bug to hide.
-  const tinyLease = calcLeaseNetCost({ ...base, price: 100000, bigEngine: false });
-  ok('calcLeaseNetCost: taxSaved can be negative (EMI below perquisite) and is not clamped to 0',
+  const tinyLease = calcOwnershipCost({ ...base, price: 100000, bigEngine: false });
+  ok('calcOwnershipCost (lease): taxSaved can be negative (EMI below perquisite) and is not clamped to 0',
     tinyLease.taxSaved < 0, `taxSaved=${tinyLease.taxSaved.toFixed(2)}`);
+
+  // ── Loan and cash modes (Phase 14, R55/R57/R58) ─────────────────────
+  const loanResult = calcOwnershipCost({ ...base, mode: 'loan', downPayment: 300000 });
+  ok('calcOwnershipCost (loan): taxSaved is exactly 0 — no deduction on a personal car loan under Indian law',
+    loanResult.taxSaved === 0, `taxSaved=${loanResult.taxSaved}`);
+  ok('calcOwnershipCost (loan): capital === downPayment + emi*months',
+    approxEqual(loanResult.capital, loanResult.downPayment + loanResult.emi * loanResult.months, 0.01));
+  ok('calcOwnershipCost (loan): netCost === rawOutflow (taxSaved=0, so no reduction)',
+    approxEqual(loanResult.netCost, loanResult.rawOutflow, 0.01));
+
+  const cashResult = calcOwnershipCost({ ...base, mode: 'cash' });
+  ok('calcOwnershipCost (cash): emi is exactly 0 — no financing', cashResult.emi === 0, `emi=${cashResult.emi}`);
+  ok('calcOwnershipCost (cash): capital === price', cashResult.capital === base.price, `capital=${cashResult.capital}`);
+  ok('calcOwnershipCost (cash): taxSaved is exactly 0', cashResult.taxSaved === 0, `taxSaved=${cashResult.taxSaved}`);
+  ok('calcOwnershipCost (cash): netCost === price + runningTotal + maintTotal + insTotal',
+    approxEqual(cashResult.netCost, base.price + cashResult.runningTotal + cashResult.maintTotal + cashResult.insTotal, 0.01));
+
+  // Direct analogue of the existing single-tranche-at-month-0 ≡ plain-EMI
+  // invariant (section-disb) / balloon-EMI-at-0%-residual ≡ plain-EMI
+  // invariant (R38, Phase 9): a lease at residual=0 and a loan at
+  // downPayment=0 must produce IDENTICAL EMIs for the same principal/rate/
+  // tenure — both reduce to calcEMI(price, rate, years, 0) on the exact
+  // same code path.
+  const leaseZeroResidual = calcOwnershipCost({ ...base, mode: 'lease', residualPct: 0, bigEngine: false });
+  const loanZeroDown = calcOwnershipCost({ ...base, mode: 'loan', downPayment: 0 });
+  ok('calcOwnershipCost: a residual=0 lease and a downPayment=0 loan produce IDENTICAL EMIs at the same price/rate/tenure',
+    leaseZeroResidual.emi === loanZeroDown.emi,
+    `lease(residual=0)=${leaseZeroResidual.emi} loan(downPayment=0)=${loanZeroDown.emi}`);
 }
+
+// =====================================================================
+// calcLumpsumGrowth (Phase 14, R55/R58) — cash mode's opportunity-cost reveal
+// =====================================================================
+ok('calcLumpsumGrowth: matches P*(1+cagr/100)^years directly',
+  approxEqual(calcLumpsumGrowth(1000000, 12, 5), 1000000 * Math.pow(1.12, 5), 0.01),
+  `got ${calcLumpsumGrowth(1000000, 12, 5)}`);
+ok('calcLumpsumGrowth: 0% CAGR returns principal unchanged',
+  calcLumpsumGrowth(500000, 0, 10) === 500000, `got ${calcLumpsumGrowth(500000, 0, 10)}`);
+ok('calcLumpsumGrowth: 0 years returns principal unchanged',
+  calcLumpsumGrowth(500000, 12, 0) === 500000, `got ${calcLumpsumGrowth(500000, 12, 0)}`);
 
 // =====================================================================
 // calcOwnershipCurve (Phase 13, R49) — the cost-vs-value chart's engine.
@@ -469,6 +512,7 @@ function insuranceLoop(price, rate, depRate, years) {
 // =====================================================================
 {
   const base = {
+    mode: 'lease',
     price: 2000000, annualRate: 10, residualPct: 0.10, years: 4,
     hasDriver: false, marginalRate: 0.312, bigEngine: false,
     type: 'ICE', efficiency: 15,
@@ -477,7 +521,7 @@ function insuranceLoop(price, rate, depRate, years) {
     maintAnnual: 9000, insRate: 0.03, depRate: 0.15,
   };
   const curve = calcOwnershipCurve(base);
-  const net = calcLeaseNetCost(base);
+  const net = calcOwnershipCost(base);
   const last = curve.years.length - 1;
 
   ok('calcOwnershipCurve: reference case endpoint pins to 2406795.0641',
@@ -487,7 +531,7 @@ function insuranceLoop(price, rate, depRate, years) {
     approxEqual(curve.cumulativeCost[last] - curve.carValue[last], 1424195.0641, 0.01),
     `got ${(curve.cumulativeCost[last] - curve.carValue[last]).toFixed(4)}`);
 
-  ok('calcOwnershipCurve: cumulativeCost[N-1] === calcLeaseNetCost netCost — the curve\'s endpoint IS the card\'s headline',
+  ok('calcOwnershipCurve: cumulativeCost[N-1] === calcOwnershipCost netCost — the curve\'s endpoint IS the card\'s headline',
     approxEqual(curve.cumulativeCost[last], net.netCost, 0.01),
     `curve=${curve.cumulativeCost[last].toFixed(4)} netCost=${net.netCost.toFixed(4)}`);
   ok('calcOwnershipCurve: cumulativeCost[N-1] - carValue[N-1] === netCostAfterResale — the gap IS the reveal figure',
@@ -496,14 +540,14 @@ function insuranceLoop(price, rate, depRate, years) {
 
   // Guards the spec's central warning: the EMI must be the full-term value,
   // accumulated — not recomputed per year via a shorter-tenure
-  // calcLeaseNetCost call. That mistake is invisible at the endpoint (a
+  // calcOwnershipCost call. That mistake is invisible at the endpoint (a
   // shorter-tenure call at y===N is the full-term call), so it has to be
   // caught at an intermediate year instead.
   ok('calcOwnershipCurve: year-2 point is the full-term EMI accumulated, not a 2-year lease repriced',
     approxEqual(curve.cumulativeCost[1], 1118798.7828, 0.01),
     `got ${curve.cumulativeCost[1].toFixed(4)}`);
-  const repricedYear2 = calcLeaseNetCost({ ...base, years: 2 }).netCost;
-  ok('calcOwnershipCurve: year-2 point must NOT equal a 2-year-tenure calcLeaseNetCost (the exact per-year-reprice mistake R49 warns against)',
+  const repricedYear2 = calcOwnershipCost({ ...base, years: 2 }).netCost;
+  ok('calcOwnershipCurve: year-2 point must NOT equal a 2-year-tenure calcOwnershipCost (the exact per-year-reprice mistake R49 warns against)',
     !approxEqual(curve.cumulativeCost[1], repricedYear2, 0.01),
     `curve[1]=${curve.cumulativeCost[1].toFixed(4)} 2yr-repriced=${repricedYear2.toFixed(4)}`);
 
@@ -518,28 +562,50 @@ function insuranceLoop(price, rate, depRate, years) {
     `values=${curve.carValue.map(v=>v.toFixed(0))}`);
 
   // N=1: a single point, no crossing to speak of — must still compute
-  // finite values and agree with calcLeaseNetCost at the one point.
+  // finite values and agree with calcOwnershipCost at the one point.
   const single = calcOwnershipCurve({ ...base, years: 1 });
-  const singleNet = calcLeaseNetCost({ ...base, years: 1 });
+  const singleNet = calcOwnershipCost({ ...base, years: 1 });
   ok('calcOwnershipCurve: N=1 produces exactly one point',
     single.years.length === 1 && single.cumulativeCost.length === 1 && single.carValue.length === 1,
     `years.length=${single.years.length}`);
-  ok('calcOwnershipCurve: N=1 endpoint still matches calcLeaseNetCost at the same tenure',
+  ok('calcOwnershipCurve: N=1 endpoint still matches calcOwnershipCost at the same tenure',
     approxEqual(single.cumulativeCost[0], singleNet.netCost, 0.01),
     `curve=${single.cumulativeCost[0].toFixed(4)} netCost=${singleNet.netCost.toFixed(4)}`);
   ok('calcOwnershipCurve: N=1 values are finite (no NaN/Infinity)',
     isFinite(single.cumulativeCost[0]) && isFinite(single.carValue[0]));
 
   // Zero-rate case: calcEMI's r===0 branch, still no NaN/Infinity and
-  // still agrees with calcLeaseNetCost at the endpoint.
+  // still agrees with calcOwnershipCost at the endpoint.
   const zeroRate = calcOwnershipCurve({ ...base, annualRate: 0 });
-  const zeroRateNet = calcLeaseNetCost({ ...base, annualRate: 0 });
+  const zeroRateNet = calcOwnershipCost({ ...base, annualRate: 0 });
   ok('calcOwnershipCurve: zero-rate case is finite throughout',
     zeroRate.cumulativeCost.every(isFinite) && zeroRate.carValue.every(isFinite),
     `cumulativeCost=${zeroRate.cumulativeCost}`);
-  ok('calcOwnershipCurve: zero-rate case endpoint still matches calcLeaseNetCost',
+  ok('calcOwnershipCurve: zero-rate case endpoint still matches calcOwnershipCost',
     approxEqual(zeroRate.cumulativeCost[zeroRate.years.length-1], zeroRateNet.netCost, 0.01),
     `curve=${zeroRate.cumulativeCost[zeroRate.years.length-1].toFixed(4)} netCost=${zeroRateNet.netCost.toFixed(4)}`);
+
+  // ── Loan and cash modes (Phase 14, R55) — calcOwnershipCurve's endpoint
+  // must equal calcOwnershipCost's netCost in EVERY mode, not just lease. ──
+  const loanBase = { ...base, mode: 'loan', downPayment: 300000 };
+  const loanCurve = calcOwnershipCurve(loanBase);
+  const loanNet = calcOwnershipCost(loanBase);
+  ok('calcOwnershipCurve (loan mode): endpoint equals calcOwnershipCost netCost',
+    approxEqual(loanCurve.cumulativeCost[loanCurve.years.length - 1], loanNet.netCost, 0.01),
+    `curve=${loanCurve.cumulativeCost[loanCurve.years.length-1].toFixed(4)} netCost=${loanNet.netCost.toFixed(4)}`);
+  ok('calcOwnershipCurve (loan mode): cumulativeCost is finite and rising throughout',
+    loanCurve.cumulativeCost.every(isFinite) &&
+    loanCurve.cumulativeCost.every((v, i) => i === 0 || v > loanCurve.cumulativeCost[i-1]));
+
+  const cashBase = { ...base, mode: 'cash' };
+  const cashCurve = calcOwnershipCurve(cashBase);
+  const cashNet = calcOwnershipCost(cashBase);
+  ok('calcOwnershipCurve (cash mode): endpoint equals calcOwnershipCost netCost',
+    approxEqual(cashCurve.cumulativeCost[cashCurve.years.length - 1], cashNet.netCost, 0.01),
+    `curve=${cashCurve.cumulativeCost[cashCurve.years.length-1].toFixed(4)} netCost=${cashNet.netCost.toFixed(4)}`);
+  ok('calcOwnershipCurve (cash mode): the full price is already "spent" from year 1 — cumulativeCost[0] includes the whole price',
+    cashCurve.cumulativeCost[0] >= cashBase.price,
+    `cumulativeCost[0]=${cashCurve.cumulativeCost[0].toFixed(2)} price=${cashBase.price}`);
 }
 
 // =====================================================================
