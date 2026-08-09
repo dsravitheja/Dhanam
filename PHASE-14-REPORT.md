@@ -4,6 +4,24 @@
 
 ---
 
+## Post-review fixes (applied after this report was first written)
+
+An Opus code-review pass (run alongside a Sonnet QA pass, both against the merged build) found two HIGH-severity and several MEDIUM/LOW issues. All were fixed directly; summary below, full detail in `CLAUDE.md`'s updated Phase 14 sections and checklist items 51/53/54/55.
+
+- **HIGH, fixed — the absorbed loan-balance overlay (`#cc-depr-chart`) was hardcoded to a 5-year loan tenure**, a leftover from Phase 13's `cb-*` code where the constant was correct because no term selector existed there. Phase 14's own `cc-years` selector (3/4/5yr) already drives the EMI/netCost/ranking above it, but the overlay never read it — at the app's own 4-year default it could print a false "you'd owe more than the car is worth" claim for years that don't apply to the real loan. Now reads `a.years` directly (`ccRenderLoanDetail()`, `index.html`).
+- **HIGH, fixed — the R60 cross-mode comparison's Lease column used residual %/marginal tax rate/driver inputs that are invisible outside Lease mode** (and the Cash column's opportunity-cost figure used a CAGR invisible outside Cash mode), since the Assumptions card only ever shows one mode's field group at a time. A Loan-mode visitor could see "Lease is ₹6L cheaper" with no way to see the marginal tax rate that produced it. Fixed by adding a permanent `#cc-crossmode-assumptions` line stating the exact values in use, in every mode, always.
+- **MEDIUM, fixed — B13's "identical across modes" held on the cross-mode card but not on the per-car surface**: the opportunity-cost reveal button was visible only in Cash mode, so a Loan-mode down payment never got asked the same question a Cash purchase's full price did. Now shown (closed by default) in all three modes, with a mode-aware label naming the actual capital being charged.
+- **MEDIUM, fixed — no test could catch the exact per-year-reprice mistake (R49's central warning) in `calcOwnershipCurve`'s loan branch**, only its lease branch. Added an intermediate year-2 pin + explicit inequality check for loan mode, mirroring the existing lease-mode test (`tests.js`/`tests.html`).
+- **MEDIUM, fixed — the caveat list didn't state that Loan/Cash carry no tax deduction** (R55's own explicit requirement) despite `CLAUDE.md` claiming it did, and two Lease-only caveat lines (perquisite table, marginal rate) read as if they applied to every mode. Caveat list updated with an explicit "Tax Saved is genuinely ₹0" line, an opportunity-cost-reveal line, and "(Lease mode only)" tags where needed.
+- **LOW, fixed — About page provenance still named the retired "Car Buying" section's 9.5% default**, and didn't list the new `cc-cash-cagr` 12% default. Both fixed.
+- **LOW, fixed — the Cash-mode result card's compact supporting line lost its ₹/km figure** (showed only "Paid in full"). Now shows "Paid in full · ₹X/km".
+- **LOW, fixed — no guard against a down payment exceeding the car's own price.** Computes without NaN/Infinity either way, but now surfaces a same-row hint ("check for a typo") via the existing `ccRowHintText()` mechanism.
+- **Informational, not fixed — `calcOwnershipCurve`'s lease branch has a ~1 ULP (5.8e-16 relative) numeric drift from Phase 13's ordering of terms**, from folding the residual into the running total before vs. after the running/maintenance/insurance terms. Below any tolerance the app or its tests use; noted for completeness, not treated as a bug.
+
+Test count after fixes: **95/95** (`node tests.js`), up from 93 (2 new assertions for the loan-branch curve pin).
+
+---
+
 ## Handoff state at the start of this pass
 
 Confirmed before touching anything: working directory `/Users/ravithejadasika/Documents/Dhanam/.claude/worktrees/agent-a87289d3a48de4b48`, branch `claude/phase-14-financing-modes`, tip commit `fc8ae76`, clean working tree, `node tests.js` passing 93/93. Three prior commits on this branch already carried R55–R59 and a first pass of the `CLAUDE.md` architecture section:
@@ -47,20 +65,24 @@ No code changes were needed for R60; it was already built to spec and the manual
 ## Test count
 
 - Before this pass: `node tests.js` → 93/93 (unchanged from the prior instance's handoff state).
-- After this pass: `node tests.js` → **93/93**, unchanged — no calc.js edits this pass.
-- `tests.html` (verified by extraction + Node execution, not a browser): **64/64**, unchanged.
+- After R61 (docs/report only, no calc.js edits): `node tests.js` → 93/93, unchanged.
+- After the post-review fixes above (one new `calcOwnershipCurve` loan-branch pin, mirrored into `tests.html`): `node tests.js` → **95/95**.
+- `tests.html` (verified by extraction + Node execution, not a browser): 64/64 before the fixes, **66/66** after.
 
 ## Manual QA status
 
-**Not yet run in a real browser.** This pass (like the prior instance's) worked entirely by static code reading, Node-based test execution, and hand-traced arithmetic — no Chromium/Playwright/jsdom was available in this environment. Everything reported as "verified" above was verified by one of: reading the exact code path end to end, running the pure `calc.js` functions under Node with hand-picked inputs and checking the output by independent calculation, or running the existing/mirrored test suites. **None of items 1–56 in `CLAUDE.md`'s manual checklist — including the new 51–56 — have been walked in an actual browser against the live app.** That is explicitly the next pipeline stage (per this task's own instructions: QA and code review both have to pass before `TASK-UX-REDESIGN.md`'s Phase 14 header is marked shipped, which this pass deliberately did not touch), not something this pass claims to have done. In particular:
+**A dedicated QA pass and an independent Opus code-review pass both ran after this report was first written — see "Post-review fixes" above for what the review found. Neither had real browser/automation tooling available in this environment** (no Chromium/Playwright — checked and confirmed absent), so both worked by the same method as this report's own verification: reading exact code execution paths, running `calc.js`'s pure functions under Node against hand-picked inputs, and cross-checking numbers independently. QA walked checklist items 51–56 individually and found no functional bugs (only a documentation drift, since corrected); code review found the six issues listed in "Post-review fixes," all now fixed.
 
-- The mode selector's live visual behavior (field show/hide, no layout jump, focus retention while typing) has only been confirmed by reading `setCarMode()`/`updateCCModeFields()`/`ccRowHtml()`'s logic, not by clicking through it.
-- The cross-mode comparison's card layout and the reveal's live redraw have not been screenshotted or interacted with.
-- 375px-width rendering, dot-circularity on the two absorbed chart hosts, and the underwater-note wording at real underwater/never-underwater scenarios are all unverified in an actual browser.
+**None of items 1–56 in `CLAUDE.md`'s manual checklist have been walked in an actual running browser against the live app — this remains the one real outstanding gap.** In particular, still unverified against a live page (only traced in code):
+
+- The mode selector's live visual behavior (field show/hide, no layout jump, focus retention while typing).
+- The cross-mode comparison's card layout and the reveal's live redraw, including the new `#cc-crossmode-assumptions` line's wording/placement.
+- 375px-width rendering and dot-circularity on the absorbed chart hosts.
+- The underwater-note wording at real underwater/never-underwater scenarios, now re-verified in code against the term-selector fix but not re-walked by eye.
 
 ## Known gaps
 
-- **`carMode` itself is not persisted.** Every reload of `hub-car` defaults back to Loan regardless of what a user last selected. This wasn't called out as a requirement anywhere in R55–R61 or B13, and the app's existing persistence rules would classify "which mode you're comparing in" ambiguously — arguably tier-1 (a fact about how this particular user is actually paying) or tier-3 (a view toggle, like the reveals). Left as-is since no owner decision exists on this either way; worth a future B-numbered question if it turns out to matter in practice.
+- **`carMode` itself is not persisted, by deliberate design, not an oversight.** Every reload of `hub-car` defaults back to Loan regardless of what a user last selected. The code comment above `let carMode` (`index.html`) states this outright: "deliberately tier-3 — a plain JS variable, not persisted into DS/dhanam.v1 — same judgment call as `ccRevealOpen`." (An earlier draft of this report described this as an open, undecided question — that was this report's own drift from what the code already asserts, caught during QA; corrected here.) Worth a future B-numbered question only if it turns out to matter in practice, but it's a real decision already made, not a gap.
 - **`calcLumpsumGrowth` is not yet the Grow hub's implementation**, per the spec's own explicit scope note (R55: "this is one implementation for Compare Cars' new use, not yet the only one in the codebase" — `updateLumpsum` still computes the same formula inline). Not a gap introduced by this phase; the spec named it out of scope on purpose.
 - **Real-browser QA and code review are both still open**, as stated above — this is the primary gap, not a secondary one.
 - Everything else flagged as open in `PHASE-13-REPORT.md`'s own "What's still open" section (R8 accessibility sweep, R23/6c inline term definitions, the rest of R25/6e, Phase 7/R31) remains open and untouched by this phase, as expected.

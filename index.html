@@ -1682,7 +1682,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
           <div class="field" id="cc-field-cash-cagr" style="display:none;">
             <label>Investment Return If Invested Instead (% p.a.)</label>
             <input type="number" id="cc-cash-cagr" value="12" step="0.5" min="0" oninput="renderCarCompare()">
-            <span class="field-hint">Cash only — used only by the opportunity-cost reveal below, never the ranking</span>
+            <span class="field-hint">Used only by the opportunity-cost reveal below (in any mode) and the "Lease vs. Loan vs. Cash" comparison's Cash column — never the ranking</span>
           </div>
           <div class="field">
             <label>Petrol Price (₹/litre)</label>
@@ -1787,13 +1787,21 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
             <span class="car-stat-lbl">Net cost after resale credit — a forecast, not part of the ranking above</span>
             <span class="car-stat-val accent" id="cc-reveal-value">—</span>
           </div>
-          <!-- Cash mode's opportunity-cost reveal (B13, R58) — same shape as
-               the resale reveal above: off by default, permanent adjacent
-               label, tier-3 state (ccOppRevealOpen), never persisted. Only
-               shown when the selected car's mode is Cash. -->
-          <button class="btn btn-secondary" id="cc-opp-reveal-btn" onclick="ccToggleOppReveal()" type="button" style="display:none;margin-top:8px;">Reveal opportunity cost of tied-up capital (forecast)</button>
+          <!-- Opportunity-cost reveal (B13, R58) — same shape as the resale
+               reveal above: off by default, permanent adjacent label,
+               tier-3 state (ccOppRevealOpen), never persisted. Shown in
+               EVERY mode, not just Cash (post-review fix, Phase 14) — B13's
+               fairness rule says the same reveal applies identically across
+               modes, and hiding it outside Cash meant a Loan-mode user's own
+               down payment never got the same "what did this capital cost
+               you" question a Cash buyer's full price did. The label text
+               is mode-aware (set in renderCCOwnCurve()): cash = the full
+               price, loan = the down payment only, lease = genuinely ~₹0
+               because a lease ties up no capital upfront (that's real, not
+               an omission — see calc.js's ccOpportunityCost). -->
+          <button class="btn btn-secondary" id="cc-opp-reveal-btn" onclick="ccToggleOppReveal()" type="button" style="margin-top:8px;">Reveal opportunity cost of tied-up capital (forecast)</button>
           <div class="car-stat" id="cc-opp-reveal-figure" style="display:none;margin-top:10px;">
-            <span class="car-stat-lbl">What this cash could have earned if invested instead — a forecast, not part of the ranking above</span>
+            <span class="car-stat-lbl" id="cc-opp-reveal-label">What this cash could have earned if invested instead — a forecast, not part of the ranking above</span>
             <span class="car-stat-val accent" id="cc-opp-reveal-value">—</span>
           </div>
         </div>
@@ -1848,6 +1856,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
           </div>
           <div class="collapse-body">
             <p class="note-text" style="margin-bottom:10px;">Money out the door only, same as the ranking above — uses this car's own down payment and the assumptions above for all three columns. Switch mode at the top of the page to change which one actually drives the ranking and shortlist.</p>
+            <p class="note-text" id="cc-crossmode-assumptions" style="margin-bottom:10px;"></p>
             <div id="cc-crossmode-cards" class="loan-grid"></div>
             <div style="margin-top:10px;">
               <button class="btn btn-secondary" id="cc-cross-reveal-btn" onclick="ccToggleCrossReveal()" type="button">Reveal resale credit &amp; opportunity cost for all three (forecast)</button>
@@ -1892,8 +1901,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
           <li>Insurance is one flat rate per vehicle type (ICE vs EV), not a per-model quote.</li>
           <li>The city:highway driving split and its multipliers are global — every car is assumed driven the same way, with no per-car override.</li>
           <li>Unlike the spreadsheet this section is based on, there's no "EV driven more because it feels free" multiplier — annual km is the same figure for every car, so the ₹/km figures stay comparable across ICE and EV.</li>
-          <li>Perquisite per the Income-tax Rules, 2026 (in force 1 Apr 2026): ≤1600cc or electric = ₹5,000/mo · &gt;1600cc = ₹7,000/mo · company driver = +₹3,000/mo — the same table the lease analysis above uses.</li>
-          <li>Marginal tax rate is a single number you enter here, not derived from a slab calculation — it doesn't pick up the Section 87A relief the salary panel above applies.</li>
+          <li><strong>Loan and Cash modes carry no tax deduction — <code>Tax Saved</code> is genuinely ₹0, not a missing calculation.</strong> The lease's tax shield comes from a company reimbursing/leasing the car and taxing you only on its perquisite value; a personal car loan or a cash purchase has no equivalent deduction under either regime, so the Lease vs. Loan vs. Cash comparison correctly shows Lease alone with a tax-saved line.</li>
+          <li>(Lease mode only) Perquisite per the Income-tax Rules, 2026 (in force 1 Apr 2026): ≤1600cc or electric = ₹5,000/mo · &gt;1600cc = ₹7,000/mo · company driver = +₹3,000/mo — the same table the lease analysis above uses.</li>
+          <li>(Lease mode only) Marginal tax rate is a single number you enter here, not derived from a slab calculation — it doesn't pick up the Section 87A relief the salary panel above applies. It also drives the Lease column of "Lease vs. Loan vs. Cash" even when you're not in Lease mode — see that card's own assumptions line for the exact figure in use.</li>
+          <li>The "opportunity cost of tied-up capital" reveal (per car, and in "Lease vs. Loan vs. Cash") is a forecast at whatever return rate you enter — 12% by default — not a cash cost, and not part of any ranking. It's ~₹0 for a lease by construction: a lease ties up no capital upfront, which is a real structural difference, not an omission.</li>
           <li>Consult a CA and get dealer quotes before acting on this comparison.</li>
         </ul>
       </div>
@@ -2291,9 +2302,14 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <div class="provenance-date">As of: a starting point — replace with your own lender's quote</div>
       </div>
       <div class="provenance-row">
-        <div class="provenance-term">Car loan default rate (Car Buying)</div>
-        <div class="provenance-value">9.5% p.a.</div>
-        <div class="provenance-date">As of: a starting point — replace with your own quote</div>
+        <div class="provenance-term">Compare Cars loan/lease interest rate default</div>
+        <div class="provenance-value">10% p.a.</div>
+        <div class="provenance-date">As of: a starting point — replace with your own quote. (The standalone "Car Buying" section this used to live in was retired in Phase 14 and folded into Compare Cars' Loan mode.)</div>
+      </div>
+      <div class="provenance-row">
+        <div class="provenance-term">Compare Cars opportunity-cost reveal — assumed return if the tied-up capital were invested instead</div>
+        <div class="provenance-value">12% p.a.</div>
+        <div class="provenance-date">As of: a starting point, same figure as the SIP CAGR default below — markets don't guarantee any return</div>
       </div>
       <div class="provenance-row">
         <div class="provenance-term">SIP CAGR default (all three Dhanam Grow tabs)</div>
@@ -4886,8 +4902,14 @@ function ccRowHintText(c) {
   const missing = [];
   if (!(c.price > 0)) missing.push('on-road price');
   if (!(c.eff > 0)) missing.push(c.type === 'EV' ? 'efficiency' : 'mileage');
-  if (!missing.length) return '';
-  return `Add ${missing.join(' and ')} to include this car in the comparison`;
+  if (missing.length) return `Add ${missing.join(' and ')} to include this car in the comparison`;
+  // Not a blocking case (computes fine, no NaN/Infinity — see calcOwnershipCost's
+  // loan branch) but a down payment over the car's own price is almost
+  // certainly a typo, and nothing else on screen would ever flag it.
+  if (carMode === 'loan' && (c.downPayment || 0) > c.price) {
+    return `Down payment (${fmt(c.downPayment)}) is more than this car's price — check for a typo`;
+  }
+  return '';
 }
 
 function ccRowHtml(c, i) {
@@ -5171,7 +5193,7 @@ function renderCarCompare() {
   // saved; loan has an EMI but no tax saved (no deduction on a personal car
   // loan — correct, not an omission, see calc.js/CLAUDE.md); lease keeps
   // both, unchanged from before Phase 14.
-  const emiSub = r => carMode === 'cash' ? 'Paid in full' : `${fmt(r.result.emi)}/mo · ₹${r.result.costPerKm.toFixed(2)}/km`;
+  const emiSub = r => carMode === 'cash' ? `Paid in full · ₹${r.result.costPerKm.toFixed(2)}/km` : `${fmt(r.result.emi)}/mo · ₹${r.result.costPerKm.toFixed(2)}/km`;
   el('cc-results').innerHTML = rows.map((r, rank) => {
     const isRank1 = rank === 0;
     const vsCheapest = r.result.netCost - cheapest.result.netCost;
@@ -5321,22 +5343,24 @@ function renderCCOwnCurve() {
     fig.style.display = 'none';
   }
 
-  // Cash mode's opportunity-cost reveal (B13, R58) — same shape as the
-  // resale reveal directly above, only visible in Cash mode.
+  // Opportunity-cost reveal (B13, R58) — same shape as the resale reveal
+  // directly above. Shown in every mode (post-review fix): the capital base
+  // ccOpportunityCost() charges already varies correctly by mode (full price
+  // in Cash, down payment only in Loan, ~₹0 in Lease — see its own comment),
+  // so gating the reveal's visibility to Cash alone was the actual bug, not
+  // a simplification — it meant a Loan-mode down payment's opportunity cost
+  // was computed (and used on the cross-mode card) but never shown here.
   const oppBtn = el('cc-opp-reveal-btn');
   const oppFig = el('cc-opp-reveal-figure');
-  if (carMode === 'cash') {
-    oppBtn.style.display = '';
-    if (ccOppRevealOpen) {
-      oppBtn.textContent = 'Hide opportunity-cost figure';
-      oppFig.style.display = '';
-      set('cc-opp-reveal-value', fmt(ccOpportunityCost('cash', row.car.price, 0, a.cashCagr, a.years)));
-    } else {
-      oppBtn.textContent = 'Reveal opportunity cost of tied-up capital (forecast)';
-      oppFig.style.display = 'none';
-    }
+  const oppCapitalLabel = carMode === 'cash' ? 'this cash'
+    : (carMode === 'loan' ? 'this car\'s down payment' : 'the capital tied up (none, upfront, for a lease)');
+  if (ccOppRevealOpen) {
+    oppBtn.textContent = 'Hide opportunity-cost figure';
+    oppFig.style.display = '';
+    set('cc-opp-reveal-label', `What ${oppCapitalLabel} could have earned if invested instead — a forecast, not part of the ranking above`);
+    set('cc-opp-reveal-value', fmt(ccOpportunityCost(carMode, row.car.price, row.car.downPayment || 0, a.cashCagr, a.years)));
   } else {
-    oppBtn.style.display = 'none';
+    oppBtn.textContent = 'Reveal opportunity cost of tied-up capital (forecast)';
     oppFig.style.display = 'none';
   }
 
@@ -5376,10 +5400,11 @@ function ccOpportunityCost(mode, price, downPayment, cagr, years) {
 // tenureStats() is carried across intact (see its own comment above); the
 // depreciation table/chart is mode-independent (renders off price alone,
 // R13) and shown for every mode, with the outstanding-loan-balance overlay
-// (R53, Phase 13 — both post-review bugfixes carried across: the balance
-// series is sliced to its own 5-year tenure rather than the chart's full
-// 7-year window, and "underwater" is reported as the actual first-through-
-// last year range, never "from year N onward") added only in Loan mode.
+// (R53, Phase 13; re-fixed post-Phase-14-review — see the loanTermYears
+// comment below) added only in Loan mode. Both Phase-13 bugfixes still hold:
+// the balance series is sliced to its own loan term rather than the chart's
+// full 7-year window, and "underwater" is reported as the actual
+// first-through-last year range, never "from year N onward".
 function ccRenderLoanDetail(car, a) {
   const tenureCard = el('cc-tenure-card');
   const price = car.price;
@@ -5416,8 +5441,17 @@ function ccRenderLoanDetail(car, a) {
     const chartYears = [1, 2, 3, 4, 5, 6, 7];
     const valueVals = chartYears.map(y => calcCarDepreciation(price, y));
 
-    const LOAN_CHART_TENURE = 5;
-    const loanYears = chartYears.slice(0, LOAN_CHART_TENURE);
+    // R53 originally hardcoded 5 years here because the retired cb-* section
+    // had no separate "chosen tenure" input. Phase 14/R59's absorption gave
+    // Compare Cars its own term selector (cc-years, 3/4/5yr) that already
+    // drives the EMI, netCost, ranking and cost-vs-value chart above — the
+    // balance line has to agree with THAT loan, not a fixed 5-year stand-in,
+    // or the underwater note ends up naming a loan the user never configured
+    // (found in code review: at the app's own 4-year default, the fixed
+    // 5-year line falsely claimed underwater years that don't exist for the
+    // real 4-year loan, and at a 3-year term it ran two years past payoff).
+    const loanTermYears = a.years;
+    const loanYears = chartYears.slice(0, loanTermYears);
     // Parity with the retired cb-* code: the overlay's own guard is just
     // `loan > 0` (not `&& rate > 0`) — loanAtYear's r===0 branch is a valid,
     // non-NaN linear amortization, and the old section showed the balance
@@ -5425,18 +5459,18 @@ function ccRenderLoanDetail(car, a) {
     // an intentional Phase 14 addition (no "loan balance" concept in
     // Lease/Cash mode).
     const balanceVals = (carMode === 'loan' && loan > 0)
-      ? loanYears.map(y => loanAtYear(loan, rate, LOAN_CHART_TENURE, y).balance)
+      ? loanYears.map(y => loanAtYear(loan, rate, loanTermYears, y).balance)
       : null;
 
     let underwaterNote = '';
     if (balanceVals) {
       const underwaterYears = loanYears.filter((y, i) => balanceVals[i] > valueVals[i]);
       if (!underwaterYears.length) {
-        underwaterNote = ` At this ${LOAN_CHART_TENURE}-year loan's pace, the outstanding balance never exceeds the car's resale value.`;
+        underwaterNote = ` At this ${loanTermYears}-year loan's pace, the outstanding balance never exceeds the car's resale value.`;
       } else {
         const first = underwaterYears[0], last = underwaterYears[underwaterYears.length - 1];
         const span = first === last ? `in year ${first}` : `from year ${first} through year ${last}`;
-        underwaterNote = ` At this ${LOAN_CHART_TENURE}-year loan's pace, the outstanding balance exceeds the car's resale value ${span} — you'd owe more than the car is worth.`;
+        underwaterNote = ` At this ${loanTermYears}-year loan's pace, the outstanding balance exceeds the car's resale value ${span} — you'd owe more than the car is worth.`;
       }
     }
 
@@ -5482,6 +5516,20 @@ function renderCCCrossMode(car, a) {
   const modes = ['lease', 'loan', 'cash'];
   const labels = { lease: 'Lease', loan: 'Loan', cash: 'Cash' };
   const results = modes.map(m => calcOwnershipCost(ccOwnershipInput(car, a, m)));
+
+  // This card always renders all three columns, but the Assumptions card
+  // only ever shows the ONE mode-specific field group matching the currently
+  // active mode (updateCCModeFields()) — so outside Lease mode, the Lease
+  // column's residual/marginal-rate/driver inputs are invisible on screen,
+  // and outside Cash mode, the Cash column's CAGR input is too. Found in
+  // code review: that left the Lease column looking unconditionally cheaper
+  // (via an invisible marginal tax rate) with no way for a Loan/Cash-mode
+  // visitor to see what number produced it. State the actual values used,
+  // in words, every time — same instinct as the resale reveal's permanent
+  // label, applied to inputs instead of an output.
+  set('cc-crossmode-assumptions',
+    `Lease column assumes a ${(a.residualPct * 100).toFixed(0)}% residual and a ${(a.marginalRate * 100).toFixed(1)}% marginal tax rate` +
+    `${a.hasDriver ? ', with a company driver' : ''} — editable in Lease mode. Cash's opportunity-cost forecast (below) assumes a ${a.cashCagr}% p.a. return — editable in Cash mode.`);
 
   const btn = el('cc-cross-reveal-btn');
   btn.textContent = ccCrossRevealOpen

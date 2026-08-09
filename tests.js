@@ -597,6 +597,18 @@ ok('calcLumpsumGrowth: 0 years returns principal unchanged',
     loanCurve.cumulativeCost.every(isFinite) &&
     loanCurve.cumulativeCost.every((v, i) => i === 0 || v > loanCurve.cumulativeCost[i-1]));
 
+  // Found in code review: the endpoint-only + monotonicity checks above
+  // cannot catch the per-year-reprice mistake in the loan branch either —
+  // same blind spot the lease-mode year-2 pin above exists to close, just
+  // never mirrored onto the loan branch when Phase 14 added it.
+  ok('calcOwnershipCurve (loan mode): year-2 point is the full-term EMI accumulated, not a 2-year loan repriced',
+    approxEqual(loanCurve.cumulativeCost[1], 1634815.6264, 0.01),
+    `got ${loanCurve.cumulativeCost[1].toFixed(4)}`);
+  const loanRepricedYear2 = calcOwnershipCost({ ...loanBase, years: 2 }).netCost;
+  ok('calcOwnershipCurve (loan mode): year-2 point must NOT equal a 2-year-tenure calcOwnershipCost (the exact per-year-reprice mistake R49 warns against)',
+    !approxEqual(loanCurve.cumulativeCost[1], loanRepricedYear2, 0.01),
+    `curve[1]=${loanCurve.cumulativeCost[1].toFixed(4)} 2yr-repriced=${loanRepricedYear2.toFixed(4)}`);
+
   const cashBase = { ...base, mode: 'cash' };
   const cashCurve = calcOwnershipCurve(cashBase);
   const cashNet = calcOwnershipCost(cashBase);

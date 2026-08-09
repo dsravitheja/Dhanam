@@ -212,6 +212,9 @@ ok('calcCarDepreciation: zero price -> zero resale', calcCarDepreciation(0, 5) =
   const loanCurve = calcOwnershipCurve(loanBase);
   const loanNet = calcOwnershipCost(loanBase);
   ok('calcOwnershipCurve (loan mode): endpoint equals calcOwnershipCost netCost', approxEqual(loanCurve.cumulativeCost[loanCurve.years.length - 1], loanNet.netCost, 0.01), `curve=${loanCurve.cumulativeCost[loanCurve.years.length-1].toFixed(4)} netCost=${loanNet.netCost.toFixed(4)}`);
+  ok('calcOwnershipCurve (loan mode): year-2 point is the full-term EMI accumulated, not a 2-year loan repriced', approxEqual(loanCurve.cumulativeCost[1], 1634815.6264, 0.01), `got ${loanCurve.cumulativeCost[1].toFixed(4)}`);
+  const loanRepricedYear2 = calcOwnershipCost({ ...loanBase, years: 2 }).netCost;
+  ok('calcOwnershipCurve (loan mode): year-2 point must NOT equal a 2-year-tenure calcOwnershipCost', !approxEqual(loanCurve.cumulativeCost[1], loanRepricedYear2, 0.01), `curve[1]=${loanCurve.cumulativeCost[1].toFixed(4)} 2yr-repriced=${loanRepricedYear2.toFixed(4)}`);
 
   const cashBase = { ...base, mode: 'cash' };
   const cashCurve = calcOwnershipCurve(cashBase);
