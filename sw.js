@@ -1,4 +1,4 @@
-const CACHE = 'apt-cost-v17';
+const CACHE = 'apt-cost-v18';
 // R29, Phase 4b: a cache write must never surface as an error — the response
 // has already been returned to the page by the time this runs, so a rejected
 // cache.put would otherwise become an unhandled promise rejection in the SW
