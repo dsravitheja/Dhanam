@@ -246,6 +246,51 @@ function calcBreakevenKm(evFixed, evPerKm, iceFixed, icePerKm, years) {
   return (evFixed - iceFixed) / denom;
 }
 
+// Cumulative-cost-vs-car-value curve for one car over its full term (Phase 13,
+// R49). Two series on a shared rupee scale: cumulativeCost rises (money spent
+// so far), carValue falls (what the car is worth so far) — the gap between
+// them at year N is exactly `netCostAfterResale`, and cumulativeCost's own
+// endpoint is exactly `netCost`. That's not a coincidence to maintain by
+// hand: both are derived from the same EMI/running/maintenance/insurance/
+// tax-saved terms `calcLeaseNetCost` already uses, just accumulated year by
+// year instead of summed once at the full term.
+//
+// The EMI is computed ONCE at the full term (`o.years`), not re-derived per
+// year by calling calcLeaseNetCost with a shorter `years` — that would price
+// a *different* lease at each point (a 2-year lease's EMI differs from being
+// 2 years into a 4-year one) and the curve would silently stop agreeing with
+// the card's headline number. Only the accumulation (× y) varies by year.
+//
+// o = { price, annualRate, years (N), residualPct, type, efficiency,
+//       cityKm, hwyKm, petrolPrice, iceHwyMult, homeRate, publicRate,
+//       evHwyMult, maintAnnual, insRate, depRate, marginalRate,
+//       bigEngine, hasDriver }
+function calcOwnershipCurve(o) {
+  const N = o.years;
+  const residual = o.price * o.residualPct;
+  const emi = calcEMI(o.price, o.annualRate, N, residual); // fixed at full term
+  const { annual: runAnnual } = calcRunningCost(o.type, o.efficiency, {
+    cityKm: o.cityKm, hwyKm: o.hwyKm, petrolPrice: o.petrolPrice,
+    iceHwyMult: o.iceHwyMult, homeRate: o.homeRate, publicRate: o.publicRate,
+    evHwyMult: o.evHwyMult,
+  });
+  const perq = calcPerquisite(o.bigEngine, o.hasDriver);
+  const years = [], cumulativeCost = [], carValue = [];
+  for (let y = 1; y <= N; y++) {
+    years.push(y);
+    cumulativeCost.push(
+      emi * 12 * y
+      + runAnnual * y
+      + o.maintAnnual * y
+      + calcInsuranceTotal(o.price, o.insRate, o.depRate, y)
+      - o.marginalRate * (emi - perq) * 12 * y
+      + (y === N ? residual : 0)
+    );
+    carValue.push(calcCarDepreciation(o.price, y));
+  }
+  return { years, cumulativeCost, carValue };
+}
+
 // Zero-dependency bridge: browsers see plain globals via <script src="calc.js">;
 // Node (tests.js) gets the same file via require('./calc.js'). No bundler either way.
 if (typeof module !== 'undefined' && module.exports) {
@@ -253,6 +298,7 @@ if (typeof module !== 'undefined' && module.exports) {
     calcEMI, loanAtYear, simulateLoan,
     calcSIP, calcStepupSIP,
     calcIncomeTax, calcPerquisite, calcCarDepreciation,
-    calcRunningCost, calcInsuranceTotal, calcLeaseNetCost, calcBreakevenKm
+    calcRunningCost, calcInsuranceTotal, calcLeaseNetCost, calcBreakevenKm,
+    calcOwnershipCurve,
   };
 }

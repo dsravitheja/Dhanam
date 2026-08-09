@@ -4,6 +4,27 @@
 
 ---
 
+> **Addendum, 2026-08-09 — Phase 13 carries its own wave plan.** A new phase
+> (**R49**–**R54**: the resale credit becomes an explicit reveal, a
+> cumulative-cost-vs-car-value chart becomes the default) was specced after this
+> document was written, and the owner asked for it to be structured for parallel
+> agents. **Its wave plan lives in `TASK-UX-REDESIGN.md`'s Phase 13 section**,
+> not here, so the spec and the execution plan can't drift apart. It follows
+> every convention below — isolated worktrees, one integration agent per merge,
+> shared touchpoints (`sw.js`'s `CACHE`, `BUILD_STAMP`, CLAUDE.md placement)
+> reserved to the integrator, `git merge-base` verified before any diff is
+> trusted.
+>
+> Two findings from this document generalised there and are worth noting here
+> because they'll recur: **(1)** a phase confined to one `render*` function
+> mostly *doesn't* parallelise, and the honest plan says so rather than
+> manufacturing agents — Phase 13 has exactly two genuine build-parallel splits
+> out of six items; **(2)** §2's Cluster-A lesson reappeared in a new form —
+> two agents each drawing a two-series chart in different regions will invent
+> two different visual languages unless the shared conventions are written into
+> both briefs *before* the wave starts. That's a decision the integration agent
+> makes once, not a merge conflict to resolve later.
+
 ## 1. What's actually still open
 
 Per `TASK-UX-REDESIGN.md`'s "Remaining work" table (as of this writing): Phase 5 (**R8**, **R10**), Phase 6 (**R21**–**R25**, **R45**-the-build-stamp — not to be confused with the now-shipped Phase 10a hero, which collided on the same number; see that file's note), and Phase 7 (**R31**, **R32**). Phases 1–4, 4b, 8, 8b, 9, and 10 are shipped.

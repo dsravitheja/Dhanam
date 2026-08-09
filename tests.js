@@ -15,7 +15,8 @@ const {
   calcEMI, loanAtYear, simulateLoan,
   calcSIP, calcStepupSIP,
   calcIncomeTax, calcPerquisite, calcCarDepreciation,
-  calcRunningCost, calcInsuranceTotal, calcLeaseNetCost, calcBreakevenKm
+  calcRunningCost, calcInsuranceTotal, calcLeaseNetCost, calcBreakevenKm,
+  calcOwnershipCurve,
 } = require('./calc.js');
 
 let pass = 0, fail = 0;
@@ -457,6 +458,88 @@ function insuranceLoop(price, rate, depRate, years) {
   const tinyLease = calcLeaseNetCost({ ...base, price: 100000, bigEngine: false });
   ok('calcLeaseNetCost: taxSaved can be negative (EMI below perquisite) and is not clamped to 0',
     tinyLease.taxSaved < 0, `taxSaved=${tinyLease.taxSaved.toFixed(2)}`);
+}
+
+// =====================================================================
+// calcOwnershipCurve (Phase 13, R49) — the cost-vs-value chart's engine.
+// Reference case (₹20L ICE, 10% residual, 10% rate, 4yr, app defaults —
+// the same `base`/bigEngine:false shape as calcLeaseNetCost's own pin
+// above) was verified by hand before this spec was written: endpoint
+// 2406795.0641, gap 1424195.0641.
+// =====================================================================
+{
+  const base = {
+    price: 2000000, annualRate: 10, residualPct: 0.10, years: 4,
+    hasDriver: false, marginalRate: 0.312, bigEngine: false,
+    type: 'ICE', efficiency: 15,
+    cityKm: 8000, hwyKm: 4000, petrolPrice: 117, iceHwyMult: 1.35,
+    homeRate: 8, publicRate: 20, evHwyMult: 1.15,
+    maintAnnual: 9000, insRate: 0.03, depRate: 0.15,
+  };
+  const curve = calcOwnershipCurve(base);
+  const net = calcLeaseNetCost(base);
+  const last = curve.years.length - 1;
+
+  ok('calcOwnershipCurve: reference case endpoint pins to 2406795.0641',
+    approxEqual(curve.cumulativeCost[last], 2406795.0641, 0.01),
+    `got ${curve.cumulativeCost[last].toFixed(4)}`);
+  ok('calcOwnershipCurve: reference case gap pins to 1424195.0641',
+    approxEqual(curve.cumulativeCost[last] - curve.carValue[last], 1424195.0641, 0.01),
+    `got ${(curve.cumulativeCost[last] - curve.carValue[last]).toFixed(4)}`);
+
+  ok('calcOwnershipCurve: cumulativeCost[N-1] === calcLeaseNetCost netCost — the curve\'s endpoint IS the card\'s headline',
+    approxEqual(curve.cumulativeCost[last], net.netCost, 0.01),
+    `curve=${curve.cumulativeCost[last].toFixed(4)} netCost=${net.netCost.toFixed(4)}`);
+  ok('calcOwnershipCurve: cumulativeCost[N-1] - carValue[N-1] === netCostAfterResale — the gap IS the reveal figure',
+    approxEqual(curve.cumulativeCost[last] - curve.carValue[last], net.netCostAfterResale, 0.01),
+    `gap=${(curve.cumulativeCost[last]-curve.carValue[last]).toFixed(4)} netCostAfterResale=${net.netCostAfterResale.toFixed(4)}`);
+
+  // Guards the spec's central warning: the EMI must be the full-term value,
+  // accumulated — not recomputed per year via a shorter-tenure
+  // calcLeaseNetCost call. That mistake is invisible at the endpoint (a
+  // shorter-tenure call at y===N is the full-term call), so it has to be
+  // caught at an intermediate year instead.
+  ok('calcOwnershipCurve: year-2 point is the full-term EMI accumulated, not a 2-year lease repriced',
+    approxEqual(curve.cumulativeCost[1], 1118798.7828, 0.01),
+    `got ${curve.cumulativeCost[1].toFixed(4)}`);
+  const repricedYear2 = calcLeaseNetCost({ ...base, years: 2 }).netCost;
+  ok('calcOwnershipCurve: year-2 point must NOT equal a 2-year-tenure calcLeaseNetCost (the exact per-year-reprice mistake R49 warns against)',
+    !approxEqual(curve.cumulativeCost[1], repricedYear2, 0.01),
+    `curve[1]=${curve.cumulativeCost[1].toFixed(4)} 2yr-repriced=${repricedYear2.toFixed(4)}`);
+
+  let costRising = true, valueFalling = true;
+  for (let i = 1; i < curve.years.length; i++) {
+    if (curve.cumulativeCost[i] <= curve.cumulativeCost[i-1]) costRising = false;
+    if (curve.carValue[i] >= curve.carValue[i-1]) valueFalling = false;
+  }
+  ok('calcOwnershipCurve: cumulativeCost is strictly rising year over year', costRising,
+    `values=${curve.cumulativeCost.map(v=>v.toFixed(0))}`);
+  ok('calcOwnershipCurve: carValue is strictly falling year over year', valueFalling,
+    `values=${curve.carValue.map(v=>v.toFixed(0))}`);
+
+  // N=1: a single point, no crossing to speak of — must still compute
+  // finite values and agree with calcLeaseNetCost at the one point.
+  const single = calcOwnershipCurve({ ...base, years: 1 });
+  const singleNet = calcLeaseNetCost({ ...base, years: 1 });
+  ok('calcOwnershipCurve: N=1 produces exactly one point',
+    single.years.length === 1 && single.cumulativeCost.length === 1 && single.carValue.length === 1,
+    `years.length=${single.years.length}`);
+  ok('calcOwnershipCurve: N=1 endpoint still matches calcLeaseNetCost at the same tenure',
+    approxEqual(single.cumulativeCost[0], singleNet.netCost, 0.01),
+    `curve=${single.cumulativeCost[0].toFixed(4)} netCost=${singleNet.netCost.toFixed(4)}`);
+  ok('calcOwnershipCurve: N=1 values are finite (no NaN/Infinity)',
+    isFinite(single.cumulativeCost[0]) && isFinite(single.carValue[0]));
+
+  // Zero-rate case: calcEMI's r===0 branch, still no NaN/Infinity and
+  // still agrees with calcLeaseNetCost at the endpoint.
+  const zeroRate = calcOwnershipCurve({ ...base, annualRate: 0 });
+  const zeroRateNet = calcLeaseNetCost({ ...base, annualRate: 0 });
+  ok('calcOwnershipCurve: zero-rate case is finite throughout',
+    zeroRate.cumulativeCost.every(isFinite) && zeroRate.carValue.every(isFinite),
+    `cumulativeCost=${zeroRate.cumulativeCost}`);
+  ok('calcOwnershipCurve: zero-rate case endpoint still matches calcLeaseNetCost',
+    approxEqual(zeroRate.cumulativeCost[zeroRate.years.length-1], zeroRateNet.netCost, 0.01),
+    `curve=${zeroRate.cumulativeCost[zeroRate.years.length-1].toFixed(4)} netCost=${zeroRateNet.netCost.toFixed(4)}`);
 }
 
 // =====================================================================
