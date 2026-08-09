@@ -62,6 +62,30 @@
 > **local composer that sends nothing itself**, plus a visible build stamp
 > (**R45**) without which a cache-first PWA makes bug reports unfalsifiable.
 > See **6e-i** and **6e-ii**.
+> **New on 2026-08-09: Phase 13 (R49–R54) — do next.** The owner pushed back on
+> Phase 9's always-on resale credit: `calcCarDepreciation` is an IRDAI
+> *insured-declared-value* schedule, not a market resale predictor, and one
+> ICE-shaped curve applied to EVs as well — too speculative for a default
+> headline. It becomes an explicit reveal, and the default becomes a
+> **cumulative-cost-vs-car-value chart** whose *gap at year N is the
+> resale-adjusted number*, so the reveal reads a gap already on screen rather
+> than switching models. **This retires B12** (no competing rank candidate
+> remains) and **answers B8** (the same two-series shape, shipped alongside as
+> R53). Phase 13 carries its own **parallel wave plan** for multi-agent
+> execution, following `TASK-PARALLEL-EXECUTION.md`'s conventions.
+> ⚠️ Phase 13 deliberately does **not** introduce the Loan/Lease/Cash financing
+> modes — those are now **Phase 14 (R55–R61)**, specced 2026-08-09. Everything in
+> Phase 13 is mode-agnostic so Phase 14 lands on top of it without rework.
+> **Phase 14 generalises `hub-car` from a company-lease tool into a
+> lease-vs-loan-vs-cash one**, on the owner's observation that a lease policy is
+> a niche perk while buying a car is near-universal. Two things about it are
+> load-bearing and easy to get wrong: **the lease panel is *gated*, never
+> simplified** (its depth is the app's differentiator — a generic EMI calculator
+> competes with every bank site and wins nothing), and **Loan mode absorbs the
+> existing `cb-*` section rather than shipping beside it** (owner decision: no
+> duplication), which is a **migration with a parity checklist**, not a delete.
+> New decision **B13** (where opportunity cost applies) gates R57/R58 and is the
+> most likely source of a confidently wrong answer in that phase.
 > **Start at the Remaining work table
 > below**; the phase sections that follow are the full specs, annotated with what
 > is done and what is left.
@@ -97,10 +121,11 @@ Two further owner decisions have accumulated and are **still open**:
 | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | B6      | `calcStepupSIP` (month-by-month, ordinary annuity) and `calcSIP` (closed form, annuity-due) disagree by ~1% at 0% step-up. Align the conventions, or leave the documented gap? Aligning changes live output slightly. **Phase 3c (R16) routed around this rather than resolving it** — the step-up tab's chart and `su-vs-flat` figure now both compare against `calcStepupSIP(…, 0, …)`, so the on-screen inversion this gap was causing is fixed without touching `calc.js`. The underlying ~1% gap between the two functions is unchanged and still open; it'll resurface the next time anything plots `calcSIP` and `calcStepupSIP` against each other directly (e.g. the Buy-vs-SIP comparison already does, in table form, not yet as a chart). | `calc.js`, `tests.js` — flagged since `PHASE-1-REPORT.md`; `updateStepupSIP()`'s on-screen symptom fixed in Phase 3c |
 | B7      | Dhanam Worth persists as soon as you type, with no per-hub opt-in (unlike the loan panel toggle). This follows §2.2 — an opt-in there would recreate the rejected Option A — but should it ask first?                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | `hub-worth`                                                                                                          |
-| B8      | Should the car-buying resale curve (R13) overlay outstanding loan balance (`loanAtYear`) in `--red`, so the crossover — when the car is worth less than what's owed on it — is visible? The 3b spec flagged this as worth asking rather than building; the shipped single-series version is the committed scope until answered.                                                                                                                                                                                                                                                                                                                                                                                                                       | `renderCarLoan()`                                                                                                    |
+| ~~B8~~ | ~~Should the car-buying resale curve overlay outstanding loan balance in `--red`, so the underwater crossover is visible?~~ **ANSWERED 2026-08-09: yes — built as R53 in Phase 13.** It became answerable once R51 established the same two-series shape (two rupee series, one scale, the crossing is the payload); shipping them together is what stops the app growing two different visual languages for the same idea. | `renderCarLoan()`                                                                                                    |
 | **B9**  | **Firebase (or any) backend — if, when, and on what terms?** Raised by the owner 2026-07-25 as a "wider audience" idea. **Do not act on this during Phases 5–7.** The conditions it would have to meet are written up under **Out of scope** below; the decision should be made against them rather than from scratch, because the privacy promise is a one-way ratchet — it can be tightened silently but never loosened silently.                                                                                                                                                                                                                                                                                                                   | Architecture; the "never sent anywhere" copy; Phase 6b                                                               |
 | ~~B11~~ | ~~Does `hub-car`'s new Compare Cars table persist without an opt-in?~~ **ANSWERED 2026-08-07: yes — persist by design, like Worth**, with the same "saved only on this device" disclosure and the same erase path. Shipped: `ccCars` plus `cc-city-km`/`cc-hwy-km` are tier-1 and persist automatically; every other Compare Cars input is tier-2 and is never stored. See `PHASE-9-REPORT.md`. | Phase 9f (done); `saveState()` schema |
 | ~~B12~~ | ~~Does the Compare Cars ranking use net cost, or net cost after the resale credit?~~ **ANSWERED 2026-08-07: net cost BEFORE the resale credit** — the owner's call, the opposite of this document's stated lean toward after-credit ranking. Both figures are on screen on every result card either way; the pre-credit figure just drives the sort, the hero, and the rank-1 gold highlight. See `PHASE-9-REPORT.md`. | Phase 9c, 9d (done) |
+| **B13** | **Opportunity cost in Phase 14's financing modes — where does it apply?** Cash ties up the whole price; a loan ties up a down payment; a lease ties up a residual buyout. **Charging opportunity cost on cash alone rigs the comparison against cash**, and it will look authoritative while being wrong — this is the single most likely way Phase 14 produces a confidently incorrect answer. Three coherent options: *(a)* none anywhere — simple, but cash then reads as free, which it isn't; *(b)* on tied-up capital in **every** mode — correct, but a large conceptual leap for a default view; *(c)* **an explicit reveal, off by default, applied identically across all modes.** My lean: **(c)** — it's exactly the pattern Phase 13 establishes for the resale credit, for the same reason (a forecast, not a cash flow), and consistency in how this app treats speculative numbers is worth more than any individual call. Needed before R57/R58; R55's lease and loan paths and R56 can proceed without it. | Phase 14 (R57, R58, R60) |
 | **B10** | **If post-tax figures ship (Phase 7), are they on by default?** Default-off hides the more honest number behind a control most people never touch; default-on makes every headline figure smaller, more conditional, and partially undoes the D4 density work. My lean: **default-off in the Grow hub** (pure projections, where nobody is choosing between differently-taxed options) and **structurally fixed rather than toggled in the comparison views** (where the framing itself is what misleads) — but the owner decides. Needed before R31 starts; R32 can be specced without it.                                                                                                                                                           | Phase 7; `hub-sip`; the two comparison panels                                                                        |
 
 ## Remaining work (as of 2026-08-07)
@@ -163,9 +188,22 @@ R1–R4, R6, R11–R20, R5/R7/R9 (Phase 4), R26–R30 (Phase 4b), R33–R35/R37 
 | ~~R45~~ | ✅ **SHIPPED 2026-08-08** (`PHASE-10-REPORT.md`). ~~**Lease Tax Analysis hero (D4).**~~ ⚠️ *This R45 collides with the unrelated Phase 6e "build/version stamp" R45 above — a pre-existing numbering duplication in this doc from the 2026-08-07 filing, not introduced by either phase's execution. Left as-is rather than renumbered, to avoid breaking cross-references; the two are distinguishable by phase (6e vs. 10a).* | 10a | — | — | — |
 | ~~R46~~ | ✅ **SHIPPED 2026-08-08** (`PHASE-10-REPORT.md`). ~~**Car Buying loan-analysis hero (D4).**~~ | 10b | — | — | — |
 | ~~R47~~ | ✅ **SHIPPED 2026-08-08** (`PHASE-10-REPORT.md`). ~~**Compare Cars ranked-card density (D4).**~~ | 10c | — | — | — |
+| R55     | **`calcOwnershipCost({ mode, … })` + `calcLumpsumGrowth()`** — generalise `calcLeaseNetCost` to Lease / Loan / Cash. ⚠️ **This rename was free before Phase 9 shipped and isn't any more** — it's called from `renderCarCompare()`, feeds `ccComputedRows()`, and is test-pinned. `taxSaved = 0` for loan/cash is correct law, not a shortcut.                                                                                                                                                                              | **14** | B13 (cash only)          | High (enabler)         | Low–Medium |
+| R56     | **Mode selector, lease gating, entry copy** — *"How are you paying for the car?"*, **Loan as default**. Hides the `car-*` salary wall (basic pay, bonus, EPF, regime) from the majority who can't use it, without simplifying the panel itself. Retires **"Optimize My Company Car"** on the landing tile and **"Company Car Lease — Tax Analysis"** as the hub's first heading — both currently tell ~4 in 5 visitors the app isn't for them.                                                                    | **14** | —                        | **High (reach)**       | Medium     |
+| R57     | **Loan mode in the compare engine** — per-car down payment; no perquisite, no residual.                                                                                                                                                                                                                                                                                                                                                                                                                          | **14** | R55, R56, B13            | High                   | Medium     |
+| R58     | **Cash mode + opportunity-cost reveal** — ⚠️ charging opportunity cost on cash alone, while loan and lease pay nothing on their down payment and residual, **rigs the comparison against cash** and looks authoritative doing it. See **B13**.                                                                                                                                                                                                                                                                  | **14** | R55, **B13**             | High (differentiator)  | Medium     |
+| R59     | **Absorb `cb-*`, then delete it** (owner decision 2026-08-09: no duplication) — a **migration, not a delete**: the down-payment deep dive, R46's `tenureStats()` 3/5/7 grid, the depreciation table/curve, **and R53's loan-balance overlay** all come across first. `cb-` appears **43×** in `index.html`, 9× in CLAUDE.md, 18× here. Verify parity before deleting; a deletion-first diff is unreviewable.                                                                                                     | **14** | R57                      | **High (rot risk)**    | Medium     |
+| R60     | **Cross-mode comparison — same car, three ways** — the output that justifies the restructure, and where incoherent assumptions become visible. Ships last.                                                                                                                                                                                                                                                                                                                                                       | **14** | R55–R59, B13             | High (the payoff)      | Medium     |
+| R61     | **Docs, checklist, report, and the 6f beta task** — manual items 51–56, plus adding *"decide whether to lease or finance this car"* to the beta protocol. That task is the **direct test of this phase's premise**, which is market intuition rather than evidence.                                                                                                                                                                                                                                             | **14** | R55–R60                  | Medium                 | Low        |
+| R49     | **`calcOwnershipCurve()` in `calc.js`** — the per-year cumulative-cost and car-value series behind Phase 13's default chart. Four invariants tie it to the numbers already on the cards (endpoint === `netCost`; endpoint gap === `netCostAfterResale`); **all four verified numerically against the shipped `calcLeaseNetCost` before this row was written.** Zero markup, so it parallelises cleanly with R50.                                                                                                                                                       | **13** | —                        | High (enabler)         | Low        |
+| R50     | **Resale credit off by default** (owner pushback 2026-08-09) — `calcCarDepreciation` is an IRDAI *insured-declared-value* schedule, not a market resale predictor, and it's one ICE-shaped curve applied to EVs too. A forecast that speculative doesn't belong in a default headline. Strip the two resale stat lines from the card render, keep them in the engine, and add the disclosure sentence above `#cc-hero` — because default-off is **a position, not a neutral default**: it favours cheaper cars by up to ~₹7.5L of unrecognised asset at 5 years. | **13** | —                        | **High (disclosure)**  | Low        |
+| R51     | **Cost-vs-value chart, default open** — cumulative cost rising against car value falling, one shared rupee scale. The **gap at year N is the resale-adjusted number**, so the reveal reads a gap already on screen rather than switching models. Host must be a static node outside `#cc-results` (R20).                                                                                                                                                                                                                                                       | **13** | R49, R50                 | High (the replacement) | Medium     |
+| R52     | **The resale reveal** — a button, and a figure that always renders with a permanent adjacent label (an unlabelled hero-styled number is indistinguishable from the real hero in a screenshot). Tier-3 UI state: never enters `dhanam.v1`.                                                                                                                                                                                                                                                                                                                     | **13** | R49, R51                 | Medium                 | Low        |
+| R53     | **B8 answered — outstanding loan balance on `cb-depr-chart`** — same two-series shape as R51, so it ships alongside to share one visual language rather than inventing a second. The crossing *is* the payload: when the car is worth less than what's owed. Hide the series entirely at zero loan; never draw a flat zero line.                                                                                                                                                                                                                            | **13** | R49 merged (pattern)     | Medium                 | Low        |
+| R54     | **Docs, caveats, checklist for Phase 13** — CLAUDE.md, the caveat list, manual items 45–50, and `PHASE-13-REPORT.md`, which should state whether default-off **reordered the owner's own shortlist** — if it did, that's the phase's headline result.                                                                                                                                                                                                                                                                                                       | **13** | R49–R53                  | Medium                 | Low        |
 | ~~R48~~ | ✅ **SHIPPED 2026-08-08** (`PHASE-10-REPORT.md`). ~~**Docs & checklist for Phase 10.**~~ | 10d | — | — | — |
 
-**Not work, but don't lose them:** B6, B7, B8, B9, B10 above are unanswered owner decisions (**B11 and B12 were answered 2026-08-07 during Phase 9** — see the table above and `PHASE-9-REPORT.md`). **B10 (post-tax default) is needed before R31 starts**, and B6 is now load-bearing for Phase 7: a tax layer built on either SIP function inherits their ~1% disagreement. **B5 was answered on 2026-07-26 — compress the existing logo as-is** (the owner was shown the mark's Star-of-David resemblance first, so it's an informed call). **B4 was answered on 2026-07-25 — general audience** — which is what Phase 6 exists to serve. B6 (the SIP convention gap) has been open since Phase 1 and **is now drawn on screen** — see R16; Phase 3c routed around it, but it stops being deferrable the next time either function is plotted, and it is now disclosed to strangers under Phase 6b rather than tolerated privately. B9 (backend) must not be started before Phase 6 lands.
+**Not work, but don't lose them:** B6, B7, B9, B10 and **B13** above are unanswered owner decisions. **B13 is the near-term one** — it gates Phase 14's R57/R58/R60, though R55's lease/loan paths and R56 can start without it. **B8 was answered 2026-08-09** (yes — R53/Phase 13) and **B12 is retired, not answered** — Phase 13's R50 removes the resale credit from the default view entirely, so the ranking no longer has a competing candidate for B12 to choose between. B11 was answered when Phase 9 shipped. Original text follows: B6, B7, B8, B9, B10 above are unanswered owner decisions (**B11 and B12 were answered 2026-08-07 during Phase 9** — see the table above and `PHASE-9-REPORT.md`). **B10 (post-tax default) is needed before R31 starts**, and B6 is now load-bearing for Phase 7: a tax layer built on either SIP function inherits their ~1% disagreement. **B5 was answered on 2026-07-26 — compress the existing logo as-is** (the owner was shown the mark's Star-of-David resemblance first, so it's an informed call). **B4 was answered on 2026-07-25 — general audience** — which is what Phase 6 exists to serve. B6 (the SIP convention gap) has been open since Phase 1 and **is now drawn on screen** — see R16; Phase 3c routed around it, but it stops being deferrable the next time either function is plotted, and it is now disclosed to strangers under Phase 6b rather than tolerated privately. B9 (backend) must not be started before Phase 6 lands.
 
 ## Phases (each independently shippable; do them in order)
 
@@ -496,6 +534,7 @@ Why this shape, specifically for this app:
 - Not a deliverable in `index.html`, but the reason the phase exists — recorded here so it doesn't get skipped in favour of building.
 - **Ask about the past, not the future.** "Would you use this?" produces politeness. "What did you actually do last time you thought about prepaying — a spreadsheet, the bank's site, your RM? What couldn't you work out?" produces facts. The uncle signal was valuable precisely because it was a report of past experience, not a prediction.
 - **Watch, don't demo.** Hand over a real task ("work out whether prepaying your loan beats an SIP") and stay quiet. Where someone pauses, re-reads, or asks "what does this mean?" is the R23 list, empirically derived instead of guessed.
+- **Add the Phase 14 task (2026-08-09):** *"work out whether it's cheaper to lease or finance this car."* Phase 14's whole premise — that a lease policy is niche while buying a car is near-universal — is **market intuition, not evidence**. This protocol is the instrument for converting that into a finding, and watching someone attempt this specific task is the direct test. Note which mode they reach for unprompted.
 - **Five non-family testers** surfaces most usability problems; more testers mostly re-find the same ones. Prioritise people **outside Telangana** — they're the only ones who can catch an R21 regression, and they're the users the current defaults are silently wrong for.
 - **The signal that actually matters is unprompted return use, or a tester forwarding it to someone else** — the same behaviour that made the uncle's remark worth acting on. Compliments are not signal.
 - Feed findings back into this document as new R-numbers rather than fixing them ad hoc, so the record of *why* each change happened survives.
@@ -731,6 +770,211 @@ One series per car over a **uniform** km sweep (e.g. 0 → 30,000 in 2,000 steps
 - Bump `sw.js`'s cache version in the same commit as the markup/CSS changes.
 
 **Definition of done (Phase 10):** all three sub-sections lead with a hero answer and hide their full comparison grid/card list behind a closed-by-default disclosure, matching the bar R2 already set elsewhere in the app; `node tests.js` unaffected (this is markup/CSS only — no calculation changes); manual checklist items walked at 375px and desktop; CLAUDE.md and `sw.js` updated in the same commit as the code.
+
+### Phase 13 — The resale credit becomes a choice; a cost-vs-value chart becomes the default — ⚠️ DO NEXT — ❌ NOT STARTED (**R49**–**R54**; retires **B12**, answers **B8**)
+
+> **Why this exists.** Phase 9 shipped the resale credit as an always-on line on every result card, and B12 settled the ranking question by sorting on net cost *before* the credit. The owner pushed back on 2026-08-09, on the credit itself rather than on the ranking: **it shouldn't apply by default at all.** The reasoning is sound and it matches doctrine this document already holds elsewhere. Cash leaving your account is a fact. Resale value is a **forecast**, and the forecast is `calcCarDepreciation` — an **IRDAI schedule for computing insured declared value**, not a market resale predictor, and a single ICE-shaped curve applied to EVs as well. R40 was right that dropping the credit entirely (as the source workbook did) is an error; it does not follow that the credit belongs in a default headline.
+>
+> **The owner's replacement is better than a toggle, and the spec follows it:** default to a chart of **cumulative cost rising against car value falling**, and put the resale figure behind an explicit reveal. The **gap between the two curves at year N *is* the resale-adjusted number** — so the reveal doesn't switch models, it reads a gap that's already on screen. That is the difference between an app with two opinions and an app with one picture.
+
+**The nuance that sizes this — state it, don't bury it.** The resale credit **largely cancels** when comparing financing arrangements for the *same* car (every mode ends with you owning the same asset). It **does not cancel** when comparing *different* cars: at 5 years `calcCarDepreciation` leaves a ₹12L car at ₹5.01L and a ₹30L car at ₹12.53L — a **₹7.5L difference in unrecognised asset**, far larger than the running-cost gaps the ranking is actually built on. So default-off systematically favours the cheaper car. That is a defensible position — "money out the door" is how many people genuinely think — but **it is a position, not a neutral default**, and it needs one visible sentence saying so, or a user who would have chosen differently never learns the reveal exists.
+
+⚠️ **What this phase does NOT do.** It does not introduce the Loan/Lease/Cash financing modes sketched alongside it. That restructure is real and still wanted, but it is a much larger change to `hub-car`'s information architecture and it must not ride along inside a focused correctness/disclosure change. **Everything specced below is deliberately mode-agnostic** so the restructure lands on top of it without rework: `calcOwnershipCurve` takes a residual and a per-year cost stream, both of which a loan (residual 0) and a cash purchase (whole price at year 0) express without a signature change.
+
+#### R49 — `calc.js`: `calcOwnershipCurve()` (the enabler)
+
+A new pure function returning the two series the chart plots, plus the arithmetic that ties them to the numbers already on the cards.
+
+```
+calcOwnershipCurve(o) → { years: [1..N], cumulativeCost: [...], carValue: [...] }
+
+emi = calcEMI(price, annualRate, N, residual)      // fixed at the FULL term
+for y in 1..N:
+  cumulativeCost[y] = emi*12*y
+                    + runAnnual*y
+                    + maintAnnual*y
+                    + calcInsuranceTotal(price, insRate, depRate, y)
+                    − marginalRate*(emi − perq)*12*y
+                    + (y === N ? residual : 0)
+  carValue[y]       = calcCarDepreciation(price, y)
+```
+
+⚠️ **The EMI is held at the full-term value and the cumulative is accumulated — do not call `calcLeaseNetCost` once per year with `o.years = y`.** That would re-derive a *different* EMI at each tenure and silently answer a different question ("what if I'd taken a 2-year lease?" rather than "where am I 2 years into a 4-year lease?"). The curve would then not land on the card's headline, and the chart and the number beside it would disagree.
+
+**Four invariants, all verified numerically against the shipped `calcLeaseNetCost` before this spec was written** (₹20L ICE, 10% residual, 10%, 4 years, defaults) — these are the acceptance tests:
+
+| Invariant | Verified |
+|---|---|
+| `cumulativeCost[N−1] === netCost` — the curve's endpoint **is** the card's headline | ✅ both `2406795.0641` |
+| `cumulativeCost[N−1] − carValue[N−1] === netCostAfterResale` — the gap **is** the reveal | ✅ both `1424195.0641` |
+| `cumulativeCost` strictly rising | ✅ |
+| `carValue` strictly falling | ✅ |
+
+Also worth knowing before anyone eyeballs the chart and files a bug: **the cost curve steps sharply in the final year** (₹16.66L → ₹24.07L in the reference case) because the residual buyout lands there. That is real, not a rendering artefact, and the caption should say so. In the same case the two curves **cross between year 2 and year 3** — before the crossing the car is worth more than you've spent on it. That crossing is the most informative thing on the chart and is a large part of why it earns its place as the default.
+
+- *Files:* `calc.js`, `tests.js`, `tests.html`. **No markup.**
+- *Acceptance:* `node tests.js` green with all four invariants above, plus `N = 1` (single point, no crossing) and a zero-rate case.
+
+#### R50 — Default off in the result cards
+
+- Remove the **"Resale credit"** and **"Net cost after resale credit"** stat lines from `#cc-results`' always-rendered card detail.
+- **Keep `resaleValue` / `netCostAfterResale` in `calcLeaseNetCost`'s return.** They're pure, cheap, already tested, and R51/R52 need them. This is a presentation change, not an engine change.
+- Add the **disclosure sentence** described above. Place it **above `#cc-hero`**, using the existing `.sip-caveat` pattern and for the identical reason CLAUDE.md already gives for that class: someone who reads only the hero must still see it. Name the consequence in words ("this ranking counts money out the door and ignores what the car is worth afterwards, which favours cheaper cars") and point at the reveal.
+- Update `ccComputedRows()`'s B12 comment — the ranking no longer has a competing candidate to justify itself against.
+- *Files:* `index.html` only.
+
+#### R51 + R52 — The cost-vs-value chart and the resale reveal *(one unit — see the wave plan)*
+
+- **New chart, default open**, in its own `.panel-card`. The existing crossover chart (`cc-chart-card`) stays a closed-by-default `.collapse-card`; this is a second, differently-purposed chart, not a replacement.
+- ⚠️ **The host must be a static node outside `#cc-results`.** `#cc-results` has its `innerHTML` rewritten on nearly every keystroke elsewhere in the section — a chart hosted inside it is precisely the **R20** anti-pattern, and one per card would tear down and rebuild five `ResizeObserver`s per keypress. Model it on `cb-depr-chart`'s static-sibling fix.
+- **One car at a time**, rank 1 by default, with a `<select>` to switch. A `<select>`'s `onchange` is a discrete committed choice, not a keystroke — safe to re-render on, by the same reasoning CLAUDE.md already applies to the shortlist row's Type select.
+- **Two series on one shared rupee scale**: cumulative cost (accent/gold, rising) and car value (`--text-dim`, falling). No new hues — palette rule 1.
+- **Caption (R19 + the auto-scale rule):** `Year 1 … Year N`, the value range, and one clause explaining the final-year step.
+- **The reveal:** a button under the chart that shows the resale-adjusted figure. It must render with a **permanent, adjacent label** — a hero-styled number with no label is indistinguishable from the real hero in a screenshot, and this app exports images. *(There is no Compare Cars export today — `exportCarCompare` does not exist — so nothing carries the label off-screen yet. Write the rule down anyway; the first export to land here will need it.)*
+- ⚠️ **The reveal's state is tier-3 UI state.** It must **not** enter `dhanam.v1` — same rule R25 holds for the orientation-line dismissal. Simplest correct behaviour: not persisted at all, resets each visit.
+- Every new amount-bearing element (caption, revealed figure) needs `w-amt` for the **"Hide amounts"** blur.
+- *Files:* `index.html` only. *Depends on:* R49, R50.
+
+#### R53 — B8, answered: outstanding loan balance on the car-buying depreciation chart
+
+B8 has been open since Phase 3b: should `cb-depr-chart` overlay the outstanding loan balance so the **underwater point** — when the car is worth less than what's owed on it — is visible? R51 makes it answerable, because it's the same shape: two rupee series on one scale, and the crossing is the payload. **Answer: yes**, and do it here so the two charts share one visual language instead of inventing two.
+
+- Second series from `loanAtYear(loan, rate, years, y)`, in `--red`. This is a real negative financial position, the same justification the Worth hub's negative hero already uses — palette rule 4, not decoration.
+- ⚠️ **`cb-depreciation` renders off `price` alone** so a 100%-down-payment car still shows a table and curve (a bug R13 fixed once already). With no loan, **hide the balance series entirely** — do not draw a flat zero line.
+- Update the caption; keep the existing `Year 1 … Year 7` extent.
+- *Files:* `index.html` only, `renderCarLoan()` / `cb-*` region.
+
+#### R54 — Docs, caveats, checklist
+
+- **CLAUDE.md:** the Compare Cars section gains the default-off decision *and its reasoning* (an insurance schedule is not a resale predictor), the new chart's host-stability requirement, and the reveal's tier-3 state rule. Note B12 as retired and B8 as answered.
+- **Caveat list:** what `calcCarDepreciation` actually is; that it's an ICE-shaped curve applied to EVs; that the reveal is a forecast and the ranking is not.
+- **Manual checklist items 45–50** (the list currently ends at 44): (45) no resale figure appears anywhere until revealed, and the disclosure sentence is visible without expanding anything; (46) the chart's endpoint equals the selected car's headline net cost, and the revealed figure equals the on-screen gap at year N; (47) the chart host survives continuous typing in a shortlist price field without focus loss or observer churn, and its dots stay circular at 375px after every reveal path; (48) the reveal resets on reload and never appears in `dhanam.v1`; (49) "Hide amounts" blurs the caption and the revealed figure; (50) a zero-loan car shows the depreciation curve with no balance series and no flat zero line.
+- `PHASE-13-REPORT.md` in the existing format. **It should state whether default-off changed the shortlist ranking** in the owner's own real shortlist — if it did, that reordering is the phase's headline result and belongs in writing.
+
+---
+
+#### Phase 13 wave plan (for parallel agents)
+
+Built on `TASK-PARALLEL-EXECUTION.md`'s conventions: isolated `git worktree` per build agent, one integration agent per merge, `node tests.js` + structural checks after **every** merge.
+
+⚠️ **Honest sizing first, so nobody manufactures parallelism that costs more than it saves.** Most of this phase lives in one contiguous region — `renderCarCompare()` and the `#cc-results` template. That region does **not** parallelize; three agents editing it would produce a content conflict (where does the chart live? does the reveal replace the hero or sit beside it?) that no mechanical merge resolves, which is exactly §2's Cluster A lesson. There are **two** genuine build-parallel opportunities and one pipeline opportunity. Take those and stop.
+
+| Wave | Agent | Items | Owns these files | Depends on |
+|---|---|---|---|---|
+| **A** | A1 | **R49** | `calc.js`, `tests.js`, `tests.html` | — |
+| **A** | A2 | **R50** | `index.html` (`#cc-results` template + `ccComputedRows` comment + the new caveat line) | — |
+| **B** | B1 | **R51 + R52** | `index.html` (`hub-car`'s `cc-*` chart region) | R49, R50 |
+| **B** | B2 | **R53** | `index.html` (`renderCarLoan()` / `cb-*` region) | R49 merged (pattern only) |
+| **C** | C1 | **R54** | `CLAUDE.md`, `TASK-UX-REDESIGN.md`, `PHASE-13-REPORT.md` | A + B merged |
+
+**Wave A is genuinely parallel — zero file overlap.** A1 touches no markup; A2 touches no calculation. This is the cleanest split in the phase.
+
+**Wave B is parallel by file region, with one coordination risk that must be resolved *before* the wave starts, not during.** B1 and B2 both draw a two-series rupee chart whose payload is a crossing. Left to themselves they will produce two slightly different treatments — the same failure §2 predicts for R8/R23. **The integration agent writes the shared chart conventions into both briefs up front**: series order, which series takes the accent, legend shape, caption wording, and how a hidden/absent second series is handled. One decision, made once.
+
+**Wave C is strictly last.** It documents what actually shipped, not what was specced.
+
+**Integration agent owns the shared touchpoints in every wave** — no build agent edits these: `sw.js`'s `CACHE` (bump `apt-cost-v16` → `v17`), `BUILD_STAMP` (currently `'2026-08-08'`), and CLAUDE.md section placement.
+
+**Running alongside, not in a wave — the QA agent** (§4's pipeline): after each merge it serves the tip and walks items 45–50 plus the chart items (22, 25, 34) in a real browser. Its pass **overlaps the next wave's construction** and does not block it. This is the largest real parallelism win in a phase this size — `node tests.js` is instant; the browser walk is not.
+
+**Carried forward into every brief:** verify the worktree's actual base with `git merge-base <intended-tip> <branch>` before trusting a diff. Both agents in the Phase 4b/10 run branched from stale history; one caught it, one didn't.
+
+### Phase 14 — Financing modes: Loan, Lease, Cash — one engine, no duplication — ❌ NOT STARTED (**R55**–**R61**; needs **B13**)
+
+> **Why this exists.** The owner raised it on 2026-08-09, generalising from the app's own history: *"I built most of the features based on the need I had, but some really resonated with different people. Not every company offers a lease policy, but everyone aspires to buy a car."* `hub-car` is the sharpest case. Its first section title, and the landing tile that leads to it (**"Optimize My Company Car"**), tell roughly four out of five visitors in the first three seconds that the app isn't for them — and the lease panel then demands basic pay, bonus, EPF and tax regime before it shows anything at all.
+>
+> **The trap to avoid, stated up front: do not generalise by subtraction.** Car-loan EMI calculators are a commodity — every bank site and aggregator has one. The lease perquisite analysis is the most *differentiated* thing in this app precisely because it's deep and niche. The goal is to add the other paths **without flattening the depth**: generalise by addition. A `hub-car` that becomes "another EMI calculator" has traded its only edge for reach it won't get.
+>
+> **The structural insight this phase is built on:** TCO is financing-agnostic. Running cost, maintenance, insurance and depreciation are properties of the **car**. Lease, loan and cash are **capital layers** on top of the same engine. Once all three produce a comparable net-cost-of-ownership figure, the app can answer a question nothing else answers well — *lease vs. loan vs. cash, for the same car, side by side.*
+>
+> **Owner decision, 2026-08-09: no duplication.** Loan mode **absorbs** the existing Car Buying — Loan Analysis section (`cb-*`); the two do not ship side by side. Two places answering "what's my car loan EMI?" is exactly the kind of thing that quietly rots.
+
+⚠️ **Absorption is a migration, not a delete.** `cb-*` does three things the Compare Cars section currently does **not**, and all three are recently-polished, genuinely useful, and easy to lose in a careless removal:
+
+1. **A single-car deep dive with a down payment** — Compare Cars has no down-payment concept at all (a lease has a residual, not a deposit).
+2. **The 3/5/7-year tenure comparison** behind `cb-compare-card`, with total interest and total paid — shipped as **R46** in Phase 10b, built on a shared `tenureStats(yr)` helper specifically so the hero and the grid can't drift apart.
+3. **The IRDAI depreciation table and 7-year resale curve** (`cb-depreciation`), which renders off `price` alone so it still works at a 100% down payment — a bug **R13** already fixed once.
+
+**Feature parity for all three is an acceptance condition, not a nice-to-have.** And note the sequencing hazard: **Phase 13's R53 adds the outstanding-loan-balance overlay to `cb-depr-chart`** — the very chart this phase re-homes. R53 still ships first (B8 has been open since Phase 3b, and Phase 13's R51 is what makes it answerable), so **carrying that overlay across is an explicit item on this phase's migration checklist.** It is the single most likely thing to be silently dropped.
+
+**Scale of the sweep, measured:** `cb-` appears **43 times in `index.html`**, 9 times in `CLAUDE.md`, 18 times in this document. `renderCarLoan()` is called from `switchHub()`'s `car` branch alongside `renderCarCalc()` and `renderCarCompare()`, and three inputs (`cb-price`/`cb-down`/`cb-rate`) call it on `oninput`.
+
+#### R55 — `calc.js`: `calcOwnershipCost({ mode, … })` and `calcLumpsumGrowth()`
+
+Rename and generalise `calcLeaseNetCost`. **This is now a rename with a blast radius** — it was free before Phase 9 shipped, and isn't any more: it's called from `renderCarCompare()`, feeds `ccComputedRows()`, and is pinned by tests. Small, but do it deliberately.
+
+```
+mode = 'lease':  emi     = calcEMI(price, rate, N, residual)
+                 capital = emi*months + residual
+                 taxSaved= marginalRate * (emi − calcPerquisite(bigEngine, hasDriver)) * months
+
+mode = 'loan':   emi     = calcEMI(price − downPayment, rate, N, 0)
+                 capital = downPayment + emi*months
+                 taxSaved= 0
+
+mode = 'cash':   emi     = 0
+                 capital = price
+                 taxSaved= 0
+
+all modes:       netCost = capital + runningTotal + maintTotal + insTotal − taxSaved
+                 resaleValue = calcCarDepreciation(price, N)     // reveal only, per Phase 13
+```
+
+- **`taxSaved = 0` for loan and cash is correct, not a simplification** — Indian law allows no deduction on a personal car loan. Say so in the caveat list rather than leaving it looking like an omission.
+- **`calcLumpsumGrowth(P, cagr, years)`** — a new pure function for the cash-mode opportunity cost (B13). The Grow hub's lumpsum tab currently does this inline as `amount * Math.pow(1 + cagr/100, years)`; extracting it here means one implementation, and that tab can adopt it later.
+- ⚠️ **`calcOwnershipCurve` (R49, Phase 13) must keep working across all three modes** — it was specced mode-agnostic for exactly this reason. Loan expresses as residual 0 with the down payment at year 0; cash as the whole price at year 0. Its four invariants must hold in every mode, not just lease.
+- *Acceptance:* `node tests.js` green; a lease at `residual = 0` and a loan at `downPayment = 0` produce **identical** EMIs for the same principal/rate/tenure (the direct analogue of the existing single-tranche ≡ plain-EMI invariant); `calcOwnershipCurve`'s endpoint equals `netCost` in all three modes.
+
+#### R56 — Mode selector, lease gating, and the entry copy
+
+- **One question at the top of `hub-car`** — *"How are you paying for the car?"* — driving a **Loan / Lease / Cash** selector. **Loan is the default.** That single default is most of the generalisation.
+- **The Lease Tax Analysis panel (`car-*`) is hidden unless lease is selected.** This isn't only tidiness: that panel demands basic pay, bonus, EPF and regime before rendering anything, and loan mode needs four fields. Removing that wall for the majority is the concrete user win in this phase. **The panel itself is not simplified, shortened, or made "more generic" — it stays exactly as deep as it is.**
+- **Entry copy, both places:** the landing tile currently reads **"Optimize My Company Car"** with the description *"Company car lease tax perquisite, plus car loan & resale value"*, and the hub's first section title is **"Company Car Lease — Tax Analysis"**. Both must become mode-neutral. Follow the landing page's established convention (goal-oriented `.tile-title`, destination-naming `.tile-tool`) — and per CLAUDE.md's note on that convention, whatever name is chosen must be used consistently everywhere, since inconsistent naming for one destination was a defect the landing page was already redesigned once to fix.
+- *Acceptance:* a first-time visitor in loan mode never sees a salary field; switching to lease reveals the panel with its inputs intact; nothing in the lease panel's math changes.
+
+#### R57 — Loan mode in the compare engine · #### R58 — Cash mode and the opportunity-cost reveal
+
+- Loan mode adds a **per-car down payment** to the shortlist row and drops perquisite/residual from the cost path.
+- Cash mode charges **opportunity cost** on tied-up capital — gated on **B13**, below, which is the fairness question that decides the shape.
+- Both must respect Phase 13's rule: **the resale credit stays behind the reveal in every mode.**
+
+⚠️ **B13 — the fairness trap, and it is a real one.** If cash is charged an opportunity cost on the full price while loan and lease are charged nothing on their down payment and residual buyout, **the comparison is rigged against cash** — and it will look authoritative while being wrong. Three coherent options: *(a)* no opportunity cost anywhere (simple; cash then looks free, which it isn't); *(b)* opportunity cost on whatever capital is tied up, in **every** mode (correct, and a big conceptual leap to put in a default view); *(c)* **opportunity cost as an explicit reveal, off by default, applied consistently across all modes** — which is exactly the pattern Phase 13 just established for the resale credit, for the same reason: it's a forecast, not a cash flow. **My lean is (c)**, because it makes the app's treatment of speculative numbers consistent rather than case-by-case. Owner decides.
+
+#### R59 — Absorb `cb-*`, then delete it
+
+- Re-home all three `cb-*` capabilities listed above into a **per-car detail view** in the unified section: down payment, the 3/5/7 tenure grid (`tenureStats()` comes across intact — do not re-derive it), the depreciation table, the resale curve, **and R53's loan-balance overlay**.
+- Then remove `renderCarLoan()`, the `cb-*` markup and ids, its `switchHub()` call, and its `resetAll()` handling. **Sweep all 43 `index.html` references** plus CLAUDE.md's 9 and this document's 18.
+- ⚠️ **Do not delete before parity is verified.** The tidy order is: build the detail view → verify it against the live `cb-*` output number-for-number → then delete. A deletion-first diff is unreviewable.
+
+#### R60 — Cross-mode comparison: the same car, three ways
+
+The output that justifies the whole restructure — lease vs. loan vs. cash for one car, side by side. **Ships last**, because it's only meaningful once all three modes are trustworthy, and because it's where incoherent assumptions become visible: whatever B13 decides has to apply identically across all three, or the comparison quietly favours whichever mode got the friendlier treatment.
+
+#### R61 — Docs, checklist, report, and the beta task
+
+- CLAUDE.md: the mode architecture, the retirement of `cb-*` and its prefix, `calcOwnershipCost`'s signature, and — most importantly — **why** the lease panel is gated rather than simplified.
+- **Manual checklist items 51–56** (Phase 13's R54 claims 45–50): mode switching preserves inputs; loan mode shows no salary field; a `residual = 0` lease equals a `downPayment = 0` loan; the migrated tenure grid matches the retired `cb-*` output exactly; R53's balance overlay survives the move; no `cb-` reference remains anywhere.
+- **Add to 6f's beta protocol:** *"work out whether to lease or finance this car"* is a better observation task than anything currently in that list, and it is the direct test of this phase's premise — which is market intuition, not evidence. 6f exists to convert exactly this kind of hunch into a finding.
+- `PHASE-14-REPORT.md`.
+
+#### Phase 14 wave plan (for parallel agents)
+
+⚠️ **This phase parallelises *worse* than Phase 13, and the plan says so rather than inventing agents.** Nearly everything converges on `renderCarCompare()` and the shortlist row template. There are **two** genuine build-parallel splits; the rest is a sequence. Same conventions as Phase 13 — isolated worktrees, one integration agent per merge, `node tests.js` plus structural checks after every merge, `git merge-base` verified before any diff is trusted.
+
+| Wave | Agent | Items | Owns | Depends on |
+|---|---|---|---|---|
+| **A** | A1 | **R55** | `calc.js`, `tests.js`, `tests.html` | B13 for cash only — lease/loan can start today |
+| **A** | A2 | **R56** | `index.html` (landing tile, `hub-car` header region, mode selector, `car-*` gating) | — |
+| **A** | A3 | **R59-audit** | A written migration checklist — no code | — |
+| **B** | B1 | **R57 + R58** | `index.html` (`renderCarCompare()` cost path, shortlist row) | R55, R56, **B13** |
+| **C** | C1 | **R59-build** | `index.html` (per-car detail view; then `cb-*` deletion) | R57, A3's checklist |
+| **D** | D1 | **R60 + R61** | `index.html`, `CLAUDE.md`, `PHASE-14-REPORT.md` | all of the above |
+
+**Wave A's three-way split is genuine** — A1 touches no markup, A2 touches no engine and no results region, A3 writes a document. **A3 is the quiet win:** the `cb-*` migration checklist (all 43 references, what each does, which are markup vs. logic vs. docs) is pure reading, has zero conflict surface, and is the artefact that makes C1's deletion reviewable instead of a leap of faith. It costs one cheap agent and de-risks the phase's most dangerous step.
+
+**R57 and R58 must not be split.** They share the cost path and a content decision (does the mode selector change which assumption fields are visible, or grey them?) that two agents would answer differently — §2's Cluster A lesson, third occurrence.
+
+**Integration agent owns, as always:** `sw.js`'s `CACHE`, `BUILD_STAMP`, and CLAUDE.md section placement. **QA agent runs the pipeline alongside**, walking items 51–56 against each merged tip while the next wave builds.
 
 ## Out of scope
 
