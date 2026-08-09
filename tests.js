@@ -494,6 +494,19 @@ function insuranceLoop(price, rate, depRate, years) {
     approxEqual(curve.cumulativeCost[last] - curve.carValue[last], net.netCostAfterResale, 0.01),
     `gap=${(curve.cumulativeCost[last]-curve.carValue[last]).toFixed(4)} netCostAfterResale=${net.netCostAfterResale.toFixed(4)}`);
 
+  // Guards the spec's central warning: the EMI must be the full-term value,
+  // accumulated — not recomputed per year via a shorter-tenure
+  // calcLeaseNetCost call. That mistake is invisible at the endpoint (a
+  // shorter-tenure call at y===N is the full-term call), so it has to be
+  // caught at an intermediate year instead.
+  ok('calcOwnershipCurve: year-2 point is the full-term EMI accumulated, not a 2-year lease repriced',
+    approxEqual(curve.cumulativeCost[1], 1118798.7828, 0.01),
+    `got ${curve.cumulativeCost[1].toFixed(4)}`);
+  const repricedYear2 = calcLeaseNetCost({ ...base, years: 2 }).netCost;
+  ok('calcOwnershipCurve: year-2 point must NOT equal a 2-year-tenure calcLeaseNetCost (the exact per-year-reprice mistake R49 warns against)',
+    !approxEqual(curve.cumulativeCost[1], repricedYear2, 0.01),
+    `curve[1]=${curve.cumulativeCost[1].toFixed(4)} 2yr-repriced=${repricedYear2.toFixed(4)}`);
+
   let costRising = true, valueFalling = true;
   for (let i = 1; i < curve.years.length; i++) {
     if (curve.cumulativeCost[i] <= curve.cumulativeCost[i-1]) costRising = false;

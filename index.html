@@ -4831,16 +4831,31 @@ function renderCarLoan() {
     // all, never a flat zero line — this table/chart renders off `price`
     // alone (R13) and stays that way even with the overlay added.
     const LOAN_CHART_TENURE = 5;
+    // Sliced to the loan's own tenure, not the chart's full 7-year window —
+    // loanAtYear clamps at the tenure, so plotting all 7 years would draw a
+    // flat zero-balance line for years 6-7 after payoff, the exact artifact
+    // this overlay must avoid for a zero-loan car, just relocated to a
+    // shorter-than-7-year loan instead of avoided.
+    const loanYears = chartYears.slice(0, LOAN_CHART_TENURE);
     const balanceVals = loan > 0
-      ? chartYears.map(y => loanAtYear(loan, rate, LOAN_CHART_TENURE, y).balance)
+      ? loanYears.map(y => loanAtYear(loan, rate, LOAN_CHART_TENURE, y).balance)
       : null;
 
     let underwaterNote = '';
     if (balanceVals) {
-      const idx = chartYears.findIndex((y, i) => balanceVals[i] > valueVals[i]);
-      underwaterNote = idx === -1
-        ? ` At this ${LOAN_CHART_TENURE}-year loan's pace, the outstanding balance never exceeds the car's resale value.`
-        : ` At this ${LOAN_CHART_TENURE}-year loan's pace, the outstanding balance exceeds the car's resale value from year ${chartYears[idx]} onward — you'd owe more than the car is worth.`;
+      // Underwater is structurally a leading interval (amortization outpaces
+      // depreciation early, then the balance falls below a slowing
+      // depreciation curve) — never "from year N onward" indefinitely.
+      // Report the actual first/last underwater year rather than assuming
+      // it holds through payoff once it's ever true.
+      const underwaterYears = loanYears.filter((y, i) => balanceVals[i] > valueVals[i]);
+      if (!underwaterYears.length) {
+        underwaterNote = ` At this ${LOAN_CHART_TENURE}-year loan's pace, the outstanding balance never exceeds the car's resale value.`;
+      } else {
+        const first = underwaterYears[0], last = underwaterYears[underwaterYears.length - 1];
+        const span = first === last ? `in year ${first}` : `from year ${first} through year ${last}`;
+        underwaterNote = ` At this ${LOAN_CHART_TENURE}-year loan's pace, the outstanding balance exceeds the car's resale value ${span} — you'd owe more than the car is worth.`;
+      }
     }
 
     deprBody.innerHTML = `<div class="table-scroll"><table class="depr-table">
