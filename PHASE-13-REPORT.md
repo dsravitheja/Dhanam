@@ -2,6 +2,21 @@
 
 *Completed: 2026-08-09 · Implements `TASK-UX-REDESIGN.md`'s Phase 13 spec (R49–R54), retiring B12 and answering B8. Built as a single sequential pass rather than the doc's multi-agent wave plan — see "On the wave plan" below for why.*
 
+*Post-build QA + code review (2026-08-09): a Sonnet QA agent drove the merged build in a real Playwright/Chromium browser and passed all of items 45–50 plus regression items 22/25/34 (76/76 `node tests.js`, zero console errors). An Opus code-review agent, working analytically without a browser, found two real bugs in R53's loan-balance overlay that QA's specific test scenarios happened not to expose — see "Post-review fixes" below. Both reports agreed on everything else: `calcOwnershipCurve`'s four invariants (Opus additionally verified them against a 20,000-case randomized sweep), tier-3 reveal persistence, and R20 chart-host stability all held up under both static and live-browser scrutiny.*
+
+---
+
+## Post-review fixes (2026-08-09, after this report was first written)
+
+Code review found two bugs in R53, both now fixed (commit `a6d1d87`):
+
+1. **Flat zero-line on the loan-balance series for years beyond the loan's own tenure.** The balance series was sampled across the chart's full 7-year x-axis even when the loan's own tenure (fixed at 5 years) is shorter — `loanAtYear` clamps at the tenure, so years 6–7 always evaluated to exactly 0, drawing the flat line the zero-loan case was already guarded against, just relocated to a different trigger. It also dragged the shared y-axis min to ₹0, visibly flattening the depreciation curve this chart exists to show. **Fixed:** the balance series (and the underwater check) is now sliced to the loan's own 5-year tenure; the chart's x-axis extent is unchanged (still `Year 1 … Year 7`) since only the *balance* series is shorter, matching how `chartSvg` already handles series of unequal length.
+2. **"Underwater... from year N onward" was not actually true "onward."** Amortization outpaces a slowing depreciation curve early and then the balance falls back below it — underwater is structurally a leading interval, not an open-ended one. Verified concretely: at price ₹15L / down ₹0 / rate 9.5%, the balance is underwater in year 1 only, but the shipped copy claimed "from year 1 onward." Even the QA agent's own verification example (₹15L / ₹20K down / 22%) is only underwater years 1–2 of 5, not the "throughout" the QA report described from eyeballing a screenshot — re-run in Node to confirm. **Fixed:** the note now reports the actual first-through-last underwater year as a range ("in year 1" / "from year 1 through year 2").
+
+Also added a `calcOwnershipCurve` test pinning the year-2 intermediate point (₹11,18,798.78 in the reference case) and asserting it does **not** equal a 2-year-tenure `calcLeaseNetCost` call — the original 11 assertions all pass under the exact "recompute EMI per shorter tenure" mistake R49's spec warns against, since that mistake is invisible at the curve's endpoint. Confirmed by literally building the wrong implementation and running it against the original test file: it passed all 11 original assertions while being off by ₹8.18L at year 2. `node tests.js` is now 78/78.
+
+Neither fix changes `calcOwnershipCurve()`, R50, R51, or R52 — scoped entirely to `renderCarLoan()`'s `cb-*` region and the new test.
+
 ---
 
 ## Headline result: the ranking itself did not change; what a user sees before deciding did
@@ -45,7 +60,7 @@ Four invariants hold, all pinned in both `tests.js` and `tests.html`: the curve'
 
 ## Verification
 
-- `node tests.js` → **76/76 passed** (65 pre-existing + 11 new for `calcOwnershipCurve`), including the reference-case pins (`2406795.0641` / `1424195.0641`), the two cross-checks against `calcLeaseNetCost`, the strictly-rising/strictly-falling checks, and the N=1 and zero-rate edge cases.
+- `node tests.js` → **78/78 passed** (65 pre-existing + 13 for `calcOwnershipCurve`, after the post-review addition above), including the reference-case pins (`2406795.0641` / `1424195.0641`), the two cross-checks against `calcLeaseNetCost`, the strictly-rising/strictly-falling checks, the N=1 and zero-rate edge cases, and the year-2 intermediate pin.
 - `tests.html` mirrors the same 11 new assertions (browser-runnable path); not re-executed in a browser (see below) but inspected for parity with `tests.js`.
 - Inline `<script>` parses cleanly via `new Function()` after all `index.html` edits (catches syntax errors; does not execute against a DOM).
 - Every new DOM id (`cc-caveat`, `cc-owncurve-card/-select/-chart/-caption/-note`, `cc-reveal-btn/-figure/-value`, `cb-depr-legend/-legend-loan/-caption`) confirmed to appear exactly once in the markup.
@@ -53,7 +68,7 @@ Four invariants hold, all pinned in both `tests.js` and `tests.html`: the curve'
 - Hand-verified two `loanAtYear` overlay scenarios in Node (never-underwater and underwater-from-year-1 cases) against the `renderCarLoan()` code path's own logic.
 - Constructed and Node-verified the ICE-vs-EV ranking-flip example in the headline section above.
 
-**Not verified: real-browser rendering.** No Chromium/Playwright/jsdom is available in this environment (no `node_modules`, consistent with the project's dependency-free philosophy, and no browser CLI on this machine). Everything above is static/logical verification — pure-function correctness via `node tests.js`, JS syntax validity, markup-structure inspection, and manual tracing of which functions call which with what arguments — not a rendered page. In particular, **not visually confirmed**: chart legibility/dot-circularity at 375px, the `ResizeObserver` redraw contract firing correctly on every reveal path (card open, hub switch, window resize), the `<select>`'s actual on-screen behavior, or that the reveal button's label swap reads correctly. These should be walked by hand per the new manual checklist items 45–50 before this ships to a real user.
+**Real-browser rendering was verified in the follow-up QA pass**, not by this build agent (no Chromium/Playwright/jsdom was available in its environment). A separate Sonnet QA agent, with network access to install Playwright, drove the actual merged app and passed items 45–50 plus 22/25/34 with zero console errors — see the note at the top of this report. The two post-review bug fixes above (underwater-range wording, tenure-sliced balance series) were verified by hand-computation in Node against the exact scenarios both agents used, not re-walked in a live browser after the fix — that final visual confirmation is still open before shipping to a real user.
 
 ## What's still open after this phase
 
