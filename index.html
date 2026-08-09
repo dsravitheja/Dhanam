@@ -648,6 +648,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .milestone-table tr:last-child td { border-bottom:none; }
 /* ── CAR TAB ─────────────────────────────── */
 .car-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:16px 14px; }
+/* R60, Phase 14: marks the cross-mode comparison's currently-active mode —
+   same gold-border language as .cc-rank-card.rank-1, reused rather than a
+   new visual convention for "this one is the one currently in effect." */
+.car-card.highlight { border-color:var(--accent); }
 .car-card-title { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.1em; color:var(--text-mid); margin-bottom:6px; }
 .car-badge { display:inline-block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:2px 8px; border-radius:4px; margin-bottom:10px; }
 .car-badge.baseline { background:rgba(255,255,255,.08); color:var(--text-mid); }
@@ -662,10 +666,6 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .car-stat-val.accent { color:var(--accent); }
 .car-divider { margin:8px 0; border-top:1px dashed var(--border); padding-top:8px; }
 .car-section-lbl { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); margin-bottom:6px; }
-.cb-derived-box { display:flex; gap:12px; flex-wrap:wrap; margin-top:10px; }
-.cb-derived-item { flex:1; min-width:130px; padding:8px 12px; background:rgba(201,168,76,.06); border-radius:6px; border:1px solid rgba(201,168,76,.2); }
-.cb-derived-lbl { font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.07em; margin-bottom:2px; }
-.cb-derived-val { font-family:'DM Mono',monospace; font-size:15px; color:var(--accent2); font-weight:600; }
 .depr-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:8px; }
 .depr-table th { text-align:left; padding:6px 12px; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); border-bottom:1px solid var(--border); }
 .depr-table td { padding:6px 12px; border-bottom:1px solid var(--border-subtle); font-family:'DM Mono',monospace; }
@@ -824,9 +824,9 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   </button>
   <button class="tile" onclick="switchHub('car')">
     <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg></span>
-    <span class="tile-title">Optimize My Company Car</span>
+    <span class="tile-title">Work Out My Next Car</span>
     <span class="tile-tool">Dhanam Car</span>
-    <span class="tile-desc">Company car lease tax perquisite, plus car loan & resale value.</span>
+    <span class="tile-desc">Compare cars, and loan, lease or cash — whichever way you're paying.</span>
   </button>
   <button class="tile" onclick="openPrepayCalc()">
     <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-rocket"></use></svg></span>
@@ -1488,6 +1488,41 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="hub-content" id="hub-car">
   <div class="main">
 
+    <div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg> Dhanam Car — Cost of Ownership</div>
+
+    <!-- Mode selector (R56, Phase 14). Loan is the default: car-loan EMI
+         math is what most visitors need first, and a company lease policy
+         is the minority case. Switching modes never clears any input —
+         setCarMode() only toggles visibility and re-renders; ccCars, the
+         lease panel's own fields, and the shortlist all keep whatever was
+         typed. See CLAUDE.md's "generalize by addition, not subtraction"
+         note for why the lease panel below is gated, not simplified. -->
+    <div class="panel-card" style="margin-bottom:20px;">
+      <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg></span><span class="pch-title">How are you paying for the car?</span></div>
+      <div class="panel-card-body">
+        <div class="action-row" id="car-mode-row" style="margin-bottom:0;">
+          <button class="action-btn active" id="car-mode-btn-loan" onclick="setCarMode('loan')" type="button">
+            <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bank"></use></svg></span>
+            <span class="ab-label">Loan</span>
+          </button>
+          <button class="action-btn" id="car-mode-btn-lease" onclick="setCarMode('lease')" type="button">
+            <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-briefcase"></use></svg></span>
+            <span class="ab-label">Company Lease</span>
+          </button>
+          <button class="action-btn" id="car-mode-btn-cash" onclick="setCarMode('cash')" type="button">
+            <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span>
+            <span class="ab-label">Cash</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lease Tax Analysis — gated behind Lease mode, not simplified (R56).
+         Everything from here to the closing </div> below is untouched from
+         pre-Phase-14: same inputs, same hero, same compare-card, same
+         caveats. A first-time visitor in Loan/Cash mode never sees this — no
+         salary/bonus/EPF/regime field renders until Lease is picked. -->
+    <div id="car-lease-panel" style="display:none;">
     <div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg> Company Car Lease — Tax Analysis</div>
     <div class="panel-card">
       <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-briefcase"></use></svg></span><span class="pch-title">Salary &amp; Car Policy Inputs</span><span class="pch-tag">Live</span></div>
@@ -1588,8 +1623,9 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </ul>
       </div>
     </div>
+    </div><!-- /car-lease-panel -->
 
-    <div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-scope"></use></svg> Compare Cars — ICE vs EV Under Lease</div>
+    <div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-scope"></use></svg> Compare Cars — Cost of Ownership</div>
 
     <div class="panel-card">
       <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg></span><span class="pch-title">Your Shortlist</span><span class="pch-tag">Live</span></div>
@@ -1607,34 +1643,46 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       </div>
       <div class="collapse-body">
         <div class="grid-3">
+          <!-- Rate/term apply to every mode (loan interest, lease interest,
+               or just the holding period in cash mode); the rest of this
+               row is lease-only or cash-only and is shown/hidden by
+               setCarMode()/updateCCModeFields() rather than greyed out —
+               one visibility rule applied consistently (R57/R58's field-
+               visibility-vs-greying decision; see CLAUDE.md). -->
           <div class="field">
-            <label>Lease Interest Rate (% p.a.)</label>
+            <label id="cc-rate-label">Interest Rate (% p.a.)</label>
             <input type="number" id="cc-lease-rate" value="10" step="0.25" min="0" oninput="renderCarCompare()">
+            <span class="field-hint" id="cc-rate-hint">Loan or lease interest rate — ignored in Cash mode</span>
           </div>
-          <div class="field">
+          <div class="field" id="cc-field-residual" style="display:none;">
             <label>Residual / Buyout (%)</label>
             <input type="number" id="cc-residual-pct" value="10" step="1" min="0" max="90" oninput="renderCarCompare()">
-            <span class="field-hint">Paid at lease end to own the car</span>
+            <span class="field-hint">Paid at lease end to own the car — lease only</span>
           </div>
           <div class="field">
-            <label>Lease Tenure</label>
+            <label id="cc-years-label">Ownership / Loan Term</label>
             <select id="cc-years" onchange="renderCarCompare()">
               <option value="3">3 years</option>
               <option value="4" selected>4 years</option>
               <option value="5">5 years</option>
             </select>
           </div>
-          <div class="field">
+          <div class="field" id="cc-field-marginal" style="display:none;">
             <label>Marginal Tax Rate (%)</label>
             <input type="number" id="cc-marginal-rate" value="31.2" step="0.1" min="0" max="45" oninput="renderCarCompare()">
-            <span class="field-hint">30% slab + 4% cess at defaults (new regime)</span>
+            <span class="field-hint">30% slab + 4% cess at defaults (new regime) — lease only, no deduction on a loan or cash purchase</span>
           </div>
-          <div class="field">
+          <div class="field" id="cc-field-driver" style="display:none;">
             <label>Company Driver Provided</label>
             <select id="cc-has-driver" onchange="renderCarCompare()">
               <option value="0" selected>No</option>
               <option value="1">Yes</option>
             </select>
+          </div>
+          <div class="field" id="cc-field-cash-cagr" style="display:none;">
+            <label>Investment Return If Invested Instead (% p.a.)</label>
+            <input type="number" id="cc-cash-cagr" value="12" step="0.5" min="0" oninput="renderCarCompare()">
+            <span class="field-hint">Used only by the opportunity-cost reveal below (in any mode) and the "Lease vs. Loan vs. Cash" comparison's Cash column — never the ranking</span>
           </div>
           <div class="field">
             <label>Petrol Price (₹/litre)</label>
@@ -1719,12 +1767,13 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
          rebuild a ResizeObserver every keypress (the exact R20 anti-pattern;
          modeled on cb-depr-chart's static-sibling fix). -->
     <div class="panel-card" id="cc-owncurve-card" style="display:none;margin-bottom:14px;">
-      <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg></span><span class="pch-title">Cumulative Cost vs. Car Value</span></div>
+      <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg></span><span class="pch-title">Car Detail — Cost Over Time</span></div>
       <div class="panel-card-body">
         <div class="field" style="max-width:320px;margin-bottom:12px;">
           <label>Car</label>
           <select id="cc-owncurve-select" onchange="ccOwnCurveIdx = parseInt(this.value); renderCCOwnCurve();"></select>
         </div>
+        <p class="note-text" id="cc-owncurve-down-note" style="display:none;margin-bottom:10px;"></p>
         <div class="chart-legend">
           <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Cumulative cost</span>
           <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--text-dim)"></span>Car value (IRDAI schedule)</span>
@@ -1737,6 +1786,81 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
           <div class="car-stat" id="cc-reveal-figure" style="display:none;margin-top:10px;">
             <span class="car-stat-lbl">Net cost after resale credit — a forecast, not part of the ranking above</span>
             <span class="car-stat-val accent" id="cc-reveal-value">—</span>
+          </div>
+          <!-- Opportunity-cost reveal (B13, R58) — same shape as the resale
+               reveal above: off by default, permanent adjacent label,
+               tier-3 state (ccOppRevealOpen), never persisted. Shown in
+               EVERY mode, not just Cash (post-review fix, Phase 14) — B13's
+               fairness rule says the same reveal applies identically across
+               modes, and hiding it outside Cash meant a Loan-mode user's own
+               down payment never got the same "what did this capital cost
+               you" question a Cash buyer's full price did. The label text
+               is mode-aware (set in renderCCOwnCurve()): cash = the full
+               price, loan = the down payment only, lease = genuinely ~₹0
+               because a lease ties up no capital upfront (that's real, not
+               an omission — see calc.js's ccOpportunityCost). -->
+          <button class="btn btn-secondary" id="cc-opp-reveal-btn" onclick="ccToggleOppReveal()" type="button" style="margin-top:8px;">Reveal opportunity cost of tied-up capital (forecast)</button>
+          <div class="car-stat" id="cc-opp-reveal-figure" style="display:none;margin-top:10px;">
+            <span class="car-stat-lbl" id="cc-opp-reveal-label">What this cash could have earned if invested instead — a forecast, not part of the ranking above</span>
+            <span class="car-stat-val accent" id="cc-opp-reveal-value">—</span>
+          </div>
+        </div>
+
+        <!-- Loan-mode 3/5/7-year tenure comparison, absorbed from the
+             retired cb-* Car Buying — Loan Analysis section (R59). Same
+             tenureStats(yr) helper carried across intact, just re-homed and
+             keyed off the selected car's own price/down payment. -->
+        <div class="collapse-card" id="cc-tenure-card" style="display:none;margin-top:16px;">
+          <div class="collapse-header" onclick="toggleCard('cc-tenure-card')">
+            <span class="collapse-title">Compare 3 / 5 / 7-year loan tenures</span>
+            <span class="collapse-arrow">▼</span>
+          </div>
+          <div class="collapse-body">
+            <div id="cc-tenure-cards" class="loan-grid"></div>
+          </div>
+        </div>
+
+        <!-- IRDAI depreciation table + resale curve, absorbed from cb-depreciation
+             (R59) — mode-independent, renders off price alone (R13) for
+             every mode. The outstanding-loan-balance overlay (R53, Phase 13,
+             both post-review bugfixes: tenure-sliced balance series, actual
+             first-through-last underwater year range) is added only in Loan
+             mode, using the selected car's own down payment. Static chart
+             host (#cc-depr-chart), never regenerated inside an innerHTML
+             template — same R20 discipline the rest of this card follows;
+             only #cc-depr-body's table/note gets rewritten. -->
+        <div id="cc-depr-section" style="margin-top:16px;display:none;">
+          <div class="panel-card-header" style="padding:0 0 10px;"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-down"></use></svg></span><span class="pch-title">Estimated Resale Value (IRDAI Depreciation)</span></div>
+          <div class="chart-legend" id="cc-depr-legend">
+            <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Car value</span>
+            <span class="chart-legend-item" id="cc-depr-legend-loan" style="display:none;"><span class="chart-legend-dot" style="background:var(--red)"></span>Outstanding loan balance</span>
+          </div>
+          <div id="cc-depr-chart"></div>
+          <div class="chart-caption" id="cc-depr-caption"><span>Year 1</span><span>Year 7</span></div>
+          <div id="cc-depr-body"></div>
+        </div>
+
+        <!-- Cross-mode comparison (R60) — the payload that justifies this
+             whole restructure: lease vs. loan vs. cash for the SAME car,
+             side by side. Uses the selected car's own down payment (loan)
+             and the assumptions above (rate/term/marginal-rate/driver) for
+             all three columns regardless of which mode is currently active
+             above. One shared reveal (ccCrossRevealOpen, tier-3) applies
+             the resale credit AND the opportunity-cost forecast identically
+             to all three columns — B13's fairness rule: never a friendlier
+             default treatment for one mode than another. -->
+        <div class="collapse-card open" id="cc-crossmode-card" style="margin-top:16px;">
+          <div class="collapse-header" onclick="toggleCard('cc-crossmode-card')">
+            <span class="collapse-title">Lease vs. Loan vs. Cash — this car, three ways</span>
+            <span class="collapse-arrow">▼</span>
+          </div>
+          <div class="collapse-body">
+            <p class="note-text" style="margin-bottom:10px;">Money out the door only, same as the ranking above — uses this car's own down payment and the assumptions above for all three columns. Switch mode at the top of the page to change which one actually drives the ranking and shortlist.</p>
+            <p class="note-text" id="cc-crossmode-assumptions" style="margin-bottom:10px;"></p>
+            <div id="cc-crossmode-cards" class="loan-grid"></div>
+            <div style="margin-top:10px;">
+              <button class="btn btn-secondary" id="cc-cross-reveal-btn" onclick="ccToggleCrossReveal()" type="button">Reveal resale credit &amp; opportunity cost for all three (forecast)</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1777,75 +1901,12 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
           <li>Insurance is one flat rate per vehicle type (ICE vs EV), not a per-model quote.</li>
           <li>The city:highway driving split and its multipliers are global — every car is assumed driven the same way, with no per-car override.</li>
           <li>Unlike the spreadsheet this section is based on, there's no "EV driven more because it feels free" multiplier — annual km is the same figure for every car, so the ₹/km figures stay comparable across ICE and EV.</li>
-          <li>Perquisite per the Income-tax Rules, 2026 (in force 1 Apr 2026): ≤1600cc or electric = ₹5,000/mo · &gt;1600cc = ₹7,000/mo · company driver = +₹3,000/mo — the same table the lease analysis above uses.</li>
-          <li>Marginal tax rate is a single number you enter here, not derived from a slab calculation — it doesn't pick up the Section 87A relief the salary panel above applies.</li>
+          <li><strong>Loan and Cash modes carry no tax deduction — <code>Tax Saved</code> is genuinely ₹0, not a missing calculation.</strong> The lease's tax shield comes from a company reimbursing/leasing the car and taxing you only on its perquisite value; a personal car loan or a cash purchase has no equivalent deduction under either regime, so the Lease vs. Loan vs. Cash comparison correctly shows Lease alone with a tax-saved line.</li>
+          <li>(Lease mode only) Perquisite per the Income-tax Rules, 2026 (in force 1 Apr 2026): ≤1600cc or electric = ₹5,000/mo · &gt;1600cc = ₹7,000/mo · company driver = +₹3,000/mo — the same table the lease analysis above uses.</li>
+          <li>(Lease mode only) Marginal tax rate is a single number you enter here, not derived from a slab calculation — it doesn't pick up the Section 87A relief the salary panel above applies. It also drives the Lease column of "Lease vs. Loan vs. Cash" even when you're not in Lease mode — see that card's own assumptions line for the exact figure in use.</li>
+          <li>The "opportunity cost of tied-up capital" reveal (per car, and in "Lease vs. Loan vs. Cash") is a forecast at whatever return rate you enter — 12% by default — not a cash cost, and not part of any ranking. It's ~₹0 for a lease by construction: a lease ties up no capital upfront, which is a real structural difference, not an omission.</li>
           <li>Consult a CA and get dealer quotes before acting on this comparison.</li>
         </ul>
-      </div>
-    </div>
-
-    <div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bank"></use></svg> Car Buying — Loan Analysis</div>
-    <div class="loan-top">
-      <div class="loan-inputs-grid">
-        <div class="loan-field">
-          <label>On-Road Price (₹)</label>
-          <input type="number" id="cb-price" class="hl" value="1500000" oninput="renderCarLoan()">
-        </div>
-        <div class="loan-field">
-          <label>Down Payment (₹)</label>
-          <input type="number" id="cb-down" class="hl" value="300000" oninput="renderCarLoan()">
-        </div>
-        <div class="loan-field">
-          <label>Interest Rate (% p.a.)</label>
-          <input type="number" id="cb-rate" value="9.5" step="0.25" oninput="renderCarLoan()">
-        </div>
-      </div>
-      <div id="cb-derived" class="cb-derived-box"></div>
-    </div>
-
-    <!-- Hero answer — opinionated default: 5-year tenure (R46, Phase 10b),
-         mirroring the home-loan panel's hero pattern (l-hero) but with a
-         car-appropriate default — the shortest of the 3/5/7 options offered
-         and the closest to a typical car-loan term, unlike the 20-year
-         default that made sense for a home loan. -->
-    <div class="total-card" id="cb-hero" style="display:none;">
-      <div class="total-label">Your 5-Year EMI</div>
-      <div class="total-value" id="cb-hero-emi">—</div>
-      <div class="total-cr" id="cb-hero-note"></div>
-      <div class="total-sub">
-        <div class="total-sub-item"><div class="ts-lbl">Total Interest</div><div class="ts-val mono" id="cb-hero-interest">—</div></div>
-        <div class="total-sub-item"><div class="ts-lbl">Total Paid</div><div class="ts-val mono" id="cb-hero-total">—</div></div>
-      </div>
-    </div>
-
-    <!-- 3/5/7-year comparison — collapsed by default (R46, Phase 10b) -->
-    <div class="collapse-card" id="cb-compare-card" style="display:none;">
-      <div class="collapse-header" onclick="toggleCard('cb-compare-card')">
-        <span class="collapse-title">Compare 3 / 5 / 7-year tenures</span>
-        <span class="collapse-arrow">▼</span>
-      </div>
-      <div class="collapse-body">
-        <div id="cb-cards" class="loan-grid"></div>
-      </div>
-    </div>
-    <div id="cb-depreciation" class="panel-card" style="margin-bottom:28px;display:none;">
-      <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-down"></use></svg></span><span class="pch-title">Estimated Resale Value (IRDAI Depreciation)</span></div>
-      <div class="panel-card-body">
-        <!-- Static sibling of cb-depr-body, not inside its innerHTML (R20,
-             Phase 3c): cb-depr-body's table is rebuilt on every keystroke,
-             which was destroying and recreating this chart's host node each
-             time and forcing renderChart()'s node-identity check to tear
-             down and rebuild a ResizeObserver per character typed. The
-             loan-balance legend item (R53, Phase 13, answering B8) is a
-             static sibling too, just toggled visible/hidden — no loan means
-             no second series, not a flat zero line. -->
-        <div class="chart-legend" id="cb-depr-legend">
-          <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Car value</span>
-          <span class="chart-legend-item" id="cb-depr-legend-loan" style="display:none;"><span class="chart-legend-dot" style="background:var(--red)"></span>Outstanding loan balance</span>
-        </div>
-        <div id="cb-depr-chart"></div>
-        <div class="chart-caption" id="cb-depr-caption"><span>Year 1</span><span>Year 7</span></div>
-        <div id="cb-depr-body"></div>
       </div>
     </div>
 
@@ -2241,9 +2302,14 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <div class="provenance-date">As of: a starting point — replace with your own lender's quote</div>
       </div>
       <div class="provenance-row">
-        <div class="provenance-term">Car loan default rate (Car Buying)</div>
-        <div class="provenance-value">9.5% p.a.</div>
-        <div class="provenance-date">As of: a starting point — replace with your own quote</div>
+        <div class="provenance-term">Compare Cars loan/lease interest rate default</div>
+        <div class="provenance-value">10% p.a.</div>
+        <div class="provenance-date">As of: a starting point — replace with your own quote. (The standalone "Car Buying" section this used to live in was retired in Phase 14 and folded into Compare Cars' Loan mode.)</div>
+      </div>
+      <div class="provenance-row">
+        <div class="provenance-term">Compare Cars opportunity-cost reveal — assumed return if the tied-up capital were invested instead</div>
+        <div class="provenance-value">12% p.a.</div>
+        <div class="provenance-date">As of: a starting point, same figure as the SIP CAGR default below — markets don't guarantee any return</div>
       </div>
       <div class="provenance-row">
         <div class="provenance-term">SIP CAGR default (all three Dhanam Grow tabs)</div>
@@ -2452,10 +2518,19 @@ let loanOpened = false;
 let disbOpened = false;
 let disbTranches = [ { pct: 50, month: 0 }, { pct: 50, month: 12 } ];
 let ccCars = [
-  { type: 'ICE', name: '', price: 0, eff: 0, bigEngine: false },
-  { type: 'EV', name: '', price: 0, eff: 0, bigEngine: false },
+  { type: 'ICE', name: '', price: 0, eff: 0, bigEngine: false, downPayment: 0 },
+  { type: 'EV', name: '', price: 0, eff: 0, bigEngine: false, downPayment: 0 },
 ];
 let ccBuilt = false;
+// Financing mode (R56, Phase 14) — one of 'loan' | 'lease' | 'cash', drives
+// both the Lease Tax Analysis panel's visibility and calcOwnershipCost's
+// `mode` for every Compare Cars row. Loan is the default (most visitors
+// don't have a lease policy; a car loan is the common case). Deliberately
+// tier-3 — a plain JS variable, not persisted into DS/dhanam.v1 — same
+// judgment call as ccRevealOpen below: which mode you were last looking at
+// is session context, not a fact about the user worth remembering across a
+// reload the way propertyState (B11-style tier-1) is. See CLAUDE.md.
+let carMode = 'loan';
 // Per-card disclosure state for the ranked result list (R47, Phase 10c) —
 // independent per row (keyed by the row's stable index into ccCars, `r.i`
 // from ccComputedRows()), not an accordion. Default is "rank-1 open, ranks
@@ -2475,6 +2550,11 @@ let ccForceClosed = new Set();
 // path to even consider.
 let ccOwnCurveIdx = null;
 let ccRevealOpen = false;
+// Cash mode's opportunity-cost reveal (B13, R58) and the cross-mode
+// comparison's shared reveal (R60) — same tier-3 non-persisted rule as
+// ccRevealOpen immediately above: both always start closed on a fresh load.
+let ccOppRevealOpen = false;
+let ccCrossRevealOpen = false;
 
 // Modes for amenities / corpus / infra (sqft or lump)
 const MODES = { amenities: 'sqft', corpus: 'sqft', infra: 'sqft' };
@@ -3776,7 +3856,15 @@ function switchHub(tab) {
   if (content) content.classList.add('active');
   if (btn) btn.classList.add('active');
   if (tab === 'sip') { updateSIPPlanner(); updateStepupSIP(); updateLumpsum(); }
-  if (tab === 'car') { renderCarCalc(); renderCarLoan(); renderCarCompare(); }
+  // renderCarLoan() (Car Buying — Loan Analysis, cb-*) was retired in
+  // Phase 14/R59 — its EMI/tenure-grid/depreciation-chart capabilities are
+  // now inside Compare Cars' per-car detail view (ccRenderLoanDetail(),
+  // called from renderCCOwnCurve() -> renderCarCompare()). setCarMode()
+  // re-applies the current mode's visibility (car-lease-panel show/hide,
+  // Assumptions-card field show/hide, the shortlist row shape) and
+  // re-renders every time hub-car is entered, so switching hubs and coming
+  // back never leaves stale visibility from before.
+  if (tab === 'car') { setCarMode(carMode); }
   if (tab === 'worth') renderWorth();
 }
 
@@ -4738,162 +4826,70 @@ function renderCarCalc() {
 }
 
 // =====================================================================
-// DHANAM CAR — CAR BUYING LOAN ANALYSIS
+// DHANAM CAR — CAR BUYING LOAN TENURE HELPER
 // =====================================================================
 // calcCarDepreciation now lives in calc.js (loaded above) — see CLAUDE.md's Testing section.
-function renderCarLoan() {
-  const price = +v('cb-price') || 0;
-  const down = +v('cb-down') || 0;
-  const rate = +v('cb-rate') || 9.5;
-  const loan = Math.max(0, price - down);
-
-  el('cb-derived').innerHTML = `
-    <div class="cb-derived-item"><div class="cb-derived-lbl">Loan Amount</div><div class="cb-derived-val">${fmt(loan)}</div></div>
-    <div class="cb-derived-item"><div class="cb-derived-lbl">Down Payment %</div><div class="cb-derived-val">${price > 0 ? ((down/price)*100).toFixed(1) : 0}%</div></div>
-    <div class="cb-derived-item"><div class="cb-derived-lbl">On-Road Price</div><div class="cb-derived-val">${fmt(price)}</div></div>
-  `;
-
-  // Loan-scenario cards need an actual loan; depreciation only needs a price,
-  // so it must not sit behind this early return (a 100%-down-payment car has
-  // loan === 0 but still has a resale curve worth showing).
-  if (!loan || !rate) {
-    hide('cb-hero');
-    hide('cb-compare-card');
-    el('cb-cards').innerHTML = '';
-  } else {
-    const tenures = [3, 5, 7];
-    // Shared by the hero (5-year, R46/Phase 10b) and the 3/5/7 grid so both
-    // always agree bit-for-bit — same formula, computed once per tenure.
-    // Uses the shared calcEMI() (calc.js) rather than an inline formula
-    // (R10) — fv is omitted (defaults to 0), which is the exact original
-    // 3-argument code path, so this is numerically identical to the
-    // formula it replaces.
-    function tenureStats(yr) {
-      const n = yr * 12;
-      const emi = calcEMI(loan, rate, yr);
-      const total = emi * n;
-      const interest = total - loan;
-      return { yr, n, emi, total, interest };
-    }
-
-    // Hero — opinionated default: 5-year tenure (R2 pattern applied here as
-    // R46/Phase 10b). Live/dynamic like every other hero in this app: it
-    // recomputes on every renderCarLoan() call from the current price/rate.
-    const hero = tenureStats(5);
-    show('cb-hero');
-    set('cb-hero-emi', fmt(hero.emi) + '/mo');
-    set('cb-hero-note', `5-year loan @ ${rate}% p.a. — compare 3 & 7 years below`);
-    set('cb-hero-interest', fmt(hero.interest));
-    set('cb-hero-total', fmt(hero.total));
-
-    show('cb-compare-card');
-    el('cb-cards').innerHTML = tenures.map(yr => {
-      const t = tenureStats(yr);
-      const intPct = (t.interest / loan * 100).toFixed(1);
-      return `<div class="car-card">
-        <div class="car-card-title">${t.yr}-Year Loan</div>
-        <div class="car-stat"><span class="car-stat-lbl">Loan Amount</span><span class="car-stat-val">${fmt(loan)}</span></div>
-        <div class="car-stat"><span class="car-stat-lbl">Interest Rate</span><span class="car-stat-val">${rate}% p.a.</span></div>
-        <div class="car-stat"><span class="car-stat-lbl">Monthly EMI</span><span class="car-stat-val big">${fmt(t.emi)}</span></div>
-        <div class="car-stat"><span class="car-stat-lbl">Total Paid (${t.n} EMIs)</span><span class="car-stat-val">${fmt(t.total)}</span></div>
-        <div class="car-stat"><span class="car-stat-lbl">Total Interest</span><span class="car-stat-val red">${fmt(t.interest)}</span></div>
-        <div class="car-stat"><span class="car-stat-lbl">Interest % of Loan</span><span class="car-stat-val red">${intPct}%</span></div>
-      </div>`;
-    }).join('');
-  }
-
-  const deprEl = el('cb-depreciation');
-  const deprBody = el('cb-depr-body');
-  if (price > 0) {
-    deprEl.style.display = '';
-    const tableYears = [1, 2, 3, 5, 7];
-
-    // Resale curve (R13, x-axis fixed under R17) — chartSvg spaces points by
-    // index, not by value, so plotting the table's [1,2,3,5,7] years directly
-    // drew the flat years 1-2 as wide as the steep two-year gap from 5 to 7 —
-    // the inverse of the "cliff in years 1-3" shape this chart exists to
-    // show. Plotting every year 1-7 makes index spacing equal to time
-    // spacing; the table's five rows are still exact points on the curve.
-    const chartYears = [1, 2, 3, 4, 5, 6, 7];
-    const valueVals = chartYears.map(y => calcCarDepreciation(price, y));
-
-    // Outstanding loan balance overlay (R53, Phase 13 — answers B8: is the
-    // "underwater" point, where the car is worth less than what's owed on
-    // it, visible?). Same two-rupee-series-on-one-scale shape as R51/R52's
-    // cost-vs-value chart, for one visual language across both: no area
-    // fill (the crossing is the payload, a fill would obscure it), red for
-    // the balance (a real negative financial position, palette rule 4 —
-    // the same justification the Worth hub's negative hero already uses).
-    // Fixed at the 5-year tenure the hero above already leads with (R46) —
-    // there's no separate "chosen tenure" input in this section, so the
-    // balance line agrees with the EMI actually shown, not a different one.
-    // A 100%-down-payment car (loan === 0) must show no balance series at
-    // all, never a flat zero line — this table/chart renders off `price`
-    // alone (R13) and stays that way even with the overlay added.
-    const LOAN_CHART_TENURE = 5;
-    // Sliced to the loan's own tenure, not the chart's full 7-year window —
-    // loanAtYear clamps at the tenure, so plotting all 7 years would draw a
-    // flat zero-balance line for years 6-7 after payoff, the exact artifact
-    // this overlay must avoid for a zero-loan car, just relocated to a
-    // shorter-than-7-year loan instead of avoided.
-    const loanYears = chartYears.slice(0, LOAN_CHART_TENURE);
-    const balanceVals = loan > 0
-      ? loanYears.map(y => loanAtYear(loan, rate, LOAN_CHART_TENURE, y).balance)
-      : null;
-
-    let underwaterNote = '';
-    if (balanceVals) {
-      // Underwater is structurally a leading interval (amortization outpaces
-      // depreciation early, then the balance falls below a slowing
-      // depreciation curve) — never "from year N onward" indefinitely.
-      // Report the actual first/last underwater year rather than assuming
-      // it holds through payoff once it's ever true.
-      const underwaterYears = loanYears.filter((y, i) => balanceVals[i] > valueVals[i]);
-      if (!underwaterYears.length) {
-        underwaterNote = ` At this ${LOAN_CHART_TENURE}-year loan's pace, the outstanding balance never exceeds the car's resale value.`;
-      } else {
-        const first = underwaterYears[0], last = underwaterYears[underwaterYears.length - 1];
-        const span = first === last ? `in year ${first}` : `from year ${first} through year ${last}`;
-        underwaterNote = ` At this ${LOAN_CHART_TENURE}-year loan's pace, the outstanding balance exceeds the car's resale value ${span} — you'd owe more than the car is worth.`;
-      }
-    }
-
-    deprBody.innerHTML = `<div class="table-scroll"><table class="depr-table">
-      <thead><tr><th>Year</th><th>Est. Resale Value</th><th>Depreciation from New</th><th>Value Lost</th></tr></thead>
-      <tbody>
-        ${tableYears.map(y => {
-          const resale = calcCarDepreciation(price, y);
-          const lost = price - resale;
-          const pct = (lost/price*100).toFixed(1);
-          return `<tr><td>Year ${y}</td><td>${fmt(resale)}</td><td>${pct}% lost</td><td style="color:var(--red)">${fmt(lost)}</td></tr>`;
-        }).join('')}
-      </tbody>
-    </table></div>
-    <p style="font-size:11px;color:var(--text-dim);margin-top:8px;">Based on IRDAI schedule: 20% year 1, 15%/yr thereafter. Actual resale varies by brand, condition, and market.${underwaterNote}</p>`;
-
-    const series = [{ values: valueVals, color: 'var(--accent)', area: false }];
-    if (balanceVals) series.push({ values: balanceVals, color: 'var(--red)', area: false });
-    renderChart('cb-depr-chart', series, {
-      ariaLabel: balanceVals ? 'Estimated resale value and outstanding loan balance by year' : 'Estimated resale value by year',
-    });
-    el('cb-depr-legend-loan').style.display = balanceVals ? '' : 'none';
-    const allVals = balanceVals ? valueVals.concat(balanceVals) : valueVals;
-    el('cb-depr-caption').innerHTML =
-      `<span>Year 1</span><span>${inCr(Math.min(...allVals))} – ${inCr(Math.max(...allVals))}</span><span>Year 7</span>`;
-  } else {
-    deprEl.style.display = 'none';
-    clearChart('cb-depr-chart');
-    el('cb-depr-legend-loan').style.display = 'none';
-  }
+// Standalone (not a closure over cb-price/-rate) since Phase 14/R59 absorbed
+// the standalone "Car Buying — Loan Analysis" section (renderCarLoan(),
+// cb-*) into Compare Cars' per-car detail view and then deleted it — this is
+// the one piece carried across UNCHANGED (same formula, same shape), per the
+// spec's explicit instruction not to re-derive it. Every caller (the retired
+// renderCarLoan()'s hero/grid, and ccRenderLoanDetail() below) computes the
+// exact same numbers a fresh call to calcEMI would.
+function tenureStats(loanAmt, rate, yr) {
+  const n = yr * 12;
+  const emi = calcEMI(loanAmt, rate, yr);
+  const total = emi * n;
+  const interest = total - loanAmt;
+  return { yr, n, emi, total, interest };
 }
 
 // =====================================================================
-// DHANAM CAR — COMPARE CARS (ICE vs EV under a company lease), Phase 9
+// DHANAM CAR — COMPARE CARS (Phase 9; generalised to Loan/Lease/Cash
+// financing modes in Phase 14, R55-R60)
 // =====================================================================
-// calcRunningCost / calcInsuranceTotal / calcLeaseNetCost / calcBreakevenKm
-// and calcEMI's fv argument all live in calc.js — see CLAUDE.md's Testing
-// section. This block is the DOM-coupled half: reading cc-* inputs, the
-// ccCars shortlist, and rendering the hero/breakeven/chart/result cards.
+// calcRunningCost / calcInsuranceTotal / calcOwnershipCost / calcBreakevenKm
+// / calcOwnershipCurve / calcLumpsumGrowth and calcEMI's fv argument all
+// live in calc.js — see CLAUDE.md's Testing section. This block is the
+// DOM-coupled half: reading cc-*/car-mode-* inputs, the ccCars shortlist,
+// and rendering the mode selector, hero/breakeven/chart/result cards, and
+// the per-car detail view (cost-vs-value chart, loan tenure grid,
+// depreciation + loan-balance overlay, and the lease/loan/cash cross-mode
+// comparison).
+
+// Mode selector (R56). Switching modes never clears ccCars or the lease
+// panel's own inputs — this only toggles visibility and re-renders, exactly
+// like toggleSection()'s panels never re-run a first-open prefill on
+// reopen. renderCCRows() must re-run (not just renderCarCompare()) because
+// the shortlist row template itself changes shape — the down-payment field
+// (R57) only exists in Loan mode.
+function setCarMode(mode) {
+  carMode = mode;
+  ['loan', 'lease', 'cash'].forEach(m => {
+    el('car-mode-btn-' + m).classList.toggle('active', m === mode);
+  });
+  el('car-lease-panel').style.display = mode === 'lease' ? '' : 'none';
+  if (mode === 'lease') { renderCarCalc(); }
+  updateCCModeFields();
+  renderCCRows();
+  renderCarCompare();
+}
+
+// Shows/hides the Assumptions-card fields that only apply to some modes —
+// SHOW/HIDE, not greying out, the same visibility rule car-lease-panel
+// itself follows (R56/R57's "decide once" instruction). Called on mode
+// switch and once at init.
+function updateCCModeFields() {
+  const isLease = carMode === 'lease';
+  const isCash = carMode === 'cash';
+  el('cc-field-residual').style.display = isLease ? '' : 'none';
+  el('cc-field-marginal').style.display = isLease ? '' : 'none';
+  el('cc-field-driver').style.display = isLease ? '' : 'none';
+  el('cc-field-cash-cagr').style.display = isCash ? '' : 'none';
+  set('cc-rate-label', isCash ? 'Interest Rate (% p.a.)' : (carMode === 'loan' ? 'Loan Interest Rate (% p.a.)' : 'Lease Interest Rate (% p.a.)'));
+  set('cc-rate-hint', isCash ? 'Ignored in Cash mode — nothing is financed' : (carMode === 'loan' ? 'Used for every car\'s loan EMI' : 'Used for every car\'s lease EMI'));
+  set('cc-years-label', carMode === 'loan' ? 'Loan Term' : (isCash ? 'Ownership Term' : 'Lease Tenure'));
+}
 
 // A row that's been started (any field touched) but doesn't yet pass the
 // price>0 && eff>0 guard gets a same-row explanation of what's missing —
@@ -4906,8 +4902,14 @@ function ccRowHintText(c) {
   const missing = [];
   if (!(c.price > 0)) missing.push('on-road price');
   if (!(c.eff > 0)) missing.push(c.type === 'EV' ? 'efficiency' : 'mileage');
-  if (!missing.length) return '';
-  return `Add ${missing.join(' and ')} to include this car in the comparison`;
+  if (missing.length) return `Add ${missing.join(' and ')} to include this car in the comparison`;
+  // Not a blocking case (computes fine, no NaN/Infinity — see calcOwnershipCost's
+  // loan branch) but a down payment over the car's own price is almost
+  // certainly a typo, and nothing else on screen would ever flag it.
+  if (carMode === 'loan' && (c.downPayment || 0) > c.price) {
+    return `Down payment (${fmt(c.downPayment)}) is more than this car's price — check for a typo`;
+  }
+  return '';
 }
 
 function ccRowHtml(c, i) {
@@ -4939,6 +4941,11 @@ function ccRowHtml(c, i) {
       <label><input type="checkbox" ${c.bigEngine ? 'checked' : ''} style="accent-color:var(--accent);width:15px;height:15px;"
         onchange="ccCars[${i}].bigEngine = this.checked; renderCarCompare();"> &gt;1600cc</label>
     </div>` : ''}
+    ${carMode === 'loan' ? `<div class="cc-field">
+      <label>Down Payment (₹)</label>
+      <input type="number" value="${c.downPayment || ''}" min="0" step="10000"
+        oninput="ccCars[${i}].downPayment = parseFloat(this.value) || 0; renderCarCompare();">
+    </div>` : ''}
     <button class="disb-tr-remove" onclick="ccRemoveCar(${i})" ${ccCars.length <= 1 ? 'disabled' : ''} title="Remove car">✕</button>
     <div class="cc-row-hint" id="cc-row-hint-${i}">${xesc(ccRowHintText(c))}</div>
   </div>`;
@@ -4958,7 +4965,7 @@ function renderCCRows() {
 
 function ccAddCar() {
   if (ccCars.length >= 5) { showToast('Up to 5 cars at a time'); return; }
-  ccCars.push({ type: 'ICE', name: '', price: 0, eff: 0, bigEngine: false });
+  ccCars.push({ type: 'ICE', name: '', price: 0, eff: 0, bigEngine: false, downPayment: 0 });
   renderCCRows();
   renderCarCompare();
 }
@@ -4980,11 +4987,13 @@ function ccRemoveCar(i) {
 
 function ccAssumptions() {
   return {
+    mode: carMode,
     annualRate: v('cc-lease-rate'),
     residualPct: v('cc-residual-pct') / 100,
     years: v('cc-years') || 4,
     marginalRate: v('cc-marginal-rate') / 100,
     hasDriver: el('cc-has-driver').value === '1',
+    cashCagr: v('cc-cash-cagr') || 0,
     petrolPrice: v('cc-petrol'),
     homeRate: v('cc-home-rate'),
     publicRate: v('cc-public-rate'),
@@ -4997,6 +5006,28 @@ function ccAssumptions() {
     iceIns: v('cc-ice-ins') / 100,
     evIns: v('cc-ev-ins') / 100,
     depRate: v('cc-dep-rate') / 100,
+  };
+}
+
+// The per-car input object calcOwnershipCost/calcOwnershipCurve share —
+// built once here so ccComputedRows(), renderCCOwnCurve(), and
+// ccCrossModeStats() can never drift apart on what "this car, under these
+// assumptions" means. `mode` is an explicit parameter (not read from `a`)
+// so ccCrossModeStats() can call this three times, once per mode, for the
+// SAME car (R60) — the shortlist's own ranking still always uses `a.mode`.
+function ccOwnershipInput(c, a, mode) {
+  const isEV = c.type === 'EV';
+  return {
+    mode,
+    price: c.price, annualRate: a.annualRate, residualPct: a.residualPct, years: a.years,
+    downPayment: c.downPayment || 0,
+    bigEngine: !isEV && c.bigEngine, hasDriver: a.hasDriver, marginalRate: a.marginalRate,
+    type: c.type, efficiency: c.eff,
+    cityKm: a.cityKm, hwyKm: a.hwyKm, petrolPrice: a.petrolPrice, iceHwyMult: a.iceHwyMult,
+    homeRate: a.homeRate, publicRate: a.publicRate, evHwyMult: a.evHwyMult,
+    maintAnnual: isEV ? a.evMaint : a.iceMaint,
+    insRate: isEV ? a.evIns : a.iceIns,
+    depRate: a.depRate,
   };
 }
 
@@ -5019,17 +5050,7 @@ function ccComputedRows() {
     .map((c, i) => ({ c, i }))
     .filter(({ c }) => c.price > 0 && c.eff > 0)
     .map(({ c, i }) => {
-      const isEV = c.type === 'EV';
-      const result = calcLeaseNetCost({
-        price: c.price, annualRate: a.annualRate, residualPct: a.residualPct, years: a.years,
-        bigEngine: !isEV && c.bigEngine, hasDriver: a.hasDriver, marginalRate: a.marginalRate,
-        type: c.type, efficiency: c.eff,
-        cityKm: a.cityKm, hwyKm: a.hwyKm, petrolPrice: a.petrolPrice, iceHwyMult: a.iceHwyMult,
-        homeRate: a.homeRate, publicRate: a.publicRate, evHwyMult: a.evHwyMult,
-        maintAnnual: isEV ? a.evMaint : a.iceMaint,
-        insRate: isEV ? a.evIns : a.iceIns,
-        depRate: a.depRate,
-      });
+      const result = calcOwnershipCost(ccOwnershipInput(c, a, a.mode));
       const perKm = calcRunningCost(c.type, c.eff, a).perKm;
       return { i, car: c, result, perKm, years: a.years };
     });
@@ -5062,11 +5083,12 @@ function hydrateCC() {
       price: +c.price || 0,
       eff: +c.eff || 0,
       bigEngine: !!c.bigEngine,
+      downPayment: +c.downPayment || 0,
     }));
   } else {
     ccCars = [
-      { type: 'ICE', name: '', price: 0, eff: 0, bigEngine: false },
-      { type: 'EV', name: '', price: 0, eff: 0, bigEngine: false },
+      { type: 'ICE', name: '', price: 0, eff: 0, bigEngine: false, downPayment: 0 },
+      { type: 'EV', name: '', price: 0, eff: 0, bigEngine: false, downPayment: 0 },
     ];
   }
   if (saved && saved.cityKm) el('cc-city-km').value = saved.cityKm;
@@ -5086,7 +5108,10 @@ function persistCC() {
   if (!anyContent) return;
   if (!DS) DS = blankState();
   DS.carCompare = {
-    cars: ccCars.map(c => ({ type: c.type, name: c.name, price: c.price, eff: c.eff, bigEngine: c.bigEngine })),
+    // downPayment (R57, Phase 14): a fact about this specific car/plan, same
+    // tier-1 reasoning as bigEngine — never the shared rate/residual/
+    // marginal-rate/CAGR assumptions above, which stay tier-2.
+    cars: ccCars.map(c => ({ type: c.type, name: c.name, price: c.price, eff: c.eff, bigEngine: c.bigEngine, downPayment: c.downPayment })),
     cityKm: v('cc-city-km') || null,
     hwyKm: v('cc-hwy-km') || null,
   };
@@ -5130,6 +5155,7 @@ function renderCarCompare() {
     hide('cc-hero');
     hide('cc-owncurve-card');
     clearChart('cc-owncurve-chart');
+    clearChart('cc-depr-chart'); // R15: never leave a stale cached series behind
     hide('cc-breakeven-card');
     hide('cc-chart-card');
     clearChart('cc-chart');
@@ -5163,6 +5189,11 @@ function renderCarCompare() {
   // ccCars), not an accordion: opening one card never closes another, the
   // same carve-out CLAUDE.md documents for hub-apartment's nested
   // loan/advanced/SIP compare-grid .collapse-cards. ─────────────────────
+  // Mode-aware labels (R57/R58): cash has no EMI (paid in full) and no tax
+  // saved; loan has an EMI but no tax saved (no deduction on a personal car
+  // loan — correct, not an omission, see calc.js/CLAUDE.md); lease keeps
+  // both, unchanged from before Phase 14.
+  const emiSub = r => carMode === 'cash' ? `Paid in full · ₹${r.result.costPerKm.toFixed(2)}/km` : `${fmt(r.result.emi)}/mo · ₹${r.result.costPerKm.toFixed(2)}/km`;
   el('cc-results').innerHTML = rows.map((r, rank) => {
     const isRank1 = rank === 0;
     const vsCheapest = r.result.netCost - cheapest.result.netCost;
@@ -5172,7 +5203,7 @@ function renderCarCompare() {
       <div class="cc-rank-title">${xesc(r.car.name) || (r.car.type === 'EV' ? 'Unnamed EV' : 'Unnamed ICE car')}</div>
       <div class="cc-rank-type">${r.car.type}${r.car.type === 'ICE' && r.car.bigEngine ? ' · >1600cc' : ''} · ${fmt(r.car.price)} on-road</div>
       <div class="car-stat"><span class="car-stat-lbl">Net Cost (before resale credit)</span><span class="car-stat-val big">${fmt(r.result.netCost)}</span></div>
-      <div class="cc-rank-sub">${fmt(r.result.emi)}/mo · ₹${r.result.costPerKm.toFixed(2)}/km</div>
+      <div class="cc-rank-sub">${emiSub(r)}</div>
       <div class="collapse-card cc-detail-card ${isOpen ? 'open' : ''}" id="cc-detail-${r.i}">
         <div class="collapse-header" onclick="ccToggleDetail(${r.i})">
           <span class="collapse-title">Full breakdown</span>
@@ -5180,8 +5211,8 @@ function renderCarCompare() {
         </div>
         <div class="collapse-body">
           <div class="car-stat"><span class="car-stat-lbl">Raw Cash Outflow</span><span class="car-stat-val">${fmt(r.result.rawOutflow)}</span></div>
-          <div class="car-stat"><span class="car-stat-lbl">EMI / month</span><span class="car-stat-val">${fmt(r.result.emi)}</span></div>
-          <div class="car-stat"><span class="car-stat-lbl">Tax Saved (${r.years}yr, signed)</span><span class="car-stat-val ${r.result.taxSaved < 0 ? 'red' : ''}">${fmt(r.result.taxSaved)}</span></div>
+          ${carMode !== 'cash' ? `<div class="car-stat"><span class="car-stat-lbl">EMI / month${carMode === 'loan' && r.car.downPayment > 0 ? ` (down payment ${fmt(r.car.downPayment)})` : ''}</span><span class="car-stat-val">${fmt(r.result.emi)}</span></div>` : ''}
+          <div class="car-stat"><span class="car-stat-lbl">Tax Saved (${r.years}yr, signed)</span><span class="car-stat-val ${r.result.taxSaved < 0 ? 'red' : ''}">${carMode === 'lease' ? fmt(r.result.taxSaved) : `${fmt(0)} — no deduction on a ${carMode === 'loan' ? 'personal car loan' : 'cash purchase'}`}</span></div>
           <div class="car-stat"><span class="car-stat-lbl">Blended Cost / km</span><span class="car-stat-val">₹${r.result.costPerKm.toFixed(2)}</span></div>
           ${!isRank1 ? `<div class="car-divider"></div><div class="car-stat"><span class="car-stat-lbl">vs. cheapest</span><span class="car-stat-val red">+${fmt(vsCheapest)}</span></div>` : ''}
         </div>
@@ -5227,17 +5258,20 @@ function renderCarCompare() {
   persistCC();
 }
 
-// Cost-vs-value chart + resale reveal (R51/R52, Phase 13). Self-contained
-// like renderCCChart() below — recomputes rows itself, which is what lets it
-// be called directly from the car-select's onchange (a discrete committed
-// choice, not a keystroke — same reasoning CLAUDE.md gives for the shortlist
-// row's own Type select) without re-running all of renderCarCompare().
+// Cost-vs-value chart + resale reveal (R51/R52, Phase 13; extended in Phase
+// 14/R57-R60 with the down-payment note, the absorbed loan-tenure grid and
+// depreciation/loan-balance chart, the cash opportunity-cost reveal, and the
+// lease/loan/cash cross-mode comparison). Self-contained like renderCCChart()
+// below — recomputes rows itself, which is what lets it be called directly
+// from the car-select's onchange (a discrete committed choice, not a
+// keystroke — same reasoning CLAUDE.md gives for the shortlist row's own
+// Type select) without re-running all of renderCarCompare().
 //
 // One car at a time: ccOwnCurveIdx is the selected row's stable index into
 // ccCars (the same `r.i` convention ccForceOpen/ccForceClosed use), falling
 // back to rank 1 the first time or whenever the previous selection no longer
 // exists (car removed). calcOwnershipCurve() is called with the exact same
-// `o` shape ccComputedRows() builds for calcLeaseNetCost — same assumptions,
+// input ccOwnershipInput() builds for calcOwnershipCost — same assumptions,
 // same car — so the chart's endpoint always agrees with the card above it.
 function renderCCOwnCurve() {
   const rows = ccComputedRows();
@@ -5258,16 +5292,14 @@ function renderCCOwnCurve() {
   const row = rows.find(r => r.i === ccOwnCurveIdx) || rows[0];
   const a = ccAssumptions();
   const isEV = row.car.type === 'EV';
-  const curve = calcOwnershipCurve({
-    price: row.car.price, annualRate: a.annualRate, residualPct: a.residualPct, years: a.years,
-    bigEngine: !isEV && row.car.bigEngine, hasDriver: a.hasDriver, marginalRate: a.marginalRate,
-    type: row.car.type, efficiency: row.car.eff,
-    cityKm: a.cityKm, hwyKm: a.hwyKm, petrolPrice: a.petrolPrice, iceHwyMult: a.iceHwyMult,
-    homeRate: a.homeRate, publicRate: a.publicRate, evHwyMult: a.evHwyMult,
-    maintAnnual: isEV ? a.evMaint : a.iceMaint,
-    insRate: isEV ? a.evIns : a.iceIns,
-    depRate: a.depRate,
-  });
+  const curve = calcOwnershipCurve(ccOwnershipInput(row.car, a, carMode));
+
+  if (carMode === 'loan' && row.car.downPayment > 0) {
+    el('cc-owncurve-down-note').style.display = '';
+    set('cc-owncurve-down-note', `Down payment ${fmt(row.car.downPayment)} · Loan amount ${fmt(Math.max(0, row.car.price - row.car.downPayment))}`);
+  } else {
+    el('cc-owncurve-down-note').style.display = 'none';
+  }
 
   renderChart('cc-owncurve-chart', [
     { values: curve.cumulativeCost, color: 'var(--accent)', area: false },
@@ -5276,7 +5308,8 @@ function renderCCOwnCurve() {
 
   // Caption states the value range (R19's rule: nothing else on screen shows
   // these per-year figures) and calls out the final-year step in words — real
-  // (the residual buyout lands there), not a rendering artefact.
+  // (the residual buyout lands there, in lease mode only), not a rendering
+  // artefact.
   const N = curve.years.length;
   const lastCost = curve.cumulativeCost[N - 1];
   const prevCost = N > 1 ? curve.cumulativeCost[N - 2] : 0;
@@ -5284,15 +5317,21 @@ function renderCCOwnCurve() {
   const lo = Math.min(...allVals), hi = Math.max(...allVals);
   el('cc-owncurve-caption').innerHTML =
     `<span>Year 1</span><span>${inCr(lo)} – ${inCr(hi)}</span><span>Year ${N}</span>`;
-  set('cc-owncurve-note', N > 1
-    ? `Year ${N}'s cost steps sharply, ${inCr(prevCost)} to ${inCr(lastCost)}, because the ${fmt(row.result.residual)} residual buyout lands in that year — not a rendering error.`
-    : `A ${N}-year term is a single point — nothing to plot a crossing against.`);
+  if (N > 1 && carMode === 'lease' && row.result.residual > 0) {
+    set('cc-owncurve-note', `Year ${N}'s cost steps sharply, ${inCr(prevCost)} to ${inCr(lastCost)}, because the ${fmt(row.result.residual)} residual buyout lands in that year — not a rendering error.`);
+  } else if (N > 1) {
+    set('cc-owncurve-note', '');
+  } else {
+    set('cc-owncurve-note', `A ${N}-year term is a single point — nothing to plot a crossing against.`);
+  }
 
   // Reveal (R52): tier-3 UI state (ccRevealOpen), never persisted, resets on
   // reload. The button's label and the figure's own label are both permanent
   // text — never a bare styled number, so an exported screenshot can't read
   // this as the ranking's real hero (there is no Compare Cars export today,
   // but the rule is written down for the first one that lands here).
+  // resaleValue is computed identically in every mode (Phase 14) — the
+  // reveal works the same way in Loan/Cash as it always did in Lease.
   const btn = el('cc-reveal-btn');
   const fig = el('cc-reveal-figure');
   if (ccRevealOpen) {
@@ -5303,10 +5342,217 @@ function renderCCOwnCurve() {
     btn.textContent = 'Reveal resale-adjusted net cost (forecast)';
     fig.style.display = 'none';
   }
+
+  // Opportunity-cost reveal (B13, R58) — same shape as the resale reveal
+  // directly above. Shown in every mode (post-review fix): the capital base
+  // ccOpportunityCost() charges already varies correctly by mode (full price
+  // in Cash, down payment only in Loan, ~₹0 in Lease — see its own comment),
+  // so gating the reveal's visibility to Cash alone was the actual bug, not
+  // a simplification — it meant a Loan-mode down payment's opportunity cost
+  // was computed (and used on the cross-mode card) but never shown here.
+  const oppBtn = el('cc-opp-reveal-btn');
+  const oppFig = el('cc-opp-reveal-figure');
+  const oppCapitalLabel = carMode === 'cash' ? 'this cash'
+    : (carMode === 'loan' ? 'this car\'s down payment' : 'the capital tied up (none, upfront, for a lease)');
+  if (ccOppRevealOpen) {
+    oppBtn.textContent = 'Hide opportunity-cost figure';
+    oppFig.style.display = '';
+    set('cc-opp-reveal-label', `What ${oppCapitalLabel} could have earned if invested instead — a forecast, not part of the ranking above`);
+    set('cc-opp-reveal-value', fmt(ccOpportunityCost(carMode, row.car.price, row.car.downPayment || 0, a.cashCagr, a.years)));
+  } else {
+    oppBtn.textContent = 'Reveal opportunity cost of tied-up capital (forecast)';
+    oppFig.style.display = 'none';
+  }
+
+  // Loan-only 3/5/7-year tenure grid + IRDAI depreciation/loan-balance chart,
+  // absorbed from the retired cb-* Car Buying — Loan Analysis section (R59).
+  ccRenderLoanDetail(row.car, a);
+
+  // Lease vs. Loan vs. Cash for this same car (R60).
+  renderCCCrossMode(row.car, a);
 }
 
 function ccToggleReveal() {
   ccRevealOpen = !ccRevealOpen;
+  renderCCOwnCurve();
+}
+
+function ccToggleOppReveal() {
+  ccOppRevealOpen = !ccOppRevealOpen;
+  renderCCOwnCurve();
+}
+
+// Opportunity cost on whatever lump sum of capital is tied up *upfront* in a
+// given mode (B13/R58's "applied consistently across all modes" fairness
+// rule — see calc.js's calcLumpsumGrowth and CLAUDE.md's Compare Cars
+// section for the full reasoning): cash ties up the full price at t=0; a
+// loan ties up only its down payment at t=0 (the EMIs that follow are
+// ongoing income, not idle capital); a lease ties up nothing upfront at all
+// (that IS the lease's structural advantage) — so its opportunity cost is
+// genuinely ~₹0, a real finding, not a bug. Same calcLumpsumGrowth() formula
+// in every branch, just fed a different capital amount.
+function ccOpportunityCost(mode, price, downPayment, cagr, years) {
+  const capital = mode === 'cash' ? price : (mode === 'loan' ? (downPayment || 0) : 0);
+  return calcLumpsumGrowth(capital, cagr, years) - capital;
+}
+
+// Absorbed from the retired cb-* Car Buying — Loan Analysis section (R59).
+// tenureStats() is carried across intact (see its own comment above); the
+// depreciation table/chart is mode-independent (renders off price alone,
+// R13) and shown for every mode, with the outstanding-loan-balance overlay
+// (R53, Phase 13; re-fixed post-Phase-14-review — see the loanTermYears
+// comment below) added only in Loan mode. Both Phase-13 bugfixes still hold:
+// the balance series is sliced to its own loan term rather than the chart's
+// full 7-year window, and "underwater" is reported as the actual
+// first-through-last year range, never "from year N onward".
+function ccRenderLoanDetail(car, a) {
+  const tenureCard = el('cc-tenure-card');
+  const price = car.price;
+  const down = carMode === 'loan' ? (car.downPayment || 0) : 0;
+  const loan = Math.max(0, price - down);
+  const rate = a.annualRate;
+
+  if (carMode === 'loan' && loan > 0 && rate > 0) {
+    show('cc-tenure-card');
+    const tenures = [3, 5, 7];
+    el('cc-tenure-cards').innerHTML = tenures.map(yr => {
+      const t = tenureStats(loan, rate, yr);
+      const intPct = loan > 0 ? (t.interest / loan * 100).toFixed(1) : '0.0';
+      return `<div class="car-card">
+        <div class="car-card-title">${t.yr}-Year Loan</div>
+        <div class="car-stat"><span class="car-stat-lbl">Loan Amount</span><span class="car-stat-val">${fmt(loan)}</span></div>
+        <div class="car-stat"><span class="car-stat-lbl">Interest Rate</span><span class="car-stat-val">${rate}% p.a.</span></div>
+        <div class="car-stat"><span class="car-stat-lbl">Monthly EMI</span><span class="car-stat-val big">${fmt(t.emi)}</span></div>
+        <div class="car-stat"><span class="car-stat-lbl">Total Paid (${t.n} EMIs)</span><span class="car-stat-val">${fmt(t.total)}</span></div>
+        <div class="car-stat"><span class="car-stat-lbl">Total Interest</span><span class="car-stat-val red">${fmt(t.interest)}</span></div>
+        <div class="car-stat"><span class="car-stat-lbl">Interest % of Loan</span><span class="car-stat-val red">${intPct}%</span></div>
+      </div>`;
+    }).join('');
+  } else {
+    hide('cc-tenure-card');
+    el('cc-tenure-cards').innerHTML = '';
+  }
+
+  const deprSection = el('cc-depr-section');
+  const deprBody = el('cc-depr-body');
+  if (price > 0) {
+    deprSection.style.display = '';
+    const tableYears = [1, 2, 3, 5, 7];
+    const chartYears = [1, 2, 3, 4, 5, 6, 7];
+    const valueVals = chartYears.map(y => calcCarDepreciation(price, y));
+
+    // R53 originally hardcoded 5 years here because the retired cb-* section
+    // had no separate "chosen tenure" input. Phase 14/R59's absorption gave
+    // Compare Cars its own term selector (cc-years, 3/4/5yr) that already
+    // drives the EMI, netCost, ranking and cost-vs-value chart above — the
+    // balance line has to agree with THAT loan, not a fixed 5-year stand-in,
+    // or the underwater note ends up naming a loan the user never configured
+    // (found in code review: at the app's own 4-year default, the fixed
+    // 5-year line falsely claimed underwater years that don't exist for the
+    // real 4-year loan, and at a 3-year term it ran two years past payoff).
+    const loanTermYears = a.years;
+    const loanYears = chartYears.slice(0, loanTermYears);
+    // Parity with the retired cb-* code: the overlay's own guard is just
+    // `loan > 0` (not `&& rate > 0`) — loanAtYear's r===0 branch is a valid,
+    // non-NaN linear amortization, and the old section showed the balance
+    // line at a 0% rate too. Only the NEW `carMode === 'loan'` condition is
+    // an intentional Phase 14 addition (no "loan balance" concept in
+    // Lease/Cash mode).
+    const balanceVals = (carMode === 'loan' && loan > 0)
+      ? loanYears.map(y => loanAtYear(loan, rate, loanTermYears, y).balance)
+      : null;
+
+    let underwaterNote = '';
+    if (balanceVals) {
+      const underwaterYears = loanYears.filter((y, i) => balanceVals[i] > valueVals[i]);
+      if (!underwaterYears.length) {
+        underwaterNote = ` At this ${loanTermYears}-year loan's pace, the outstanding balance never exceeds the car's resale value.`;
+      } else {
+        const first = underwaterYears[0], last = underwaterYears[underwaterYears.length - 1];
+        const span = first === last ? `in year ${first}` : `from year ${first} through year ${last}`;
+        underwaterNote = ` At this ${loanTermYears}-year loan's pace, the outstanding balance exceeds the car's resale value ${span} — you'd owe more than the car is worth.`;
+      }
+    }
+
+    deprBody.innerHTML = `<div class="table-scroll"><table class="depr-table">
+      <thead><tr><th>Year</th><th>Est. Resale Value</th><th>Depreciation from New</th><th>Value Lost</th></tr></thead>
+      <tbody>
+        ${tableYears.map(y => {
+          const resale = calcCarDepreciation(price, y);
+          const lost = price - resale;
+          const pct = (lost/price*100).toFixed(1);
+          return `<tr><td>Year ${y}</td><td>${fmt(resale)}</td><td>${pct}% lost</td><td style="color:var(--red)">${fmt(lost)}</td></tr>`;
+        }).join('')}
+      </tbody>
+    </table></div>
+    <p style="font-size:11px;color:var(--text-dim);margin-top:8px;">Based on IRDAI schedule: 20% year 1, 15%/yr thereafter. Actual resale varies by brand, condition, and market.${underwaterNote}</p>`;
+
+    const series = [{ values: valueVals, color: 'var(--accent)', area: false }];
+    if (balanceVals) series.push({ values: balanceVals, color: 'var(--red)', area: false });
+    renderChart('cc-depr-chart', series, {
+      ariaLabel: balanceVals ? 'Estimated resale value and outstanding loan balance by year' : 'Estimated resale value by year',
+    });
+    el('cc-depr-legend-loan').style.display = balanceVals ? '' : 'none';
+    const allVals = balanceVals ? valueVals.concat(balanceVals) : valueVals;
+    el('cc-depr-caption').innerHTML =
+      `<span>Year 1</span><span>${inCr(Math.min(...allVals))} – ${inCr(Math.max(...allVals))}</span><span>Year 7</span>`;
+  } else {
+    deprSection.style.display = 'none';
+    clearChart('cc-depr-chart');
+    el('cc-depr-legend-loan').style.display = 'none';
+  }
+}
+
+// Lease vs. Loan vs. Cash for the SAME car, side by side (R60) — the payload
+// that justifies this whole restructure. Uses the car's own down payment
+// (loan) and the shared assumptions (rate/term/marginal-rate/driver) for all
+// three columns, regardless of which mode currently drives the ranking.
+// resaleValue is mode-independent (calcCarDepreciation(price, N) in every
+// branch of calcOwnershipCost), so a single shared reveal can apply it — and
+// the opportunity-cost forecast — identically to all three columns at once,
+// which is exactly B13's fairness rule: never a friendlier default for one
+// mode than another.
+function renderCCCrossMode(car, a) {
+  const modes = ['lease', 'loan', 'cash'];
+  const labels = { lease: 'Lease', loan: 'Loan', cash: 'Cash' };
+  const results = modes.map(m => calcOwnershipCost(ccOwnershipInput(car, a, m)));
+
+  // This card always renders all three columns, but the Assumptions card
+  // only ever shows the ONE mode-specific field group matching the currently
+  // active mode (updateCCModeFields()) — so outside Lease mode, the Lease
+  // column's residual/marginal-rate/driver inputs are invisible on screen,
+  // and outside Cash mode, the Cash column's CAGR input is too. Found in
+  // code review: that left the Lease column looking unconditionally cheaper
+  // (via an invisible marginal tax rate) with no way for a Loan/Cash-mode
+  // visitor to see what number produced it. State the actual values used,
+  // in words, every time — same instinct as the resale reveal's permanent
+  // label, applied to inputs instead of an output.
+  set('cc-crossmode-assumptions',
+    `Lease column assumes a ${(a.residualPct * 100).toFixed(0)}% residual and a ${(a.marginalRate * 100).toFixed(1)}% marginal tax rate` +
+    `${a.hasDriver ? ', with a company driver' : ''} — editable in Lease mode. Cash's opportunity-cost forecast (below) assumes a ${a.cashCagr}% p.a. return — editable in Cash mode.`);
+
+  const btn = el('cc-cross-reveal-btn');
+  btn.textContent = ccCrossRevealOpen
+    ? 'Hide resale credit & opportunity cost'
+    : 'Reveal resale credit & opportunity cost for all three (forecast)';
+
+  el('cc-crossmode-cards').innerHTML = modes.map((m, idx) => {
+    const r = results[idx];
+    const isActive = m === carMode;
+    const oppCost = ccOpportunityCost(m, car.price, car.downPayment || 0, a.cashCagr, a.years);
+    return `<div class="car-card${isActive ? ' highlight' : ''}">
+      <div class="car-card-title">${labels[m]}${isActive ? ' (current mode)' : ''}</div>
+      <div class="car-stat"><span class="car-stat-lbl">Net Cost (before resale credit)</span><span class="car-stat-val big">${fmt(r.netCost)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">${m === 'cash' ? 'Paid in full' : 'EMI / month'}</span><span class="car-stat-val">${m === 'cash' ? '—' : fmt(r.emi)}</span></div>
+      ${ccCrossRevealOpen ? `<div class="car-divider"></div>
+      <div class="car-stat"><span class="car-stat-lbl">After resale credit</span><span class="car-stat-val accent">${fmt(r.netCostAfterResale)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Opportunity cost of tied-up capital</span><span class="car-stat-val">${fmt(oppCost)}</span></div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function ccToggleCrossReveal() {
+  ccCrossRevealOpen = !ccCrossRevealOpen;
   renderCCOwnCurve();
 }
 
