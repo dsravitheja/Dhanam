@@ -27,6 +27,8 @@
 
 ## 1. What's actually still open
 
+> ⚠️ **This section is stale — it was written 2026-08-08 and predates Phases 11, 12, 13 and 14.** The *conventions* in this document (isolated worktrees, one integration agent per merge, shared touchpoints reserved to the integrator, `git merge-base` verified before any diff is trusted) are still current and still binding; only the inventory below is out of date. **`TASK-UX-REDESIGN.md`'s "Remaining work" table is the live view**, and `MID-PROJECT-REVIEW.md` (2026-08-10) is the audit behind its current state. In short: R10, R21, R22, R24 and R45 have since shipped; what remains is **R8** (now re-rated **High**), **R23**, the rest of **R25**, **R31** (still gated on B10), and the five new items **R62–R66** filed by the mid-project review. Note also that **R62–R64 are deliberately single-agent work** — three small edits in one file each, where the coordination cost of a wave would exceed the work.
+
 Per `TASK-UX-REDESIGN.md`'s "Remaining work" table (as of this writing): Phase 5 (**R8**, **R10**), Phase 6 (**R21**–**R25**, **R45**-the-build-stamp — not to be confused with the now-shipped Phase 10a hero, which collided on the same number; see that file's note), and Phase 7 (**R31**, **R32**). Phases 1–4, 4b, 8, 8b, 9, and 10 are shipped.
 
 | Item | What it touches | Blocked by | Notes |
