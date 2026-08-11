@@ -364,6 +364,24 @@ function calcOwnershipCurve(o) {
   return { years, cumulativeCost, carValue };
 }
 
+// ── DHANAM WORTH ──────────────────────────────────────────────────
+// Extracted from index.html's renderWorthProjection() (Phase 16/R65) so that
+// function and the loan panel's "reverse Worth bridge" disclosure
+// (worthSnapshot() + this function, both in index.html) can never
+// independently drift into two different net-worth projections — they call
+// this exact same formula with the exact same arguments, not two hand-copied
+// versions of it. investable/propertyVal/liabilities are today's balance-
+// sheet figures; property is deliberately held flat (this app has no basis
+// to assume an appreciation rate for it) and debt amortizes generically via
+// loanAtYear at a single blended rate/tenure, same as before extraction —
+// this is a pure refactor, not a new model, and produces bit-identical
+// output to the pre-R65 inline version for the same inputs.
+function calcNetWorthProjection(investable, propertyVal, liabilities, cagr, debtRate, debtYears, monthlySip, years) {
+  const grownInvestable = investable * Math.pow(1 + cagr / 100, years) + calcSIP(monthlySip, cagr, years);
+  const remainingDebt = loanAtYear(liabilities, debtRate, debtYears, years).balance;
+  return grownInvestable + propertyVal - remainingDebt;
+}
+
 // Zero-dependency bridge: browsers see plain globals via <script src="calc.js">;
 // Node (tests.js) gets the same file via require('./calc.js'). No bundler either way.
 if (typeof module !== 'undefined' && module.exports) {
@@ -373,5 +391,6 @@ if (typeof module !== 'undefined' && module.exports) {
     calcIncomeTax, calcPerquisite, calcCarDepreciation,
     calcRunningCost, calcInsuranceTotal, calcOwnershipCost, calcBreakevenKm,
     calcOwnershipCurve, calcLumpsumGrowth,
+    calcNetWorthProjection,
   };
 }
