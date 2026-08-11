@@ -1,9 +1,23 @@
 # Task Brief: Add a Correctness Test Harness for Dhanam's Financial Calculations
 
-> **Status: NOT approved for execution.** Owner is reviewing this brief before any work starts.
+> **Status: ✅ SHIPPED — Option A, in Phase 1 (commit `c292d4b`).** This brief is kept as the record of
+> *why* the harness exists and how the option was chosen; it is **no longer a work item.**
 > This task implements recommendation #1 from `ARCHITECTURE-ANALYSIS.md`: *"the actual risk in going
 > public isn't the single-file structure — it's that nothing catches a wrong financial answer before
-> a stranger trusts it."* This is the highest-leverage, lowest-cost fix identified there.
+> a stranger trusts it."* This was the highest-leverage, lowest-cost fix identified there.
+>
+> **What actually shipped, and where it exceeded this brief** (verified 2026-08-10, see `MID-PROJECT-REVIEW.md` §2.4):
+> Option A was taken. `calc.js` holds **14** pure functions, not the 8 scoped below — `calcRunningCost`,
+> `calcInsuranceTotal`, `calcOwnershipCost`, `calcBreakevenKm`, `calcOwnershipCurve` and `calcLumpsumGrowth`
+> were added by Phases 9, 13 and 14 and are covered too. `tests.js` and `tests.html` both exist and run the
+> same assertions. The suite is at **95 assertions**, not the ~39 this brief's scope implies, and now includes
+> an independent bisection oracle for `calcEMI` and conservation/monotonicity properties.
+>
+> ⚠️ **Do not use the expected values in the "Test cases to implement" section below as-is.** They were written
+> on 2026-07-20, before three statutory-correctness phases. **`calcPerquisite`'s four expected values are now
+> flatly wrong** (superseded by R37's Income-tax Rules 2026 table) and **`calcIncomeTax`'s new-regime bullet
+> describes a cliff that R34 deliberately removed** — both are annotated inline below. `tests.js` is the live
+> specification; this section is history, kept for the reasoning rather than the numbers.
 
 ## Context to load first
 
@@ -108,14 +122,17 @@ Wherever a case says "verify independently" — **do not trust hand-computed fig
 
 - `calcIncomeTax(0, 'new')` === 0; `calcIncomeTax(-100000, 'new')` === 0 (guard clause).
 - New regime 87A cliff: `calcIncomeTax(1200000, 'new')` === 0, `calcIncomeTax(1200001, 'new')` > 0 — confirm this cliff-edge jump is intentional per current tax rules (it's a real, well-known feature of the 87A rebate, not obviously a bug, but worth asserting explicitly since cliff edges are where off-by-one errors hide).
+  - ⚠️ **Answered, and it was a bug — this brief's instinct was right.** The suspicion recorded above ("cliff edges are where off-by-one errors hide") is exactly what **R34/D14** later found: real law grants **Section 87A marginal relief** across ₹12,00,000–₹12,70,588.24, capping tax before cess at `taxable − 1200000`. The app was applying the naive slab jump and over-taxing that band by up to ~₹31K/year. Both assertions above still hold, but the *shape* changed: `calcIncomeTax(1200001, 'new')` is now ≈ ₹1.04, not ~₹62,400. `tests.js` pins the boundary and the breakeven. **The old-regime ₹5L rebate is a genuine cliff in law and must stay one** — there is a test pinning it so a future "consistency" fix can't quietly extend relief to it.
 - Old regime 87A cliff: `calcIncomeTax(500000, 'old')` === 0, `calcIncomeTax(500001, 'old')` > 0.
 
 **`calcPerquisite`** (exact lookup table, per IT Rule 3(2) as coded — high confidence, should be exact)
 
-- `calcPerquisite(false, false)` === 1800
-- `calcPerquisite(true, false)` === 2400
-- `calcPerquisite(false, true)` === 2700
-- `calcPerquisite(true, true)` === 3300
+> 🛑 **SUPERSEDED — do not write these assertions.** The four values below are the **Income-tax Rules 1962** figures that were in the code when this brief was written on 2026-07-20. They were found stale by four months during Phase 8b and replaced by the **Income-tax Rules, 2026** table (in force 2026-04-01) under **R37**: ₹5,000/mo for ≤1.6L *or electric*, ₹7,000/mo above 1.6L, +₹3,000/mo for a chauffeur. `tests.js` now pins the current values **and** asserts that no superseded figure survives anywhere in the table. Left visible rather than deleted because this is the worked example behind CLAUDE.md's rule that *statutory constants rot silently — date them and pin them in the same commit.*
+
+- ~~`calcPerquisite(false, false)` === 1800~~ → **5000**
+- ~~`calcPerquisite(true, false)` === 2400~~ → **7000**
+- ~~`calcPerquisite(false, true)` === 2700~~ → **8000**
+- ~~`calcPerquisite(true, true)` === 3300~~ → **10000**
 
 **`calcCarDepreciation`**
 

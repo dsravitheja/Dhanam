@@ -2,6 +2,13 @@
 
 *Reviewed: 2026-07-19 · Source: `index.html` (~2,900 lines), `manifest.json`, `sw.js` · No code was changed for this review.*
 
+> **📍 Status header, added 2026-08-10.** This document is the **original analysis and its rationale** — it is deliberately *not* updated as things ship, because its value is the reasoning at the time. Two things a reader needs to know before trusting a detail in it:
+>
+> 1. **`TASK-UX-REDESIGN.md`'s "Remaining work" table is the live view of what's left**, and **`MID-PROJECT-REVIEW.md` (2026-08-10) is the audit of this document against the code that actually shipped.** Scorecard: **11 of the 14 design defects fully closed, D12 half-closed, D7 regressed, D8 untouched.**
+> 2. **Two visual descriptions below are stale.** The verdict paragraph and the first "What's working well" bullet describe a *"forest green + gold"* palette. That palette was replaced by the true-neutral near-black **"Quiet Luxury / Private Bank"** system (gold as the sole accent, disciplined green/red for real deltas) — see `COLOR-PALETTE-ANALYSIS.md` and `TASK-COLOR-PALETTE.md`. The *argument* those sentences make (that the app has a real visual identity, unusually for a calculator) still holds; only the hue names are wrong. `index.html` is also now 5,589 lines, not ~2,900.
+>
+> **Where this document's own predictions landed** (detail in `MID-PROJECT-REVIEW.md` §2.2): **Strategic #1 (the front door) — solved**, goal-framed tiles, Grow first. ⚠️ Watch that the tile grid has grown to 7 and **4 of the 7 now lead to home/loan destinations**; the original complaint was "three of six tiles are loan-related", and the underlying gravity has returned even though goal-framing masks it. **Strategic #2 (Worth as the anchor) — about a third built, and stalled**: the projection bridge ships, but the two things promised in §Strategic-2 below — the prepayment simulator showing its effect on *your* net worth, and the verdict cards becoming personal — were never given R-numbers and never built. The bridge runs one way only. **That is now tracked as R65**, whose acceptable outcome includes an explicit decision *not* to build it — recorded here rather than left looking half-finished by accident.
+
 ---
 
 ## Verdict up front
@@ -214,6 +221,8 @@ In `hub-disb`, each keystroke in a tranche input calls `renderLoanDisb()` → `r
 
 Inputs use 13–14px fonts (`.field input` 14px, `.cf-input` 13px). Mobile Safari auto-zooms any focused input under 16px, causing the page to lurch on every field tap — a classic mobile-web annoyance for a PWA meant to be installed on phones. *Fix:* ≥16px input font on touch widths.
 
+> 🐛 **Shipped in Phase 0, then REGRESSED — found 2026-08-10** (`MID-PROJECT-REVIEW.md` §6.1; tracked as **R62**). The fix is a media query listing input classes **explicitly**, which means it silently fails to cover any class added later. `TASK-UX-REDESIGN.md`'s Phase 0 flagged this as a *"standing obligation, not a one-off"* and the CSS itself carries the comment *"Every new input class must be added here too."* Two later phases added classes and neither was added to the list: **`.cc-field input`/`.cc-field select`** at 14px (Phase 9, extended by Phase 14 — every Compare Cars field including the Down Payment) and **`.qf select`** at 15px (Phase 6a — `q-state`, the control that makes the app correct for non-Telangana users). **The lesson generalises past this defect:** a rule enforced only by a comment failed twice in six weeks in a codebase that is otherwise unusually disciplined about writing rules down. Where a rule is a *list that must be extended*, it needs a check, not a comment.
+
 ### D8. Keyboard & screen-reader access is near zero — *severity: medium, effort: medium*
 
 Collapse headers, `adv-header`, `sip-header` are `<div onclick>` — unreachable by keyboard, no `aria-expanded`. Hub nav has no `tablist`/`aria-selected` semantics. Mode-toggle buttons (`₹/sft`/`Lump`) are ~20px tall — far below the 44px touch-target minimum. Only `.tile` defines `:focus-visible`. *Fix:* buttons for all clickables, ARIA states on expand/collapse and tabs, larger touch targets.
@@ -252,6 +261,8 @@ Found on 2026-07-26 by the owner running a real scenario — defer a house purch
 ⚠️ **Modeling this properly is harder than it looks and may not be worth it.** Each SIP installment carries its own holding-period clock, so a redemption splits into long-term and short-term buckets by installment date; `calcSIP` is a closed-form annuity that structurally cannot express that (only a month-by-month simulation can). And equity tax treatment changed in 2018, 2023 and 2024 — a precise post-tax figure projected twenty years out asserts both a redemption event that may never happen and rules that will certainly change. **A precisely wrong number is worse than a roughly right range, and worse than an honest "we don't model this."**
 
 *Tracked as 6d-i (framing, ships with the prepayment tile) and R31/R32 (Phase 7) in `TASK-UX-REDESIGN.md`.*
+
+> **Status 2026-08-10 — the serious half shipped, the ordinary half did not, and the gap is now in the wrong place** (`MID-PROJECT-REVIEW.md` §6.2). **Framing (the serious one): ✅ closed** — 6d-i's caveat sits above the Buy-vs-SIP hero and names both the SIP side's uncertainty/tax exposure *and* the loan side's ignored Section 24/80C benefits, so it doesn't trade one bias for its mirror image. **Precision (the ordinary one): ❌ still fully open on the hub where it applies most.** R32 was assessed and correctly declined (*state-and-don't-model*), and that assessment ended by saying: ship the one-sentence caveat instead. **It was never placed in Dhanam Grow.** As of today, `hub-sip` — the app's *first landing tile* — contains no occurrence of the word "tax" at all: a user typing ₹50,000/month over 20 years reads a ₹4.98 Cr corpus with nothing on screen indicating it is pre-tax. The honest disclosure exists, is written, was recommended by our own assessment, and lives only on the About page and inside a different hub's caveat. **Tracked as R63** — and note it does *not* need B10 answered, because B10 gates a computed figure, not a stated assumption. That conflation is what kept a one-paragraph fix queued behind a modeling decision for two weeks.
 
 ### D13. Regional defaults are presented as universal — *severity: high (correctness), effort: medium*
 

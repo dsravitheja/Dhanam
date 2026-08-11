@@ -1,7 +1,10 @@
 # Task Brief: Color Palette Overhaul (Quiet Luxury / Private Bank)
 
-> **Status: NOT approved for execution.** Brand direction and the "drop section-flavor colors" call are already confirmed with the owner (see `COLOR-PALETTE-ANALYSIS.md`), but the two open items at the end of that doc (export-button treatment, and confirming green/red hex stay unchanged) need a final yes before this executes.
+> **Status: ✅ SHIPPED** — the palette overhaul in commit `728666e`, completed by the D1 gray sweep in `d2a7a60`. This brief is kept as the record of what was changed and why; it is **no longer a work item.**
 > This implements the recommendations in `COLOR-PALETTE-ANALYSIS.md` — read that document first; this brief assumes its reasoning and only restates the actionable parts.
+>
+> **Held up under audit (2026-08-10, see `MID-PROJECT-REVIEW.md` §2.4).** Twelve phases of new UI later, the three-hue rule has never been broken: `index.html` contains only two hex literals outside `:root`, both duplicates of existing tokens in `<meta>`/manifest contexts. Neutral-scale extensions were added deliberately (`--border-subtle`, `--hero-grad-1/2`, `--on-accent`, `--header-grad-mid/end`) — neutrals only, no new hues, as the rules require.
+> ⚠️ Note for anyone re-reading the constraints below: the test-count sanity check says *"expect 39/39"*, which was true in July 2026. The suite is now at **95** assertions. The constraint is "unchanged", not "39".
 
 ## Goal
 

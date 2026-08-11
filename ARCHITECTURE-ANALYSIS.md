@@ -82,3 +82,41 @@ The Google Fonts `@import` (`index.html:14`) is currently the only outbound netw
 4. **Only then**, as a maintainability improvement rather than a launch blocker, consider lightly modularizing: splitting the inline `<script>` into a handful of `<script src="js/loan.js">`-style files grouped by hub (still zero build tooling, still fully static, just less of a single scroll-forever file), and namespacing each hub's state behind an object (`Loan.state`, `Worth.state`) instead of bare globals. This directly reduces the collision risk in point 2 above and makes review diffs scoped to the feature that changed. It's optional, lower urgency than 1–3, and worth doing incrementally rather than as a big-bang rewrite — natural entry points are exactly the phases already planned in `TASK-UX-REDESIGN.md` (each new hub is a good moment to split it out into its own file).
 
 **In one sentence:** the architecture you chose is right for a free, private, static finance-calculator app at any scale of traffic — the thing that actually needs fixing before strangers rely on it isn't the file count, it's the total absence of automated verification that the math is correct.
+
+---
+
+## Status check — 2026-08-10, fourteen phases later
+
+*Added by `MID-PROJECT-REVIEW.md` (§2.3). This document made specific, falsifiable predictions; this section reports what happened to them. The core judgement — **keep the static, no-backend architecture** — held up completely and is not in question.*
+
+### The four recommendations
+
+| # | Recommendation | Status |
+|---|---|---|
+| 1 | Minimal correctness test harness | ✅ **Shipped and exceeded.** Option A of `TASK-TEST-HARNESS.md`: `calc.js` extracted, loadable identically in Node and the browser. Scoped at 8 pure functions, now **14**; scoped at "hand-written assertions", now **95**, including an independent bisection oracle for `calcEMI` (so a *formula* bug, not just a regression, is caught) and conservation properties. It has since caught real bugs — see below. |
+| 2 | Basic client-side error visibility | ❌ **Not done, and still open since day one.** The only `onerror` in `index.html` is `reader.onerror` on the backup-file input. A stranger who hits a JS exception sees a silently dead calculator and has nothing to report. Now tracked as **R66** in `TASK-UX-REDESIGN.md`. ⚠️ If it ships it must **surface text on screen for the user to copy, never send anything** — an error endpoint would forfeit the privacy claim more cheaply than a backend would. |
+| 3 | Close the Google Fonts gap | ✅ **Shipped** (Phase 4/R5). Three families self-hosted, latin *and* latin-ext (the plain latin subset excludes `₹`), all precached. Zero off-origin requests, which is what makes the About page's *"open devtools and check"* claim verifiable. |
+| 4 | Light modularization, one hub at a time | ❌ **Not done — and it was declined by default, not by decision.** `calc.js` was extracted (as a side effect of #1, which this document predicted: *"one change serves two purposes"*), but the inline `<script>` was never split. There have been four natural entry points since — Worth, Compare Cars, financing modes, the absorbed loan detail — and none was taken. Now tracked as the structural option under **R66**. |
+
+### The prediction in §5, measured
+
+This document wrote: *"2,888 lines today; the UX redesign brief alone proposes a new hub, a persistence layer, and a chart system, easily pushing this past 4,000–5,000 lines."*
+
+| Metric | 2026-07-20 | 2026-08-10 | This document said |
+|---|---|---|---|
+| `index.html` lines | 2,888 | **5,589** | *"past 4,000–5,000"* — exceeded |
+| Module-scope globals (§2) | ~8 | **38** | *"will not stay manageable as Dhanam Worth is added"* |
+| Inline event-handler strings (§3) | 93 | **167** | *"particularly fragile… fails silently"* |
+| Top-level functions | 63 | **118** | — |
+
+Nine of the 38 globals are Compare Cars UI state alone (`ccCars`, `ccBuilt`, `carMode`, `ccForceOpen`, `ccForceClosed`, `ccOwnCurveIdx`, and three separate reveal flags).
+
+### What this means — and what it doesn't
+
+**§2's predicted failure mode has not actually bitten.** No name collision, no hidden-coupling bug has been traced to the global namespace in fourteen phases. Credit where due: the per-prefix ID discipline (`q-`/`d-`/`l-`/`cc-`/`w-`…) and the "one `render*` entry point per feature" convention documented in `CLAUDE.md` have done real work that this document did not anticipate — **conventions substituted for structure, and so far they have held.** That is a genuine finding in favour of the current shape, not just an absence of evidence.
+
+**But the two mitigations were prescribed together, and neither was taken.** Recommendation #4 was explicitly ranked last and called *"optional, lower urgency than 1–3"* — not doing it is defensible on its own terms. Not doing it *while also* skipping #2 is weaker, because #2 was the cheap compensating control for exactly the risk #4 addresses: a silent failure in a large file with no type checker, no linter, and no build step to warn.
+
+**The class of bug that has actually bitten is the one #1 was built for — and #1 keeps catching it.** Phases 13 and 14 each shipped a real wrong-number bug that a live-browser QA pass missed and an analytical code review found (a hardcoded 5-year loan tenure; a balance series drawn past its own payoff). Phase 13's fix went further and is the model worth repeating: the team **built the wrong implementation deliberately**, confirmed it passed all 11 existing assertions while being off by ₹8.18L at year 2, and then added the assertion that could tell them apart. That is this document's recommendation #1 working exactly as intended, three phases beyond where it was scoped to reach.
+
+**Recommendation, unchanged in substance:** still don't restructure as a prerequisite for launch. Take the cheap half of what's outstanding — a `window.onerror` handler — because it directly serves the close-circle beta, where the failure mode is *"a tester says it broke and we have nothing."* Treat the file split as an opportunistic move at the next hub-sized change (`car.js` is the obvious first cut, at ~39% of all `index.html` churn), not as a project.
