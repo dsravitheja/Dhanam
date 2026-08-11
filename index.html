@@ -503,13 +503,29 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 /* iOS Safari auto-zooms on focusing any input under 16px; force 16px on touch widths */
 @media(max-width:600px){
-  /* Mobile Safari auto-zooms any focused input under 16px (D7). Every new
-     input class must be added here too. */
-  .qf input, .field input, .field select, .cf-input,
-  .loan-field input, .cy-input, .sip-inline-input, .disb-tr-field input,
-  .w-row input {
-    font-size:16px;
-  }
+  /* D7/R62: this used to be an explicit selector list, and the list was the
+     defect — it failed SIX ways, in three distinct modes, which is why the
+     fix is a new mechanism rather than a longer list:
+       (1) never added — `.cc-field input/select` at 14px (Phase 9, grew in
+           Phase 14) and `.qf select` at 15px (Phase 6a);
+       (2) listed but out-specified — `.field.highlight input` and
+           `.loan-field input.hl`, both (0,2,1), beat the list's own (0,1,1)
+           `.field input`/`.loan-field input` and still rendered 15px;
+       (3) listed but out-ORDERED — `.sip-inline-input` and
+           `.disb-tr-field input` are declared BELOW this block at equal
+           specificity, so plain source order beat the list and they too
+           still rendered 14px. Mode (3) went unnoticed for longer than the
+           other two and is the one no amount of diligence about "remember
+           to add your class" would ever have caught.
+     A comment telling the next author to remember is not a mechanism; an
+     `!important` catch-all is, since it is immune to all three modes.
+     Verified safe to blanket: no input/select/textarea
+     anywhere in this file sets a font-size above 16px (15px is the current
+     max), so `!important` here can only ever enlarge, never shrink, a rule
+     that someone actually intended to be small. See CLAUDE.md's Styling
+     section and manual checklist item 57 for the invariant this enforces
+     and the grep that checks it. */
+  input, select, textarea { font-size:16px !important; }
 }
 
 /* ── HUB NAVIGATION ──────────────────────── */
@@ -1917,6 +1933,14 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="hub-content" id="hub-sip">
   <div class="main">
     <div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Dhanam Grow — SIP Planner</div>
+    <!-- R63: one caveat, once, above the tab row — not three per-tab copies.
+         Sits here so it's visible the moment the hub opens regardless of
+         which of the three tabs is active, matching the Buy-vs-SIP and
+         Compare Cars .sip-caveat placement (CLAUDE.md's Styling section).
+         Copy-only, state-and-don't-model per Phase 7b's assessment
+         (TASK-UX-REDESIGN.md) — no calculation change, no computed
+         post-tax figure (that's R31, gated on B10, separate and unstarted). -->
+    <div class="sip-caveat"><strong>Every figure below is pre-tax.</strong> On redemption, equity LTCG above ₹1.25L in a financial year is taxed at 12.5% (rate and exemption as of the Union Budget 2024, effective 23 Jul 2024) — actual tax depends on when you sell, how the redemption is split across financial years, and what the law says at that time, none of which this app can know. A projection, not a promise.</div>
     <div class="sip-planner-tabs">
       <button class="sip-planner-tab active" id="spt-monthly" onclick="switchSIPPlannerTab('monthly')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Monthly SIP</button>
       <button class="sip-planner-tab" id="spt-stepup" onclick="switchSIPPlannerTab('stepup')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Step-up SIP</button>
@@ -2362,7 +2386,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 // cached shell without knowing it). Bump this BY HAND alongside sw.js's CACHE
 // version whenever a user-visible change ships — the two are not derived from
 // one another, so both need editing.
-const BUILD_STAMP = '2026-08-09';
+const BUILD_STAMP = '2026-08-11';
 
 // =====================================================================
 // UTILITIES
