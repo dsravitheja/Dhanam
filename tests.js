@@ -17,6 +17,7 @@ const {
   calcIncomeTax, calcPerquisite, calcCarDepreciation,
   calcRunningCost, calcInsuranceTotal, calcOwnershipCost, calcBreakevenKm,
   calcOwnershipCurve, calcLumpsumGrowth,
+  calcNetWorthProjection,
 } = require('./calc.js');
 
 let pass = 0, fail = 0;
@@ -637,6 +638,53 @@ ok('calcBreakevenKm: EV never cheaper per km (denom<=0) -> null, not Infinity/Na
   ok('calcBreakevenKm: normal case -> a positive breakeven km/yr',
     approxEqual(needsMore, 8333.33, 0.01),
     `got ${needsMore}`);
+}
+
+// =====================================================================
+// calcNetWorthProjection (Phase 16/R65) — extracted verbatim out of
+// renderWorthProjection()'s inline closure so that function and the loan
+// panel's reverse Worth bridge (renderAdvWorthBridge()) call one shared
+// formula instead of two hand-copied ones. These pin the formula's shape,
+// not any UI behaviour.
+// =====================================================================
+ok('calcNetWorthProjection: all-zero inputs at year 0 -> 0',
+  calcNetWorthProjection(0, 0, 0, 10, 9, 10, 0, 0) === 0,
+  `got ${calcNetWorthProjection(0, 0, 0, 10, 9, 10, 0, 0)}`);
+
+ok('calcNetWorthProjection: year 0 with no SIP contribution reduces to investable + property - liabilities exactly (no growth/decay has had time to apply)',
+  calcNetWorthProjection(100000, 500000, 200000, 10, 9, 10, 0, 0) === 400000,
+  `got ${calcNetWorthProjection(100000, 500000, 200000, 10, 9, 10, 0, 0)}`);
+
+{
+  // 0% cagr / 0% debt rate -> straight-line SIP contributions and
+  // straight-line debt amortization, independently cross-checked against
+  // calcSIP/loanAtYear directly (not just against calcNetWorthProjection's
+  // own internals) so a bug shared between this function and its two
+  // primitives wouldn't hide behind agreeing with itself.
+  const investable = 100000, propertyVal = 0, liabilities = 120000;
+  const monthlySip = 10000, years = 5, debtYears = 10;
+  const expected = investable /* 0% cagr: no growth */
+    + calcSIP(monthlySip, 0, years)
+    + propertyVal
+    - loanAtYear(liabilities, 0, debtYears, years).balance;
+  ok('calcNetWorthProjection: 0% cagr/0% debt-rate case matches calcSIP + loanAtYear composed independently',
+    calcNetWorthProjection(investable, propertyVal, liabilities, 0, 0, debtYears, monthlySip, years) === expected,
+    `got ${calcNetWorthProjection(investable, propertyVal, liabilities, 0, 0, debtYears, monthlySip, years)} expected ${expected}`);
+}
+
+ok('calcNetWorthProjection: property is held flat — with investable/liabilities/SIP all 0, the result equals propertyVal unchanged at any horizon',
+  calcNetWorthProjection(0, 750000, 0, 12, 9, 10, 0, 20) === 750000,
+  `got ${calcNetWorthProjection(0, 750000, 0, 12, 9, 10, 0, 20)}`);
+
+{
+  // Debt fully amortized by the horizon (years >= debtYears) -> remaining
+  // debt is 0, same "clamped at 0, never negative" contract loanAtYear
+  // already guarantees on its own.
+  const result = calcNetWorthProjection(200000, 0, 500000, 10, 9, 5, 0, 5);
+  const expectedGrown = 200000 * Math.pow(1.10, 5);
+  ok('calcNetWorthProjection: debt fully paid off by the horizon leaves only the grown investable amount (no negative liability)',
+    approxEqual(result, expectedGrown, 0.01),
+    `got ${result} expected ${expectedGrown}`);
 }
 
 // =====================================================================
