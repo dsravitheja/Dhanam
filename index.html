@@ -118,6 +118,22 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text); font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; font-size: 15px; line-height: 1.6; min-height: 100vh; }
 
+/* ── GLOBAL FOCUS RING (R8, Phase 5) ─────── */
+/* One catch-all for every interactive element type, rather than an
+   enumerated selector list — the same "a list is a defect waiting to
+   happen" reasoning D7/R62 already applied to the touch-width input
+   font-size rule below. Reuses the exact gold --accent ring already
+   established, pre-R8, by .header-about-link/.tile/.landing-footer-link's
+   own :focus-visible rules further down this stylesheet — this doesn't
+   replace those (harmless, identical duplication), it just means every
+   button/link/input/select/textarea/tabindex element gets the same ring
+   even where no per-component rule was ever written. :focus-visible (not
+   :focus) so a mouse click never shows a ring, only real keyboard/AT focus. */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
 /* ── HEADER ─────────────────────────────── */
 .header {
   background: linear-gradient(135deg, var(--bg) 0%, var(--header-grad-mid) 50%, var(--header-grad-end) 100%);
@@ -322,7 +338,15 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 /* ── COLLAPSIBLE CARDS ───────────────────── */
 .collapse-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:8px; overflow:hidden; }
 .collapse-card:hover { border-color:var(--hl-border); }
-.collapse-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; cursor:pointer; user-select:none; gap:12px; }
+/* R8, Phase 5: .collapse-header/.adv-header/.sip-header are now real
+   <button>s (were <div onclick>) so they're keyboard-reachable and get an
+   accessible name/state for free. Unlike .action-btn/.hub-tab/etc, these
+   three classes never had to reset native button chrome before, since a
+   <div> has none — background/border/font/width/text-align below undo what
+   a bare <button> would otherwise paint (UA button face, 2px outset border,
+   caption font, shrink-to-content width, centered text), so the visual
+   result is unchanged from the old <div>. */
+.collapse-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; cursor:pointer; user-select:none; gap:12px; width:100%; background:none; border:none; font:inherit; text-align:left; color:inherit; }
 .collapse-header:hover { background:rgba(255,255,255,.02); }
 .collapse-title { font-size:13px; font-weight:600; color:var(--text); flex:1; }
 .collapse-amount { font-family:'DM Mono',monospace; font-size:13px; font-weight:500; color:var(--text-mid); }
@@ -387,7 +411,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 /* Advanced loan */
 .adv-section { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:14px; }
-.adv-header { display:flex; align-items:center; gap:10px; padding:13px 18px; cursor:pointer; user-select:none; }
+.adv-header { display:flex; align-items:center; gap:10px; padding:13px 18px; cursor:pointer; user-select:none; width:100%; background:none; border:none; font:inherit; text-align:left; color:inherit; }
 .adv-header:hover { background:rgba(255,255,255,.02); }
 .adv-title { font-size:13px; font-weight:600; color:var(--text); flex:1; }
 .adv-arrow { font-size:12px; color:var(--text-dim); transition:transform .2s; }
@@ -545,6 +569,21 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   input, select, textarea { font-size:16px !important; }
 }
 
+/* R8, Phase 5: 44px minimum touch target (WCAG 2.5.5) for the app's primary
+   tap targets at touch widths — a separate block from the font-size
+   catch-all just above rather than folded into it, since that one is
+   deliberately narrated as a single-purpose fix and this is a distinct
+   concern. `.tile`/`.mode-btn` are deliberately not listed: `.tile` is out
+   of scope for this pass (a concurrent landing-page task owns that region —
+   see CLAUDE.md/TASK-PARALLEL-EXECUTION.md), and `.mode-btn` (the ₹/sft vs
+   lump toggle) is a small inline widget, not one of the tab/mode-selector
+   controls this task named. */
+@media(max-width:600px){
+  .hub-tab, .sip-planner-tab, .action-btn, .btn, .collapse-header, .adv-header, .sip-header {
+    min-height:44px;
+  }
+}
+
 /* ── HUB NAVIGATION ──────────────────────── */
 /* R10: scroll-shadow affordance so a narrow phone can see there's more to
    scroll — the classic "double background-image" trick (css-tricks),
@@ -639,7 +678,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 /* ── BUY vs SIP SECTION ──────────────────── */
 .sip-section { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:14px; }
-.sip-header { display:flex; align-items:center; gap:10px; padding:13px 18px; cursor:pointer; user-select:none; }
+.sip-header { display:flex; align-items:center; gap:10px; padding:13px 18px; cursor:pointer; user-select:none; width:100%; background:none; border:none; font:inherit; text-align:left; color:inherit; }
 .sip-header:hover { background:rgba(255,255,255,.02); }
 .sip-title { font-size:13px; font-weight:600; color:var(--text); flex:1; }
 .sip-arrow { font-size:12px; color:var(--text-dim); transition:transform .2s; }
@@ -816,12 +855,12 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 <!-- ===== HUB NAVIGATION ===== -->
 <nav class="hub-nav">
-  <div class="hub-nav-inner">
-    <button class="hub-tab active" id="ht-landing" onclick="switchHub('landing')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg> Home</button>
-    <button class="hub-tab" id="ht-apartment" onclick="switchHub('apartment')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg> Dhanam Home</button>
-    <button class="hub-tab" id="ht-car" onclick="switchHub('car')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg> Dhanam Car</button>
-    <button class="hub-tab" id="ht-sip" onclick="switchHub('sip')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Dhanam Grow</button>
-    <button class="hub-tab" id="ht-worth" onclick="switchHub('worth')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Dhanam Worth</button>
+  <div class="hub-nav-inner" role="tablist" aria-label="Dhanam hubs">
+    <button class="hub-tab active" id="ht-landing" role="tab" aria-selected="true" onclick="switchHub('landing')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg> Home</button>
+    <button class="hub-tab" id="ht-apartment" role="tab" aria-selected="false" onclick="switchHub('apartment')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg> Dhanam Home</button>
+    <button class="hub-tab" id="ht-car" role="tab" aria-selected="false" onclick="switchHub('car')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg> Dhanam Car</button>
+    <button class="hub-tab" id="ht-sip" role="tab" aria-selected="false" onclick="switchHub('sip')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Dhanam Grow</button>
+    <button class="hub-tab" id="ht-worth" role="tab" aria-selected="false" onclick="switchHub('worth')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Dhanam Worth</button>
   </div>
 </nav>
 
@@ -963,17 +1002,17 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 <!-- ===== ACTION BUTTONS ===== -->
 <div class="action-row">
-  <button class="action-btn" id="btn-detail" onclick="toggleSection('detail')">
+  <button class="action-btn" id="btn-detail" aria-expanded="false" aria-controls="section-detail" onclick="toggleSection('detail')">
     <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg></span>
     <span class="ab-label">Detailed Cost Analysis</span>
     <span class="ab-arrow">▼</span>
   </button>
-  <button class="action-btn" id="btn-loan" onclick="toggleSection('loan')">
+  <button class="action-btn" id="btn-loan" aria-expanded="false" aria-controls="section-loan" onclick="toggleSection('loan')">
     <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bank"></use></svg></span>
     <span class="ab-label">Loan Analysis</span>
     <span class="ab-arrow">▼</span>
   </button>
-  <button class="action-btn" id="btn-disb" onclick="toggleSection('disb')">
+  <button class="action-btn" id="btn-disb" aria-expanded="false" aria-controls="section-disb" onclick="toggleSection('disb')">
     <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-construction"></use></svg></span>
     <span class="ab-label">Loan Disbursement (Pre-EMI)</span>
     <span class="ab-arrow">▼</span>
@@ -1191,20 +1230,20 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <!-- Collapsible breakdown -->
   <div style="margin-top:10px;">
     <div class="collapse-card open" id="dc-base">
-      <div class="collapse-header" onclick="toggleCard('dc-base')">
+      <button type="button" class="collapse-header" onclick="toggleCard('dc-base')" aria-expanded="true">
         <span class="collapse-title">Base Construction Cost</span>
         <span class="collapse-amount" id="dch-base">—</span>
         <span class="collapse-arrow">▼</span>
-      </div>
+      </button>
       <div class="collapse-body" id="d-body-base"></div>
     </div>
 
     <div class="collapse-card" id="dc-gst" style="display:none;">
-      <div class="collapse-header" onclick="toggleCard('dc-gst')">
+      <button type="button" class="collapse-header" onclick="toggleCard('dc-gst')" aria-expanded="false">
         <span class="collapse-title">GST on Construction</span>
         <span class="collapse-amount" id="dch-gst">—</span>
         <span class="collapse-arrow">▼</span>
-      </div>
+      </button>
       <div class="collapse-body">
         <div class="br-row"><span class="br-label">GST Base (Sale Value)</span><span class="br-calc" id="d-calc-gstbase"></span><span class="br-val" id="d-val-gstbase">—</span></div>
         <div class="br-row"><span class="br-label">GST Amount</span><span class="br-calc" id="d-calc-gstrate"></span><span class="br-val" id="d-val-gstamt">—</span></div>
@@ -1213,11 +1252,11 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     </div>
 
     <div class="collapse-card" id="dc-reg">
-      <div class="collapse-header" onclick="toggleCard('dc-reg')">
+      <button type="button" class="collapse-header" onclick="toggleCard('dc-reg')" aria-expanded="false">
         <span class="collapse-title">Registration & Stamp Duty</span>
         <span class="collapse-amount" id="dch-reg">—</span>
         <span class="collapse-arrow">▼</span>
-      </div>
+      </button>
       <div class="collapse-body">
         <div class="br-row"><span class="br-label">Stamp Duty</span><span class="br-calc" id="d-calc-stamp"></span><span class="br-val" id="d-val-stamp">—</span></div>
         <div class="br-row"><span class="br-label">Registration Fee</span><span class="br-calc" id="d-calc-regfee"></span><span class="br-val" id="d-val-regfee">—</span></div>
@@ -1227,20 +1266,20 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     </div>
 
     <div class="collapse-card" id="dc-other">
-      <div class="collapse-header" onclick="toggleCard('dc-other')">
+      <button type="button" class="collapse-header" onclick="toggleCard('dc-other')" aria-expanded="false">
         <span class="collapse-title">Additional Charges Breakdown</span>
         <span class="collapse-amount" id="dch-other">—</span>
         <span class="collapse-arrow">▼</span>
-      </div>
+      </button>
       <div class="collapse-body" id="d-body-other"></div>
     </div>
 
     <div class="collapse-card" id="dc-payment">
-      <div class="collapse-header" onclick="toggleCard('dc-payment')">
+      <button type="button" class="collapse-header" onclick="toggleCard('dc-payment')" aria-expanded="false">
         <span class="collapse-title">Payment Schedule (Construction-Linked)</span>
         <span class="collapse-amount" id="dch-payment">—</span>
         <span class="collapse-arrow">▼</span>
-      </div>
+      </button>
       <div class="collapse-body">
         <div class="table-scroll">
         <table class="pay-table">
@@ -1295,7 +1334,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     </div>
     <div class="remember-row">
       <label class="ts-switch">
-        <input type="checkbox" id="l-remember" onchange="toggleRememberInputs()">
+        <input type="checkbox" id="l-remember" aria-label="Remember my inputs on this device" onchange="toggleRememberInputs()">
         <span class="ts-slider"></span>
       </label>
       <div>
@@ -1338,10 +1377,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
   <!-- 3 Scenario Cards + Custom Year Analysis — collapsed by default (R2) -->
   <div class="collapse-card" id="l-compare-card" style="display:none;">
-    <div class="collapse-header" onclick="toggleCard('l-compare-card')">
+    <button type="button" class="collapse-header" onclick="toggleCard('l-compare-card')" aria-expanded="false">
       <span class="collapse-title">Compare 15 / 20 / 30-year scenarios &amp; custom year</span>
       <span class="collapse-arrow">▼</span>
-    </div>
+    </button>
     <div class="collapse-body">
       <div class="loan-grid" id="l-cards"></div>
       <div class="custom-year-section">
@@ -1357,11 +1396,11 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
   <!-- Advanced Loan Analysis -->
   <div class="adv-section" id="adv-section">
-    <div class="adv-header" onclick="toggleAdv()">
+    <button type="button" class="adv-header" onclick="toggleAdv()" aria-expanded="false">
       <span style="font-size:16px;"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-rocket"></use></svg></span>
       <span class="adv-title">Advanced: Extra Payments Projection</span>
       <span class="adv-arrow">▼</span>
-    </div>
+    </button>
     <div class="adv-body">
       <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">
         Making extra principal payments reduces tenure significantly. For example, one extra EMI per year on a 20-year loan can cut 4–5 years off your tenure.
@@ -1395,10 +1434,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
            #worth-main, where "Hide amounts"/.amounts-hidden has no effect
            (that mechanism is scoped to #worth-main only) — see CLAUDE.md. -->
       <div class="collapse-card" id="adv-worth-card" style="margin:0 0 12px;">
-        <div class="collapse-header" onclick="toggleCard('adv-worth-card')">
+        <button type="button" class="collapse-header" onclick="toggleCard('adv-worth-card')" aria-expanded="false">
           <span class="collapse-title">What this does to your net worth</span>
           <span class="collapse-arrow">▼</span>
-        </div>
+        </button>
         <div class="collapse-body">
           <div id="adv-worth-empty" class="note-text" style="display:none;">
             You haven't saved a balance sheet in <strong>Dhanam Worth</strong> yet — once you do, this section will show what this extra-payments plan does to your actual net worth, not a hypothetical loan. <a href="#" onclick="switchHub('worth');return false;" style="color:var(--accent);">Open Dhanam Worth →</a>
@@ -1416,10 +1455,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="collapse-card" id="adv-compare-card">
-        <div class="collapse-header" onclick="toggleCard('adv-compare-card')">
+        <button type="button" class="collapse-header" onclick="toggleCard('adv-compare-card')" aria-expanded="false">
           <span class="collapse-title">Compare 15 / 20 / 30-year tenures</span>
           <span class="collapse-arrow">▼</span>
-        </div>
+        </button>
         <div class="collapse-body">
           <div class="adv-compare-grid" id="adv-cards"></div>
         </div>
@@ -1429,11 +1468,11 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
   <!-- Buy vs SIP section -->
   <div class="sip-section" id="sip-section">
-    <div class="sip-header" onclick="toggleSIP()">
+    <button type="button" class="sip-header" onclick="toggleSIP()" aria-expanded="false">
       <span style="font-size:16px;"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg></span>
       <span class="sip-title">Buy vs. SIP: What if you invested instead?</span>
       <span class="sip-arrow">▼</span>
-    </div>
+    </button>
     <div class="sip-body">
       <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">
         If instead of buying, you invested the same EMI amount monthly in a SIP — how much corpus would you accumulate?
@@ -1456,10 +1495,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="collapse-card" id="sip-compare-card">
-        <div class="collapse-header" onclick="toggleCard('sip-compare-card')">
+        <button type="button" class="collapse-header" onclick="toggleCard('sip-compare-card')" aria-expanded="false">
           <span class="collapse-title">Compare across CAGR &amp; tenure scenarios</span>
           <span class="collapse-arrow">▼</span>
-        </div>
+        </button>
         <div class="collapse-body">
           <div class="sip-grid" id="sip-cards"></div>
           <div class="sip-custom-inputs">
@@ -1573,16 +1612,16 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <div class="panel-card" style="margin-bottom:20px;">
       <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg></span><span class="pch-title">How are you paying for the car?</span></div>
       <div class="panel-card-body">
-        <div class="action-row" id="car-mode-row" style="margin-bottom:0;">
-          <button class="action-btn active" id="car-mode-btn-loan" onclick="setCarMode('loan')" type="button">
+        <div class="action-row" id="car-mode-row" style="margin-bottom:0;" role="group" aria-label="How are you paying for the car?">
+          <button class="action-btn active" id="car-mode-btn-loan" aria-pressed="true" onclick="setCarMode('loan')" type="button">
             <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bank"></use></svg></span>
             <span class="ab-label">Loan</span>
           </button>
-          <button class="action-btn" id="car-mode-btn-lease" onclick="setCarMode('lease')" type="button">
+          <button class="action-btn" id="car-mode-btn-lease" aria-pressed="false" onclick="setCarMode('lease')" type="button">
             <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-briefcase"></use></svg></span>
             <span class="ab-label">Company Lease</span>
           </button>
-          <button class="action-btn" id="car-mode-btn-cash" onclick="setCarMode('cash')" type="button">
+          <button class="action-btn" id="car-mode-btn-cash" aria-pressed="false" onclick="setCarMode('cash')" type="button">
             <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span>
             <span class="ab-label">Cash</span>
           </button>
@@ -1673,10 +1712,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
          card it restated, so keeping it too would state the same figures a
          third time. -->
     <div class="collapse-card" id="car-compare-card">
-      <div class="collapse-header" onclick="toggleCard('car-compare-card')">
+      <button type="button" class="collapse-header" onclick="toggleCard('car-compare-card')" aria-expanded="false">
         <span class="collapse-title">Compare all three scenarios</span>
         <span class="collapse-arrow">▼</span>
-      </div>
+      </button>
       <div class="collapse-body">
         <div id="car-scenario-cards" class="loan-grid"></div>
       </div>
@@ -1710,10 +1749,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     </div>
 
     <div class="collapse-card" id="cc-assumptions-card">
-      <div class="collapse-header" onclick="toggleCard('cc-assumptions-card')">
+      <button type="button" class="collapse-header" onclick="toggleCard('cc-assumptions-card')" aria-expanded="false">
         <span class="collapse-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg> Assumptions</span>
         <span class="collapse-arrow">▼</span>
-      </div>
+      </button>
       <div class="collapse-body">
         <div class="grid-3">
           <!-- Rate/term apply to every mode (loan interest, lease interest,
@@ -1884,10 +1923,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
              tenureStats(yr) helper carried across intact, just re-homed and
              keyed off the selected car's own price/down payment. -->
         <div class="collapse-card" id="cc-tenure-card" style="display:none;margin-top:16px;">
-          <div class="collapse-header" onclick="toggleCard('cc-tenure-card')">
+          <button type="button" class="collapse-header" onclick="toggleCard('cc-tenure-card')" aria-expanded="false">
             <span class="collapse-title">Compare 3 / 5 / 7-year loan tenures</span>
             <span class="collapse-arrow">▼</span>
-          </div>
+          </button>
           <div class="collapse-body">
             <div id="cc-tenure-cards" class="loan-grid"></div>
           </div>
@@ -1923,10 +1962,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
              to all three columns — B13's fairness rule: never a friendlier
              default treatment for one mode than another. -->
         <div class="collapse-card open" id="cc-crossmode-card" style="margin-top:16px;">
-          <div class="collapse-header" onclick="toggleCard('cc-crossmode-card')">
+          <button type="button" class="collapse-header" onclick="toggleCard('cc-crossmode-card')" aria-expanded="true">
             <span class="collapse-title">Lease vs. Loan vs. Cash — this car, three ways</span>
             <span class="collapse-arrow">▼</span>
-          </div>
+          </button>
           <div class="collapse-body">
             <p class="note-text" style="margin-bottom:10px;">Money out the door only, same as the ranking above — uses this car's own down payment and the assumptions above for all three columns. Switch mode at the top of the page to change which one actually drives the ranking and shortlist.</p>
             <p class="note-text" id="cc-crossmode-assumptions" style="margin-bottom:10px;"></p>
@@ -1951,10 +1990,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     </div>
 
     <div class="collapse-card" id="cc-chart-card" style="display:none;">
-      <div class="collapse-header" onclick="toggleChartCard('cc-chart-card', renderCCChart)">
+      <button type="button" class="collapse-header" onclick="toggleChartCard('cc-chart-card', renderCCChart)" aria-expanded="false">
         <span class="collapse-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg> Net cost vs. annual km driven</span>
         <span class="collapse-arrow">▼</span>
-      </div>
+      </button>
       <div class="collapse-body">
         <div id="cc-chart"></div>
         <div class="chart-caption" id="cc-chart-caption"></div>
@@ -1998,10 +2037,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
          (TASK-UX-REDESIGN.md) — no calculation change, no computed
          post-tax figure (that's R31, gated on B10, separate and unstarted). -->
     <div class="sip-caveat"><strong>Every figure below is pre-tax.</strong> On redemption, equity LTCG above ₹1.25L in a financial year is taxed at 12.5% (rate and exemption as of the Union Budget 2024, effective 23 Jul 2024) — actual tax depends on when you sell, how the redemption is split across financial years, and what the law says at that time, none of which this app can know. A projection, not a promise.</div>
-    <div class="sip-planner-tabs">
-      <button class="sip-planner-tab active" id="spt-monthly" onclick="switchSIPPlannerTab('monthly')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Monthly SIP</button>
-      <button class="sip-planner-tab" id="spt-stepup" onclick="switchSIPPlannerTab('stepup')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Step-up SIP</button>
-      <button class="sip-planner-tab" id="spt-lumpsum" onclick="switchSIPPlannerTab('lumpsum')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Lumpsum</button>
+    <div class="sip-planner-tabs" role="tablist" aria-label="Dhanam Grow SIP planner">
+      <button class="sip-planner-tab active" id="spt-monthly" role="tab" aria-selected="true" onclick="switchSIPPlannerTab('monthly')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Monthly SIP</button>
+      <button class="sip-planner-tab" id="spt-stepup" role="tab" aria-selected="false" onclick="switchSIPPlannerTab('stepup')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Step-up SIP</button>
+      <button class="sip-planner-tab" id="spt-lumpsum" role="tab" aria-selected="false" onclick="switchSIPPlannerTab('lumpsum')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Lumpsum</button>
     </div>
 
     <!-- Monthly SIP -->
@@ -2212,10 +2251,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <!-- Trend chart — collapsed by default (D4): the tile above answers "am I
      up or down?", this answers "what shape has it been?" (2d / R3) -->
 <div class="collapse-card" id="w-trend-card" style="display:none;">
-  <div class="collapse-header" onclick="toggleChartCard('w-trend-card', renderWorthTrend)">
+  <button type="button" class="collapse-header" onclick="toggleChartCard('w-trend-card', renderWorthTrend)" aria-expanded="false">
     <span class="collapse-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-down"></use></svg> Net worth over time</span>
     <span class="collapse-arrow">▼</span>
-  </div>
+  </button>
   <div class="collapse-body">
     <div id="w-trend-chart"></div>
     <div class="chart-caption" id="w-trend-range"></div>
@@ -2276,13 +2315,13 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <p class="note-text" id="w-saved-at">Nothing saved yet — enter a value above and it's kept on this device.</p>
     <p class="note-text" id="w-install-nudge" style="display:none;">Tip: install Dhanam to your home screen. Browsers can clear data for sites you haven't opened in a while — installed apps keep theirs.</p>
     <div class="btn-row">
-      <button class="btn btn-secondary" onclick="toggleHideAmounts()" id="w-hide-btn"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg><span id="w-hide-btn-label">Hide amounts</span></button>
+      <button class="btn btn-secondary" onclick="toggleHideAmounts()" id="w-hide-btn" aria-pressed="false"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg><span id="w-hide-btn-label">Hide amounts</span></button>
       <button class="btn btn-secondary" onclick="exportWorthExcel()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg> Export Excel</button>
       <button class="btn btn-secondary" onclick="exportWorthBackup()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-download"></use></svg> Download backup</button>
       <button class="btn btn-secondary" onclick="el('w-import-file').click()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-upload"></use></svg> Restore backup</button>
       <button class="btn btn-secondary" onclick="eraseWorthData()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Erase my data</button>
     </div>
-    <input type="file" id="w-import-file" accept="application/json,.json" style="display:none;" onchange="importWorthBackup(this.files[0])">
+    <input type="file" id="w-import-file" aria-label="Restore backup file" accept="application/json,.json" style="display:none;" onchange="importWorthBackup(this.files[0])">
     <p class="note-text">A backup is a plain JSON file you keep. It's the way to move your figures to another device — Dhanam has no account and no server, so nothing syncs on its own.</p>
   </div>
 </div>
@@ -2565,7 +2604,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 // cached shell without knowing it). Bump this BY HAND alongside sw.js's CACHE
 // version whenever a user-visible change ships — the two are not derived from
 // one another, so both need editing.
-const BUILD_STAMP = '2026-08-11';
+const BUILD_STAMP = '2026-08-15';
 
 // =====================================================================
 // UTILITIES
@@ -2599,7 +2638,17 @@ function showToast(msg) {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3200);
 }
-function toggleCard(id) { el(id).classList.toggle('open'); }
+// R8: every toggleCard() caller's markup follows the same shape — a
+// .collapse-header <button> as the card's own first child — so updating
+// aria-expanded here, once, covers every .collapse-card in the app
+// (including the ones reached indirectly through toggleChartCard() below)
+// without touching each call site individually.
+function toggleCard(id) {
+  const card = el(id);
+  const open = card.classList.toggle('open');
+  const btn = card.querySelector(':scope > .collapse-header');
+  if (btn) btn.setAttribute('aria-expanded', open);
+}
 
 // =====================================================================
 // CHARTS — dependency-free inline SVG line/area chart
@@ -2940,6 +2989,7 @@ function toggleSection(id) {
   if (isOpen) {
     panel.classList.remove('open');
     btn.classList.remove('active');
+    btn.setAttribute('aria-expanded', 'false');
   } else {
     // Collapse any other open panel first. CSS class change only — the
     // detailOpened/loanOpened/disbOpened latches and every input stay
@@ -2951,11 +3001,13 @@ function toggleSection(id) {
       if (otherPanel.classList.contains('open')) {
         otherPanel.classList.remove('open');
         el('btn-' + other).classList.remove('active');
+        el('btn-' + other).setAttribute('aria-expanded', 'false');
       }
     });
 
     panel.classList.add('open');
     btn.classList.add('active');
+    btn.setAttribute('aria-expanded', 'true');
 
     if (id === 'detail' && !detailOpened) {
       detailOpened = true;
@@ -3473,8 +3525,10 @@ function renderLoans() {
 // =====================================================================
 function toggleAdv() {
   const s = el('adv-section');
-  s.classList.toggle('open');
-  if (s.classList.contains('open')) renderAdvLoan();
+  const open = s.classList.toggle('open');
+  const btn = s.querySelector(':scope > .adv-header');
+  if (btn) btn.setAttribute('aria-expanded', open);
+  if (open) renderAdvLoan();
 }
 
 function renderAdvLoan() {
@@ -4130,11 +4184,11 @@ function resetAll() {
 // =====================================================================
 function switchHub(tab) {
   document.querySelectorAll('.hub-content').forEach(c => c.classList.remove('active'));
-  document.querySelectorAll('.hub-tab[id^="ht-"]').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.hub-tab[id^="ht-"]').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
   const content = el('hub-' + tab);
   const btn = el('ht-' + tab);
   if (content) content.classList.add('active');
-  if (btn) btn.classList.add('active');
+  if (btn) { btn.classList.add('active'); btn.setAttribute('aria-selected', 'true'); }
   if (tab === 'sip') { updateSIPPlanner(); updateStepupSIP(); updateLumpsum(); }
   // renderCarLoan() (Car Buying — Loan Analysis, cb-*) was retired in
   // Phase 14/R59 — its EMI/tenure-grid/depreciation-chart capabilities are
@@ -4521,6 +4575,7 @@ function toggleHideAmounts() {
   amountsHidden = !amountsHidden;
   el('worth-main').classList.toggle('amounts-hidden', amountsHidden);
   el('w-hide-btn').querySelector('use').setAttribute('href', amountsHidden ? '#i-eye' : '#i-eye-off');
+  el('w-hide-btn').setAttribute('aria-pressed', amountsHidden);
   set('w-hide-btn-label', amountsHidden ? 'Show amounts' : 'Hide amounts');
 }
 
@@ -4614,7 +4669,7 @@ function disbTrancheRowHtml(t, i) {
         <input type="number" value="${t.month}" min="0" step="1"
           oninput="disbTranches[${i}].month = parseInt(this.value) || 0; renderLoanDisb();">
       </div>
-      <button class="disb-tr-remove" onclick="disbRemoveTranche(${i})" ${disbTranches.length <= 1 ? 'disabled' : ''} title="Remove tranche">✕</button>
+      <button class="disb-tr-remove" onclick="disbRemoveTranche(${i})" ${disbTranches.length <= 1 ? 'disabled' : ''} title="Remove tranche" aria-label="Remove tranche">✕</button>
     </div>`;
 }
 
@@ -4703,8 +4758,10 @@ function renderLoanDisb() {
 // =====================================================================
 function toggleSIP() {
   const s = el('sip-section');
-  s.classList.toggle('open');
-  if (s.classList.contains('open')) renderSIPComparison();
+  const open = s.classList.toggle('open');
+  const btn = s.querySelector(':scope > .sip-header');
+  if (btn) btn.setAttribute('aria-expanded', open);
+  if (open) renderSIPComparison();
 }
 
 // calcSIP now lives in calc.js (loaded above) — see CLAUDE.md's Testing section.
@@ -4834,8 +4891,9 @@ function switchSIPPlannerTab(tab) {
   ['monthly', 'stepup', 'lumpsum'].forEach(t => {
     const content = el('spt-content-' + t);
     const btn = el('spt-' + t);
-    if (content) content.style.display = t === tab ? '' : 'none';
-    if (btn) btn.classList.toggle('active', t === tab);
+    const active = t === tab;
+    if (content) content.style.display = active ? '' : 'none';
+    if (btn) { btn.classList.toggle('active', active); btn.setAttribute('aria-selected', active); }
   });
 }
 
@@ -5203,7 +5261,14 @@ function tenureStats(loanAmt, rate, yr) {
 function setCarMode(mode) {
   carMode = mode;
   ['loan', 'lease', 'cash'].forEach(m => {
-    el('car-mode-btn-' + m).classList.toggle('active', m === mode);
+    const btn = el('car-mode-btn-' + m);
+    const active = m === mode;
+    btn.classList.toggle('active', active);
+    // R8: aria-pressed, not aria-selected/role=tab — this is a toggle-button
+    // group choosing one exclusive setting (how you're paying), not
+    // navigation between separate tabbed panels of unrelated content the
+    // way .hub-tab/.sip-planner-tab are.
+    btn.setAttribute('aria-pressed', active);
   });
   el('car-lease-panel').style.display = mode === 'lease' ? '' : 'none';
   if (mode === 'lease') { renderCarCalc(); }
@@ -5283,7 +5348,7 @@ function ccRowHtml(c, i) {
       <input type="number" value="${c.downPayment || ''}" min="0" step="10000"
         oninput="ccCars[${i}].downPayment = parseFloat(this.value) || 0; renderCarCompare();">
     </div>` : ''}
-    <button class="disb-tr-remove" onclick="ccRemoveCar(${i})" ${ccCars.length <= 1 ? 'disabled' : ''} title="Remove car">✕</button>
+    <button class="disb-tr-remove" onclick="ccRemoveCar(${i})" ${ccCars.length <= 1 ? 'disabled' : ''} title="Remove car" aria-label="Remove car">✕</button>
     <div class="cc-row-hint" id="cc-row-hint-${i}">${xesc(ccRowHintText(c))}</div>
   </div>`;
 }
@@ -5466,6 +5531,8 @@ function ccToggleDetail(i) {
   if (!node) return;
   const willOpen = !node.classList.contains('open');
   node.classList.toggle('open', willOpen);
+  const btn = node.querySelector(':scope > .collapse-header');
+  if (btn) btn.setAttribute('aria-expanded', willOpen);
   if (willOpen) { ccForceOpen.add(i); ccForceClosed.delete(i); }
   else { ccForceClosed.add(i); ccForceOpen.delete(i); }
 }
@@ -5542,10 +5609,10 @@ function renderCarCompare() {
       <div class="car-stat"><span class="car-stat-lbl">Net Cost (before resale credit)</span><span class="car-stat-val big">${fmt(r.result.netCost)}</span></div>
       <div class="cc-rank-sub">${emiSub(r)}</div>
       <div class="collapse-card cc-detail-card ${isOpen ? 'open' : ''}" id="cc-detail-${r.i}">
-        <div class="collapse-header" onclick="ccToggleDetail(${r.i})">
+        <button type="button" class="collapse-header" onclick="ccToggleDetail(${r.i})" aria-expanded="${isOpen}">
           <span class="collapse-title">Full breakdown</span>
           <span class="collapse-arrow">▼</span>
-        </div>
+        </button>
         <div class="collapse-body">
           <div class="car-stat"><span class="car-stat-lbl">Raw Cash Outflow</span><span class="car-stat-val">${fmt(r.result.rawOutflow)}</span></div>
           ${carMode !== 'cash' ? `<div class="car-stat"><span class="car-stat-lbl">EMI / month${carMode === 'loan' && r.car.downPayment > 0 ? ` (down payment ${fmt(r.car.downPayment)})` : ''}</span><span class="car-stat-val">${fmt(r.result.emi)}</span></div>` : ''}
