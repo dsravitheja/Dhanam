@@ -692,6 +692,28 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
    for a real cost, palette rule 4). */
 .sip-caveat { font-size:12px; line-height:1.7; color:var(--text-mid); background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--text-dim); border-radius:8px; padding:10px 14px; margin-bottom:14px; }
 .sip-caveat strong { color:var(--text); }
+
+/* ── INLINE TERM DEFINITIONS (R23, Phase 18) ──────────────
+   One reusable "ⓘ" disclosure, reused at every term instead of twelve
+   bespoke tooltips. Tap-friendly (a real <button>, not hover-only — this is
+   a mobile-first audience), one open at a time (toggleTermInfo() closes
+   any other before opening the next), dismissible via Escape/outside-click/
+   re-tap, and reuses R8's aria-expanded convention rather than inventing a
+   second one. --text-dim on the glyph (not currentColor-inherited) so it
+   reads as quiet, always-available help — same reasoning as .tile-icon/
+   .ab-icon's fixed-neutral exception in the Icons section of CLAUDE.md. */
+.term-info { display:inline-flex; margin-left:5px; vertical-align:middle; }
+.term-info-btn { background:none; border:none; padding:3px; margin:-3px; cursor:pointer; color:var(--text-dim); display:inline-flex; align-items:center; line-height:0; border-radius:4px; }
+.term-info-btn .icon { width:13px; height:13px; }
+.term-info-btn:hover, .term-info-btn[aria-expanded="true"] { color:var(--accent); }
+/* position:fixed, not absolute — .panel-card and .collapse-card both set
+   overflow:hidden, and nearly every term sits inside one of those, so an
+   absolutely-positioned popover would get silently clipped by its own
+   ancestor. Fixed positioning escapes that (it isn't contained by an
+   overflow:hidden ancestor's box) at the cost of computing its own
+   top/left in JS — see toggleTermInfo()/positionTermInfoPop(). */
+.term-info-pop { position:fixed; z-index:500; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:11.5px; line-height:1.55; color:var(--text-mid); font-weight:400; text-transform:none; letter-spacing:normal; width:max-content; max-width:min(280px, calc(100vw - 32px)); box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.term-info-pop[hidden] { display:none; }
 .sip-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:14px; }
 @media(max-width:640px){ .sip-grid { grid-template-columns:1fr; } }
 .sip-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
@@ -1055,7 +1077,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
         <div class="cf-row" id="cfrow-floor">
           <input type="checkbox" class="cf-chk" id="d-incl-floor" checked onchange="updateCfRow('floor')">
-          <label class="cf-label" for="d-incl-floor">Floor / Rise Charges</label>
+          <label class="cf-label" for="d-incl-floor">Floor / Rise Charges</label><span class="term-info"><button type="button" class="term-info-btn" id="ti-floorrise-btn" aria-expanded="false" aria-controls="ti-floorrise" aria-label="What is Floor Rise Charges?" onclick="toggleTermInfo('ti-floorrise')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-floorrise" role="note" hidden>A per-square-foot premium some builders charge for higher floors, applied here only from the 6th floor upward. Whether your builder actually charges this — and how much — varies; edit the rate below if yours differs.</span></span>
           <div class="cf-inputs">
             <span class="cf-unit">Floor</span>
             <input type="number" class="cf-input w70" id="d-floor" value="1" min="1" oninput="calcDetail()">
@@ -1104,7 +1126,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <!-- Amenities -->
         <div class="cf-row" id="cfrow-amenities">
           <input type="checkbox" class="cf-chk" id="d-incl-amenities" checked onchange="updateCfRow('amenities')">
-          <label class="cf-label" for="d-incl-amenities">Amenities / Clubhouse</label>
+          <label class="cf-label" for="d-incl-amenities">Amenities / Clubhouse</label><span class="term-info"><button type="button" class="term-info-btn" id="ti-amenities-btn" aria-expanded="false" aria-controls="ti-amenities" aria-label="What is the Amenities / Clubhouse charge?" onclick="toggleTermInfo('ti-amenities')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-amenities" role="note" hidden>A one-time charge some builders levy for shared amenities — clubhouse, gym, pool, gardens — separate from the base sale price. Uncheck this if your builder already includes it in the quoted price.</span></span>
           <div class="cf-inputs">
             <div class="mode-toggle">
               <button class="mode-btn active" id="mb-amenities-sqft" onclick="setMode('amenities','sqft')">₹/sft</button>
@@ -1120,7 +1142,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <!-- Corpus Fund -->
         <div class="cf-row" id="cfrow-corpus">
           <input type="checkbox" class="cf-chk" id="d-incl-corpus" checked onchange="updateCfRow('corpus')">
-          <label class="cf-label" for="d-incl-corpus">Corpus Fund</label>
+          <label class="cf-label" for="d-incl-corpus">Corpus Fund</label><span class="term-info"><button type="button" class="term-info-btn" id="ti-corpusfund-btn" aria-expanded="false" aria-controls="ti-corpusfund" aria-label="What is the Corpus Fund charge?" onclick="toggleTermInfo('ti-corpusfund')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-corpusfund" role="note" hidden>A one-time contribution to the building's maintenance reserve, collected at possession — different from the recurring monthly maintenance you'll pay afterward. Not every builder charges this separately; uncheck it if yours doesn't.</span></span>
           <div class="cf-inputs">
             <div class="mode-toggle">
               <button class="mode-btn active" id="mb-corpus-sqft" onclick="setMode('corpus','sqft')">₹/sft</button>
@@ -1191,17 +1213,17 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <div class="panel-card-body">
       <div class="grid-3">
         <div class="field">
-          <label>Stamp Duty (%)</label>
+          <label>Stamp Duty (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-stampduty-btn" aria-expanded="false" aria-controls="ti-stampduty" aria-label="What is stamp duty?" onclick="toggleTermInfo('ti-stampduty')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-stampduty" role="note" hidden>A state government tax on registering the property in your name, charged as a percentage of the property's value. Rates vary by state — this app's default is a starting point, not a quote; edit it if your state differs (see the About page's dated state table).</span></span></label>
           <input type="number" id="d-stamp" value="4" step="0.1" oninput="calcDetail()">
           <span class="field-hint" id="d-stamp-hint">Telangana: 4%</span>
         </div>
         <div class="field">
-          <label>Registration Fee (%)</label>
+          <label>Registration Fee (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-regfee-btn" aria-expanded="false" aria-controls="ti-regfee" aria-label="What is registration fee?" onclick="toggleTermInfo('ti-regfee')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-regfee" role="note" hidden>A separate state fee for recording the sale deed in government land records, on top of stamp duty. Also state-specific and editable — see the About page's dated state table for what's assumed here.</span></span></label>
           <input type="number" id="d-regfee" value="0.5" step="0.1" oninput="calcDetail()">
           <span class="field-hint" id="d-regfee-hint">Telangana: 0.5%</span>
         </div>
         <div class="field" id="d-gst-field" style="display:none;">
-          <label>GST on Construction (%)</label>
+          <label>GST on Construction (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-gst-btn" aria-expanded="false" aria-controls="ti-gst" aria-label="What is GST on construction?" onclick="toggleTermInfo('ti-gst')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-gst" role="note" hidden>Goods & Services Tax on an under-construction property, currently 5% with no input tax credit. A ready-to-move-in property with an occupancy certificate owes no GST at all — this field only applies because the property was marked under construction in Quick Estimate.</span></span></label>
           <!-- GST rate for under-construction residential property, no input
                tax credit — current GST law; the GST Council moved real
                estate to this rate (from 12%/8% with ITC) effective
@@ -1504,7 +1526,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
           <div class="sip-custom-inputs">
             <span class="sip-custom-lbl">Custom scenario:</span>
             <div class="sip-inline-field">
-              <label>CAGR %</label>
+              <label>CAGR %<span class="term-info"><button type="button" class="term-info-btn" id="ti-cagr-sip-btn" aria-expanded="false" aria-controls="ti-cagr-sip" aria-label="What is CAGR?" onclick="toggleTermInfo('ti-cagr-sip')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-cagr-sip" role="note" hidden>Compound Annual Growth Rate — the average yearly return assumed for this projection. A guess about the future, not a guarantee: real markets don't return the same percentage every year, and past averages don't promise future ones.</span></span></label>
               <input type="number" class="sip-inline-input" id="sip-cagr" value="12" step="0.5" oninput="renderSIPComparison()">
             </div>
             <div class="sip-inline-field">
@@ -1584,7 +1606,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <div class="panel-card">
     <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span><span class="pch-title">Summary</span><span class="pch-tag">Live</span></div>
     <div class="panel-card-body">
-      <div class="loan-stat"><span class="ls-lbl">Total Pre-EMI Interest Paid</span><span class="ls-val red" id="disb-total-preemi">—</span></div>
+      <div class="loan-stat"><span class="ls-lbl">Total Pre-EMI Interest Paid<span class="term-info"><button type="button" class="term-info-btn" id="ti-preemi-btn" aria-expanded="false" aria-controls="ti-preemi" aria-label="What is pre-EMI?" onclick="toggleTermInfo('ti-preemi')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-preemi" role="note" hidden>Interest-only payments charged on the portion of a loan already disbursed to the builder, before construction finishes and the full EMI begins. You pay interest only on what's been released so far — not the full sanctioned loan amount.</span></span></span><span class="ls-val red" id="disb-total-preemi">—</span></div>
       <div class="loan-stat"><span class="ls-lbl">EMI after Final Disbursement</span><span class="ls-val big" id="disb-emi">—</span></div>
       <div class="loan-stat"><span class="ls-lbl">Total Interest (Pre-EMI + Amortization)</span><span class="ls-val red" id="disb-total-interest">—</span></div>
       <div class="loan-stat"><span class="ls-lbl">Total Cost of Loan</span><span class="ls-val" id="disb-total-cost">—</span></div>
@@ -1678,7 +1700,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
             <input type="checkbox" id="car-has-driver" onchange="renderCarCalc()" style="accent-color:var(--accent);width:16px;height:16px;">
             Company Driver Provided
           </label>
-          <span style="margin-left:auto;font-size:11px;color:var(--text-dim);">Tax Regime:</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--text-dim);">Tax Regime:<span class="term-info"><button type="button" class="term-info-btn" id="ti-regime-btn" aria-expanded="false" aria-controls="ti-regime" aria-label="What's the difference between the two tax regimes?" onclick="toggleTermInfo('ti-regime')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-regime" role="note" hidden>Old Regime keeps deductions — standard deduction, 80C, HRA — but taxes income at higher slab rates. New Regime (this app's default) has lower slab rates and a higher §87A rebate threshold, with almost no deductions. Your actual payslip determines which one you're on — this app can't know that for you.</span></span></span>
           <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text-mid);cursor:pointer;">
             <input type="radio" name="car-regime" value="new" checked onchange="renderCarCalc()" style="accent-color:var(--accent);">
             New Regime (FY2025-26)
@@ -1701,7 +1723,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       <div class="total-value" id="car-hero-value">—</div>
       <div class="total-cr" id="car-hero-note"></div>
       <div class="total-sub">
-        <div class="total-sub-item"><div class="ts-lbl">Perquisite Value</div><div class="ts-val mono" id="car-hero-perq">—</div></div>
+        <div class="total-sub-item"><div class="ts-lbl">Perquisite Value<span class="term-info"><button type="button" class="term-info-btn" id="ti-perq-btn" aria-expanded="false" aria-controls="ti-perq" aria-label="What is perquisite value?" onclick="toggleTermInfo('ti-perq')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-perq" role="note" hidden>The taxable value the Income-tax Rules, 2026 assign to personal use of a company car — ₹5,000/mo (₹7,000 if the engine is over 1600cc), +₹3,000/mo with a company driver. Added to taxable income in Carve-out A and Additive B; Baseline never has it, since there's no company car in that scenario.</span></span></div><div class="ts-val mono" id="car-hero-perq">—</div></div>
       </div>
     </div>
 
@@ -1942,7 +1964,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
              template — same R20 discipline the rest of this card follows;
              only #cc-depr-body's table/note gets rewritten. -->
         <div id="cc-depr-section" style="margin-top:16px;display:none;">
-          <div class="panel-card-header" style="padding:0 0 10px;"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-down"></use></svg></span><span class="pch-title">Estimated Resale Value (IRDAI Depreciation)</span></div>
+          <div class="panel-card-header" style="padding:0 0 10px;"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-down"></use></svg></span><span class="pch-title">Estimated Resale Value (IRDAI Depreciation)<span class="term-info"><button type="button" class="term-info-btn" id="ti-irdai-btn" aria-expanded="false" aria-controls="ti-irdai" aria-label="What is IRDAI depreciation?" onclick="toggleTermInfo('ti-irdai')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-irdai" role="note" hidden>An insurance-industry depreciation schedule — 20% in year 1, then 15%/year — used to set insured value for motor insurance, not to predict resale prices. Treat this curve as a rough anchor, not a market quote; actual resale depends on brand, condition, and demand.</span></span></span></div>
           <div class="chart-legend" id="cc-depr-legend">
             <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Car value</span>
             <span class="chart-legend-item" id="cc-depr-legend-loan" style="display:none;"><span class="chart-legend-dot" style="background:var(--red)"></span>Outstanding loan balance</span>
@@ -2054,7 +2076,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
               <input type="number" id="sp-monthly" value="10000" oninput="updateSIPPlanner()">
             </div>
             <div class="field highlight">
-              <label>Expected CAGR (%)</label>
+              <label>Expected CAGR (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-cagr-grow-btn" aria-expanded="false" aria-controls="ti-cagr-grow" aria-label="What is CAGR?" onclick="toggleTermInfo('ti-cagr-grow')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-cagr-grow" role="note" hidden>Compound Annual Growth Rate — the average yearly return assumed for this projection. A guess about the future, not a guarantee: real markets don't return the same percentage every year, and past averages don't promise future ones.</span></span></label>
               <input type="number" id="sp-cagr" value="12" step="0.5" oninput="updateSIPPlanner()">
               <span class="field-hint">Equity MFs ≈12% · Index ≈11% · Balanced ≈9%</span>
             </div>
@@ -2066,7 +2088,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="sp-result-card">
-        <div class="sp-result-label">SIP Corpus after <span id="sp-years-lbl">20</span> years</div>
+        <div class="sp-result-label">SIP Corpus after <span id="sp-years-lbl">20</span> years<span class="term-info"><button type="button" class="term-info-btn" id="ti-corpus-btn" aria-expanded="false" aria-controls="ti-corpus" aria-label="What is corpus?" onclick="toggleTermInfo('ti-corpus')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-corpus" role="note" hidden>The total value of your investment at the end of the period — what you put in, plus (or minus) whatever the market returned on it. Shown pre-tax; see the caveat above this tab for what tax could take off the top on redemption.</span></span></div>
         <div class="sp-result-value" id="sp-corpus">—</div>
         <div class="sp-result-sub" id="sp-corpus-exact"></div>
         <div class="total-sub" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
@@ -2110,7 +2132,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
               <input type="number" id="su-monthly" value="10000" oninput="updateStepupSIP()">
             </div>
             <div class="field highlight">
-              <label>Annual Step-up (%)</label>
+              <label>Annual Step-up (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-stepup-btn" aria-expanded="false" aria-controls="ti-stepup" aria-label="What is step-up?" onclick="toggleTermInfo('ti-stepup')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-stepup" role="note" hidden>Increases your monthly SIP by this percentage every year instead of investing the same amount throughout. A 10% step-up on a ₹10,000 SIP means ₹11,000/mo in year 2, ₹12,100/mo in year 3, and so on.</span></span></label>
               <input type="number" id="su-stepup" value="10" step="1" min="0" oninput="updateStepupSIP()">
               <span class="field-hint">Increase SIP by this % each year</span>
             </div>
@@ -2284,7 +2306,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <input type="number" id="w-proj-sip" min="0" step="1000" placeholder="0" oninput="renderWorth()">
       </div>
       <div class="field">
-        <label>Expected investment growth (% p.a.)</label>
+        <label>Expected investment growth (% p.a.)<span class="term-info"><button type="button" class="term-info-btn" id="ti-cagr-worth-btn" aria-expanded="false" aria-controls="ti-cagr-worth" aria-label="What is CAGR?" onclick="toggleTermInfo('ti-cagr-worth')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-cagr-worth" role="note" hidden>Compound Annual Growth Rate — the average yearly return assumed for this projection. A guess about the future, not a guarantee: real markets don't return the same percentage every year, and past averages don't promise future ones.</span></span></label>
         <input type="number" id="w-proj-cagr" value="10" step="0.5" min="0" oninput="renderWorth()">
       </div>
       <div class="field">
@@ -2301,7 +2323,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
          letting the projection quietly assume cash the user never budgeted. -->
     <p class="note-text" id="w-proj-debt-note" style="margin-top:10px;display:none;"></p>
     <div class="total-card" style="margin:16px 0 8px;">
-      <div class="total-label">Projected Net Worth in <span id="w-proj-hero-yrs">10</span> Years</div>
+      <div class="total-label">Projected Net Worth in <span id="w-proj-hero-yrs">10</span> Years<span class="term-info"><button type="button" class="term-info-btn" id="ti-investable-btn" aria-expanded="false" aria-controls="ti-investable" aria-label="What counts as investable assets, and why is property flat?" onclick="toggleTermInfo('ti-investable')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-investable" role="note" hidden>This projection grows everything you own except property (your "investable assets") at the rate below, and holds your property's value exactly flat — this app has no basis to assume it'll appreciate. Real property values can rise, fall, or sit still; this projection deliberately doesn't guess.</span></span></div>
       <div class="total-value w-amt" id="w-proj-hero-val">—</div>
       <div class="total-cr w-amt" id="w-proj-hero-sub"></div>
     </div>
@@ -2649,6 +2671,78 @@ function toggleCard(id) {
   const btn = card.querySelector(':scope > .collapse-header');
   if (btn) btn.setAttribute('aria-expanded', open);
 }
+
+// ── R23: inline term definitions (the "ⓘ" glyph next to a term) ──────────
+// One shared toggle for every instance in the app, not twelve independent
+// ones — only one popover is ever open at a time (opening a second closes
+// the first), and it's dismissible by re-tapping its own button, tapping
+// outside, or pressing Escape (which also returns focus to the trigger
+// button, the standard disclosure-widget contract). aria-expanded on the
+// trigger button is the exact same convention toggleCard() above uses —
+// deliberately not a second pattern.
+let openTermInfoId = null;
+
+function closeTermInfo() {
+  if (!openTermInfoId) return;
+  const pop = document.getElementById(openTermInfoId);
+  const btn = document.getElementById(openTermInfoId + '-btn');
+  if (pop) pop.hidden = true;
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+  openTermInfoId = null;
+}
+
+function toggleTermInfo(id) {
+  const wasOpen = openTermInfoId === id;
+  closeTermInfo();
+  if (wasOpen) return;
+  const pop = document.getElementById(id);
+  const btn = document.getElementById(id + '-btn');
+  if (!pop || !btn) return;
+  pop.hidden = false;
+  btn.setAttribute('aria-expanded', 'true');
+  openTermInfoId = id;
+  // position:fixed — coordinates computed here, not in CSS, precisely so
+  // an ancestor .panel-card/.collapse-card's overflow:hidden can't clip
+  // it (see the .term-info-pop comment in <style>). Anchored just below
+  // the trigger button, clamped inside the viewport on both axes so it
+  // never causes horizontal scroll at 375px.
+  try {
+    const r = btn.getBoundingClientRect();
+    pop.style.top = (r.bottom + 6) + 'px';
+    pop.style.left = r.left + 'px';
+    const popRect = pop.getBoundingClientRect();
+    let left = r.left;
+    if (popRect.right > window.innerWidth - 8) left = window.innerWidth - popRect.width - 8;
+    if (left < 8) left = 8;
+    pop.style.left = left + 'px';
+    if (popRect.bottom > window.innerHeight - 8) {
+      // Not enough room below — open upward from the trigger instead.
+      pop.style.top = (r.top - popRect.height - 6) + 'px';
+    }
+  } catch (e) {}
+}
+
+document.addEventListener('click', function (e) {
+  if (!openTermInfoId) return;
+  const pop = document.getElementById(openTermInfoId);
+  const btn = document.getElementById(openTermInfoId + '-btn');
+  if ((pop && pop.contains(e.target)) || (btn && btn.contains(e.target))) return;
+  closeTermInfo();
+});
+
+// Fixed-position popovers don't move with the page, so a scroll would leave
+// one visually detached from the trigger it's meant to explain — closing on
+// scroll is simpler and safer than re-computing its position on every event.
+document.addEventListener('scroll', function () { if (openTermInfoId) closeTermInfo(); }, { passive: true, capture: true });
+window.addEventListener('resize', function () { if (openTermInfoId) closeTermInfo(); });
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && openTermInfoId) {
+    const btn = document.getElementById(openTermInfoId + '-btn');
+    closeTermInfo();
+    if (btn) btn.focus();
+  }
+});
 
 // =====================================================================
 // CHARTS — dependency-free inline SVG line/area chart
@@ -4660,7 +4754,7 @@ function disbTrancheRowHtml(t, i) {
   return `
     <div class="disb-tr-row">
       <div class="disb-tr-field">
-        <label>Tranche ${i + 1} — % of Loan</label>
+        <label>Tranche ${i + 1} — % of Loan${i === 0 ? `<span class="term-info"><button type="button" class="term-info-btn" id="ti-tranche-btn" aria-expanded="false" aria-controls="ti-tranche" aria-label="What is a tranche?" onclick="toggleTermInfo('ti-tranche')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-tranche" role="note" hidden>One stage of a staged loan disbursement — a percentage of the sanctioned loan released to the builder at a given construction month. Pre-EMI interest is charged only on what's been disbursed so far, not the full loan.</span></span>` : ''}</label>
         <input type="number" value="${t.pct}" min="0" max="100" step="1"
           oninput="disbTranches[${i}].pct = parseFloat(this.value) || 0; renderLoanDisb();">
       </div>
