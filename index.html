@@ -118,6 +118,22 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text); font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; font-size: 15px; line-height: 1.6; min-height: 100vh; }
 
+/* ── GLOBAL FOCUS RING (R8, Phase 5) ─────── */
+/* One catch-all for every interactive element type, rather than an
+   enumerated selector list — the same "a list is a defect waiting to
+   happen" reasoning D7/R62 already applied to the touch-width input
+   font-size rule below. Reuses the exact gold --accent ring already
+   established, pre-R8, by .header-about-link/.tile/.landing-footer-link's
+   own :focus-visible rules further down this stylesheet — this doesn't
+   replace those (harmless, identical duplication), it just means every
+   button/link/input/select/textarea/tabindex element gets the same ring
+   even where no per-component rule was ever written. :focus-visible (not
+   :focus) so a mouse click never shows a ring, only real keyboard/AT focus. */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
 /* ── HEADER ─────────────────────────────── */
 .header {
   background: linear-gradient(135deg, var(--bg) 0%, var(--header-grad-mid) 50%, var(--header-grad-end) 100%);
@@ -322,7 +338,15 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 /* ── COLLAPSIBLE CARDS ───────────────────── */
 .collapse-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:8px; overflow:hidden; }
 .collapse-card:hover { border-color:var(--hl-border); }
-.collapse-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; cursor:pointer; user-select:none; gap:12px; }
+/* R8, Phase 5: .collapse-header/.adv-header/.sip-header are now real
+   <button>s (were <div onclick>) so they're keyboard-reachable and get an
+   accessible name/state for free. Unlike .action-btn/.hub-tab/etc, these
+   three classes never had to reset native button chrome before, since a
+   <div> has none — background/border/font/width/text-align below undo what
+   a bare <button> would otherwise paint (UA button face, 2px outset border,
+   caption font, shrink-to-content width, centered text), so the visual
+   result is unchanged from the old <div>. */
+.collapse-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; cursor:pointer; user-select:none; gap:12px; width:100%; background:none; border:none; font:inherit; text-align:left; color:inherit; }
 .collapse-header:hover { background:rgba(255,255,255,.02); }
 .collapse-title { font-size:13px; font-weight:600; color:var(--text); flex:1; }
 .collapse-amount { font-family:'DM Mono',monospace; font-size:13px; font-weight:500; color:var(--text-mid); }
@@ -387,7 +411,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 /* Advanced loan */
 .adv-section { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:14px; }
-.adv-header { display:flex; align-items:center; gap:10px; padding:13px 18px; cursor:pointer; user-select:none; }
+.adv-header { display:flex; align-items:center; gap:10px; padding:13px 18px; cursor:pointer; user-select:none; width:100%; background:none; border:none; font:inherit; text-align:left; color:inherit; }
 .adv-header:hover { background:rgba(255,255,255,.02); }
 .adv-title { font-size:13px; font-weight:600; color:var(--text); flex:1; }
 .adv-arrow { font-size:12px; color:var(--text-dim); transition:transform .2s; }
@@ -426,6 +450,23 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .toast { position:fixed; bottom:24px; right:24px; background:var(--surface2); border:1px solid var(--accent); border-radius:8px; padding:12px 20px; font-size:13px; color:var(--text); transform:translateY(80px); opacity:0; transition:all .3s; z-index:9999; pointer-events:none; max-width:300px; }
 .toast.show { transform:translateY(0); opacity:1; }
 .note-text { font-size:11px; color:var(--text-dim); padding:4px 0; }
+
+/* ── ERROR PANEL (R66) ──────────────────────
+   Deliberately its own dismissible element, not the toast above: a toast
+   auto-hides after 3.2s (showToast()), and diagnostics need to sit on
+   screen long enough to read and copy. --red is legitimate here (a real
+   app failure, not a financial delta) per palette rules 1-5 — no fourth
+   hue, and the failure is real, not decorative. */
+.err-panel { position:fixed; left:16px; right:16px; bottom:16px; max-width:520px; margin:0 auto; background:var(--surface2); border:1px solid var(--red); border-radius:var(--radius); box-shadow:0 8px 28px rgba(0,0,0,.45); z-index:10000; font-size:12px; }
+.err-panel-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; font-weight:600; color:var(--red); border-bottom:1px solid var(--border); }
+.err-panel-close { background:none; border:none; color:var(--text-dim); font-size:15px; line-height:1; cursor:pointer; padding:2px 6px; }
+.err-panel-close:hover { color:var(--text); }
+.err-panel-body { max-height:220px; overflow:auto; margin:0; padding:10px 14px; font-family:'DM Mono', monospace; font-size:11px; color:var(--text-mid); white-space:pre-wrap; word-break:break-word; }
+.err-panel-actions { display:flex; align-items:center; flex-wrap:wrap; gap:10px; padding:10px 14px; border-top:1px solid var(--border); }
+.err-copy-btn { background:var(--surface3); border:1px solid var(--border); border-radius:6px; padding:6px 12px; color:var(--text); font-size:12px; cursor:pointer; }
+.err-copy-btn:hover { border-color:var(--accent); color:var(--accent); }
+.err-panel-note { font-size:10px; color:var(--text-dim); }
+@media(max-width:600px){ .err-panel { left:8px; right:8px; bottom:8px; max-width:none; } }
 
 /* ── ABOUT PAGE PROVENANCE LIST (R22/6b) ───
    A stacked label/value/date list rather than a table — the provenance
@@ -528,6 +569,21 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   input, select, textarea { font-size:16px !important; }
 }
 
+/* R8, Phase 5: 44px minimum touch target (WCAG 2.5.5) for the app's primary
+   tap targets at touch widths — a separate block from the font-size
+   catch-all just above rather than folded into it, since that one is
+   deliberately narrated as a single-purpose fix and this is a distinct
+   concern. `.tile`/`.mode-btn` are deliberately not listed: `.tile` is out
+   of scope for this pass (a concurrent landing-page task owns that region —
+   see CLAUDE.md/TASK-PARALLEL-EXECUTION.md), and `.mode-btn` (the ₹/sft vs
+   lump toggle) is a small inline widget, not one of the tab/mode-selector
+   controls this task named. */
+@media(max-width:600px){
+  .hub-tab, .sip-planner-tab, .action-btn, .btn, .collapse-header, .adv-header, .sip-header {
+    min-height:44px;
+  }
+}
+
 /* ── HUB NAVIGATION ──────────────────────── */
 /* R10: scroll-shadow affordance so a narrow phone can see there's more to
    scroll — the classic "double background-image" trick (css-tricks),
@@ -585,6 +641,14 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 /* ── LANDING PAGE ─────────────────────────── */
 .landing-intro { color:var(--text-mid); font-size:13.5px; margin-bottom:20px; }
+/* R25/6e: first-run orientation line — one dismissible line, not a tour.
+   Dismissal is tier-3 UI state (ORIENTATION_SEEN_KEY, its own localStorage
+   key) — never dhanam.v1, never cleared by eraseState(). */
+.landing-orientation { display:flex; align-items:flex-start; gap:12px; font-size:12px; line-height:1.7; color:var(--text-mid); background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--text-dim); border-radius:8px; padding:10px 14px; margin-bottom:14px; }
+.landing-orientation-text { flex:1; }
+.landing-orientation-close { flex-shrink:0; background:none; border:none; padding:2px; color:var(--text-dim); font-size:18px; cursor:pointer; line-height:1; transition:color .15s; }
+.landing-orientation-close:hover { color:var(--accent); }
+.landing-orientation-close:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 .tile-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
 @media(max-width:640px){ .tile-grid { grid-template-columns:1fr; } }
 .tile {
@@ -614,7 +678,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 /* ── BUY vs SIP SECTION ──────────────────── */
 .sip-section { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:14px; }
-.sip-header { display:flex; align-items:center; gap:10px; padding:13px 18px; cursor:pointer; user-select:none; }
+.sip-header { display:flex; align-items:center; gap:10px; padding:13px 18px; cursor:pointer; user-select:none; width:100%; background:none; border:none; font:inherit; text-align:left; color:inherit; }
 .sip-header:hover { background:rgba(255,255,255,.02); }
 .sip-title { font-size:13px; font-weight:600; color:var(--text); flex:1; }
 .sip-arrow { font-size:12px; color:var(--text-dim); transition:transform .2s; }
@@ -628,6 +692,28 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
    for a real cost, palette rule 4). */
 .sip-caveat { font-size:12px; line-height:1.7; color:var(--text-mid); background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--text-dim); border-radius:8px; padding:10px 14px; margin-bottom:14px; }
 .sip-caveat strong { color:var(--text); }
+
+/* ── INLINE TERM DEFINITIONS (R23, Phase 18) ──────────────
+   One reusable "ⓘ" disclosure, reused at every term instead of twelve
+   bespoke tooltips. Tap-friendly (a real <button>, not hover-only — this is
+   a mobile-first audience), one open at a time (toggleTermInfo() closes
+   any other before opening the next), dismissible via Escape/outside-click/
+   re-tap, and reuses R8's aria-expanded convention rather than inventing a
+   second one. --text-dim on the glyph (not currentColor-inherited) so it
+   reads as quiet, always-available help — same reasoning as .tile-icon/
+   .ab-icon's fixed-neutral exception in the Icons section of CLAUDE.md. */
+.term-info { display:inline-flex; margin-left:5px; vertical-align:middle; }
+.term-info-btn { background:none; border:none; padding:3px; margin:-3px; cursor:pointer; color:var(--text-dim); display:inline-flex; align-items:center; line-height:0; border-radius:4px; }
+.term-info-btn .icon { width:13px; height:13px; }
+.term-info-btn:hover, .term-info-btn[aria-expanded="true"] { color:var(--accent); }
+/* position:fixed, not absolute — .panel-card and .collapse-card both set
+   overflow:hidden, and nearly every term sits inside one of those, so an
+   absolutely-positioned popover would get silently clipped by its own
+   ancestor. Fixed positioning escapes that (it isn't contained by an
+   overflow:hidden ancestor's box) at the cost of computing its own
+   top/left in JS — see toggleTermInfo()/positionTermInfoPop(). */
+.term-info-pop { position:fixed; z-index:500; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:11.5px; line-height:1.55; color:var(--text-mid); font-weight:400; text-transform:none; letter-spacing:normal; width:max-content; max-width:min(280px, calc(100vw - 32px)); box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.term-info-pop[hidden] { display:none; }
 .sip-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:14px; }
 @media(max-width:640px){ .sip-grid { grid-template-columns:1fr; } }
 .sip-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
@@ -791,12 +877,12 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 <!-- ===== HUB NAVIGATION ===== -->
 <nav class="hub-nav">
-  <div class="hub-nav-inner">
-    <button class="hub-tab active" id="ht-landing" onclick="switchHub('landing')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg> Home</button>
-    <button class="hub-tab" id="ht-apartment" onclick="switchHub('apartment')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg> Dhanam Home</button>
-    <button class="hub-tab" id="ht-car" onclick="switchHub('car')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg> Dhanam Car</button>
-    <button class="hub-tab" id="ht-sip" onclick="switchHub('sip')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Dhanam Grow</button>
-    <button class="hub-tab" id="ht-worth" onclick="switchHub('worth')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Dhanam Worth</button>
+  <div class="hub-nav-inner" role="tablist" aria-label="Dhanam hubs">
+    <button class="hub-tab active" id="ht-landing" role="tab" aria-selected="true" onclick="switchHub('landing')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg> Home</button>
+    <button class="hub-tab" id="ht-apartment" role="tab" aria-selected="false" onclick="switchHub('apartment')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg> Dhanam Home</button>
+    <button class="hub-tab" id="ht-car" role="tab" aria-selected="false" onclick="switchHub('car')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg> Dhanam Car</button>
+    <button class="hub-tab" id="ht-sip" role="tab" aria-selected="false" onclick="switchHub('sip')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Dhanam Grow</button>
+    <button class="hub-tab" id="ht-worth" role="tab" aria-selected="false" onclick="switchHub('worth')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Dhanam Worth</button>
   </div>
 </nav>
 
@@ -806,6 +892,11 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 <div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg> Welcome to Dhanam</div>
 <p class="landing-intro">What do you want to do? Everything updates live as you type. Nothing is ever sent anywhere — anything you choose to save stays on this device.</p>
+
+<div class="landing-orientation" id="landing-orientation">
+  <span class="landing-orientation-text">First time here? Pick a goal below, type in your numbers, and watch everything recalculate live.</span>
+  <button type="button" class="landing-orientation-close" id="landing-orientation-close" aria-label="Dismiss" onclick="dismissOrientationLine()">✕</button>
+</div>
 
 <div class="tile-grid">
   <button class="tile" onclick="switchHub('sip')">
@@ -933,17 +1024,17 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 <!-- ===== ACTION BUTTONS ===== -->
 <div class="action-row">
-  <button class="action-btn" id="btn-detail" onclick="toggleSection('detail')">
+  <button class="action-btn" id="btn-detail" aria-expanded="false" aria-controls="section-detail" onclick="toggleSection('detail')">
     <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg></span>
     <span class="ab-label">Detailed Cost Analysis</span>
     <span class="ab-arrow">▼</span>
   </button>
-  <button class="action-btn" id="btn-loan" onclick="toggleSection('loan')">
+  <button class="action-btn" id="btn-loan" aria-expanded="false" aria-controls="section-loan" onclick="toggleSection('loan')">
     <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bank"></use></svg></span>
     <span class="ab-label">Loan Analysis</span>
     <span class="ab-arrow">▼</span>
   </button>
-  <button class="action-btn" id="btn-disb" onclick="toggleSection('disb')">
+  <button class="action-btn" id="btn-disb" aria-expanded="false" aria-controls="section-disb" onclick="toggleSection('disb')">
     <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-construction"></use></svg></span>
     <span class="ab-label">Loan Disbursement (Pre-EMI)</span>
     <span class="ab-arrow">▼</span>
@@ -986,7 +1077,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
         <div class="cf-row" id="cfrow-floor">
           <input type="checkbox" class="cf-chk" id="d-incl-floor" checked onchange="updateCfRow('floor')">
-          <label class="cf-label" for="d-incl-floor">Floor / Rise Charges</label>
+          <label class="cf-label" for="d-incl-floor">Floor / Rise Charges</label><span class="term-info"><button type="button" class="term-info-btn" id="ti-floorrise-btn" aria-expanded="false" aria-controls="ti-floorrise" aria-label="What is Floor Rise Charges?" onclick="toggleTermInfo('ti-floorrise')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-floorrise" role="note" hidden>A per-square-foot premium some builders charge for higher floors, applied here only from the 6th floor upward. Whether your builder actually charges this — and how much — varies; edit the rate below if yours differs.</span></span>
           <div class="cf-inputs">
             <span class="cf-unit">Floor</span>
             <input type="number" class="cf-input w70" id="d-floor" value="1" min="1" oninput="calcDetail()">
@@ -1035,7 +1126,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <!-- Amenities -->
         <div class="cf-row" id="cfrow-amenities">
           <input type="checkbox" class="cf-chk" id="d-incl-amenities" checked onchange="updateCfRow('amenities')">
-          <label class="cf-label" for="d-incl-amenities">Amenities / Clubhouse</label>
+          <label class="cf-label" for="d-incl-amenities">Amenities / Clubhouse</label><span class="term-info"><button type="button" class="term-info-btn" id="ti-amenities-btn" aria-expanded="false" aria-controls="ti-amenities" aria-label="What is the Amenities / Clubhouse charge?" onclick="toggleTermInfo('ti-amenities')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-amenities" role="note" hidden>A one-time charge some builders levy for shared amenities — clubhouse, gym, pool, gardens — separate from the base sale price. Uncheck this if your builder already includes it in the quoted price.</span></span>
           <div class="cf-inputs">
             <div class="mode-toggle">
               <button class="mode-btn active" id="mb-amenities-sqft" onclick="setMode('amenities','sqft')">₹/sft</button>
@@ -1051,7 +1142,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <!-- Corpus Fund -->
         <div class="cf-row" id="cfrow-corpus">
           <input type="checkbox" class="cf-chk" id="d-incl-corpus" checked onchange="updateCfRow('corpus')">
-          <label class="cf-label" for="d-incl-corpus">Corpus Fund</label>
+          <label class="cf-label" for="d-incl-corpus">Corpus Fund</label><span class="term-info"><button type="button" class="term-info-btn" id="ti-corpusfund-btn" aria-expanded="false" aria-controls="ti-corpusfund" aria-label="What is the Corpus Fund charge?" onclick="toggleTermInfo('ti-corpusfund')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-corpusfund" role="note" hidden>A one-time contribution to the building's maintenance reserve, collected at possession — different from the recurring monthly maintenance you'll pay afterward. Not every builder charges this separately; uncheck it if yours doesn't.</span></span>
           <div class="cf-inputs">
             <div class="mode-toggle">
               <button class="mode-btn active" id="mb-corpus-sqft" onclick="setMode('corpus','sqft')">₹/sft</button>
@@ -1122,17 +1213,17 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <div class="panel-card-body">
       <div class="grid-3">
         <div class="field">
-          <label>Stamp Duty (%)</label>
+          <label>Stamp Duty (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-stampduty-btn" aria-expanded="false" aria-controls="ti-stampduty" aria-label="What is stamp duty?" onclick="toggleTermInfo('ti-stampduty')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-stampduty" role="note" hidden>A state government tax on registering the property in your name, charged as a percentage of the property's value. Rates vary by state — this app's default is a starting point, not a quote; edit it if your state differs (see the About page's dated state table).</span></span></label>
           <input type="number" id="d-stamp" value="4" step="0.1" oninput="calcDetail()">
           <span class="field-hint" id="d-stamp-hint">Telangana: 4%</span>
         </div>
         <div class="field">
-          <label>Registration Fee (%)</label>
+          <label>Registration Fee (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-regfee-btn" aria-expanded="false" aria-controls="ti-regfee" aria-label="What is registration fee?" onclick="toggleTermInfo('ti-regfee')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-regfee" role="note" hidden>A separate state fee for recording the sale deed in government land records, on top of stamp duty. Also state-specific and editable — see the About page's dated state table for what's assumed here.</span></span></label>
           <input type="number" id="d-regfee" value="0.5" step="0.1" oninput="calcDetail()">
           <span class="field-hint" id="d-regfee-hint">Telangana: 0.5%</span>
         </div>
         <div class="field" id="d-gst-field" style="display:none;">
-          <label>GST on Construction (%)</label>
+          <label>GST on Construction (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-gst-btn" aria-expanded="false" aria-controls="ti-gst" aria-label="What is GST on construction?" onclick="toggleTermInfo('ti-gst')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-gst" role="note" hidden>Goods & Services Tax on an under-construction property, currently 5% with no input tax credit. A ready-to-move-in property with an occupancy certificate owes no GST at all — this field only applies because the property was marked under construction in Quick Estimate.</span></span></label>
           <!-- GST rate for under-construction residential property, no input
                tax credit — current GST law; the GST Council moved real
                estate to this rate (from 12%/8% with ITC) effective
@@ -1161,20 +1252,20 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <!-- Collapsible breakdown -->
   <div style="margin-top:10px;">
     <div class="collapse-card open" id="dc-base">
-      <div class="collapse-header" onclick="toggleCard('dc-base')">
+      <button type="button" class="collapse-header" onclick="toggleCard('dc-base')" aria-expanded="true">
         <span class="collapse-title">Base Construction Cost</span>
         <span class="collapse-amount" id="dch-base">—</span>
         <span class="collapse-arrow">▼</span>
-      </div>
+      </button>
       <div class="collapse-body" id="d-body-base"></div>
     </div>
 
     <div class="collapse-card" id="dc-gst" style="display:none;">
-      <div class="collapse-header" onclick="toggleCard('dc-gst')">
+      <button type="button" class="collapse-header" onclick="toggleCard('dc-gst')" aria-expanded="false">
         <span class="collapse-title">GST on Construction</span>
         <span class="collapse-amount" id="dch-gst">—</span>
         <span class="collapse-arrow">▼</span>
-      </div>
+      </button>
       <div class="collapse-body">
         <div class="br-row"><span class="br-label">GST Base (Sale Value)</span><span class="br-calc" id="d-calc-gstbase"></span><span class="br-val" id="d-val-gstbase">—</span></div>
         <div class="br-row"><span class="br-label">GST Amount</span><span class="br-calc" id="d-calc-gstrate"></span><span class="br-val" id="d-val-gstamt">—</span></div>
@@ -1183,11 +1274,11 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     </div>
 
     <div class="collapse-card" id="dc-reg">
-      <div class="collapse-header" onclick="toggleCard('dc-reg')">
+      <button type="button" class="collapse-header" onclick="toggleCard('dc-reg')" aria-expanded="false">
         <span class="collapse-title">Registration & Stamp Duty</span>
         <span class="collapse-amount" id="dch-reg">—</span>
         <span class="collapse-arrow">▼</span>
-      </div>
+      </button>
       <div class="collapse-body">
         <div class="br-row"><span class="br-label">Stamp Duty</span><span class="br-calc" id="d-calc-stamp"></span><span class="br-val" id="d-val-stamp">—</span></div>
         <div class="br-row"><span class="br-label">Registration Fee</span><span class="br-calc" id="d-calc-regfee"></span><span class="br-val" id="d-val-regfee">—</span></div>
@@ -1197,20 +1288,20 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     </div>
 
     <div class="collapse-card" id="dc-other">
-      <div class="collapse-header" onclick="toggleCard('dc-other')">
+      <button type="button" class="collapse-header" onclick="toggleCard('dc-other')" aria-expanded="false">
         <span class="collapse-title">Additional Charges Breakdown</span>
         <span class="collapse-amount" id="dch-other">—</span>
         <span class="collapse-arrow">▼</span>
-      </div>
+      </button>
       <div class="collapse-body" id="d-body-other"></div>
     </div>
 
     <div class="collapse-card" id="dc-payment">
-      <div class="collapse-header" onclick="toggleCard('dc-payment')">
+      <button type="button" class="collapse-header" onclick="toggleCard('dc-payment')" aria-expanded="false">
         <span class="collapse-title">Payment Schedule (Construction-Linked)</span>
         <span class="collapse-amount" id="dch-payment">—</span>
         <span class="collapse-arrow">▼</span>
-      </div>
+      </button>
       <div class="collapse-body">
         <div class="table-scroll">
         <table class="pay-table">
@@ -1265,7 +1356,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     </div>
     <div class="remember-row">
       <label class="ts-switch">
-        <input type="checkbox" id="l-remember" onchange="toggleRememberInputs()">
+        <input type="checkbox" id="l-remember" aria-label="Remember my inputs on this device" onchange="toggleRememberInputs()">
         <span class="ts-slider"></span>
       </label>
       <div>
@@ -1308,10 +1399,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
   <!-- 3 Scenario Cards + Custom Year Analysis — collapsed by default (R2) -->
   <div class="collapse-card" id="l-compare-card" style="display:none;">
-    <div class="collapse-header" onclick="toggleCard('l-compare-card')">
+    <button type="button" class="collapse-header" onclick="toggleCard('l-compare-card')" aria-expanded="false">
       <span class="collapse-title">Compare 15 / 20 / 30-year scenarios &amp; custom year</span>
       <span class="collapse-arrow">▼</span>
-    </div>
+    </button>
     <div class="collapse-body">
       <div class="loan-grid" id="l-cards"></div>
       <div class="custom-year-section">
@@ -1327,11 +1418,11 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
   <!-- Advanced Loan Analysis -->
   <div class="adv-section" id="adv-section">
-    <div class="adv-header" onclick="toggleAdv()">
+    <button type="button" class="adv-header" onclick="toggleAdv()" aria-expanded="false">
       <span style="font-size:16px;"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-rocket"></use></svg></span>
       <span class="adv-title">Advanced: Extra Payments Projection</span>
       <span class="adv-arrow">▼</span>
-    </div>
+    </button>
     <div class="adv-body">
       <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">
         Making extra principal payments reduces tenure significantly. For example, one extra EMI per year on a 20-year loan can cut 4–5 years off your tenure.
@@ -1358,11 +1449,38 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
           <div class="total-sub-item"><div class="ts-lbl">Extra / Year</div><div class="ts-val mono" id="adv-hero-extra">—</div></div>
         </div>
       </div>
+      <!-- R65: reverse Worth bridge, narrow half only (UX-ANALYSIS.md §Strategic-2,
+           promise 1 — promise 2, personal-advice verdict cards, was explicitly
+           declined; see that document). Closed by default: this is the lighter
+           of the two honest options for a real balance sheet appearing outside
+           #worth-main, where "Hide amounts"/.amounts-hidden has no effect
+           (that mechanism is scoped to #worth-main only) — see CLAUDE.md. -->
+      <div class="collapse-card" id="adv-worth-card" style="margin:0 0 12px;">
+        <button type="button" class="collapse-header" onclick="toggleCard('adv-worth-card')" aria-expanded="false">
+          <span class="collapse-title">What this does to your net worth</span>
+          <span class="collapse-arrow">▼</span>
+        </button>
+        <div class="collapse-body">
+          <div id="adv-worth-empty" class="note-text" style="display:none;">
+            You haven't saved a balance sheet in <strong>Dhanam Worth</strong> yet — once you do, this section will show what this extra-payments plan does to your actual net worth, not a hypothetical loan. <a href="#" onclick="switchHub('worth');return false;" style="color:var(--accent);">Open Dhanam Worth →</a>
+          </div>
+          <div id="adv-worth-body" style="display:none;">
+            <p class="note-text" id="adv-worth-fact" style="margin-bottom:12px;"></p>
+            <div class="loan-card">
+              <div class="lc-title">Projected Net Worth in <span id="adv-worth-yrs">10</span> Years</div>
+              <div class="loan-stat"><span class="ls-lbl">Your Worth projection today</span><span class="ls-val big" id="adv-worth-baseline">—</span></div>
+              <div class="loan-stat"><span class="ls-lbl" id="adv-worth-withplan-lbl">Plus this plan's interest saved</span><span class="ls-val big" id="adv-worth-withplan">—</span></div>
+              <div class="loan-stat"><span class="ls-lbl" id="adv-worth-delta-lbl">Interest saved</span><span class="ls-val" style="color:var(--green)" id="adv-worth-delta">—</span></div>
+            </div>
+            <p class="note-text" id="adv-worth-caveat" style="margin-top:10px;"></p>
+          </div>
+        </div>
+      </div>
       <div class="collapse-card" id="adv-compare-card">
-        <div class="collapse-header" onclick="toggleCard('adv-compare-card')">
+        <button type="button" class="collapse-header" onclick="toggleCard('adv-compare-card')" aria-expanded="false">
           <span class="collapse-title">Compare 15 / 20 / 30-year tenures</span>
           <span class="collapse-arrow">▼</span>
-        </div>
+        </button>
         <div class="collapse-body">
           <div class="adv-compare-grid" id="adv-cards"></div>
         </div>
@@ -1372,11 +1490,11 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
   <!-- Buy vs SIP section -->
   <div class="sip-section" id="sip-section">
-    <div class="sip-header" onclick="toggleSIP()">
+    <button type="button" class="sip-header" onclick="toggleSIP()" aria-expanded="false">
       <span style="font-size:16px;"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg></span>
       <span class="sip-title">Buy vs. SIP: What if you invested instead?</span>
       <span class="sip-arrow">▼</span>
-    </div>
+    </button>
     <div class="sip-body">
       <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">
         If instead of buying, you invested the same EMI amount monthly in a SIP — how much corpus would you accumulate?
@@ -1399,16 +1517,16 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="collapse-card" id="sip-compare-card">
-        <div class="collapse-header" onclick="toggleCard('sip-compare-card')">
+        <button type="button" class="collapse-header" onclick="toggleCard('sip-compare-card')" aria-expanded="false">
           <span class="collapse-title">Compare across CAGR &amp; tenure scenarios</span>
           <span class="collapse-arrow">▼</span>
-        </div>
+        </button>
         <div class="collapse-body">
           <div class="sip-grid" id="sip-cards"></div>
           <div class="sip-custom-inputs">
             <span class="sip-custom-lbl">Custom scenario:</span>
             <div class="sip-inline-field">
-              <label>CAGR %</label>
+              <label>CAGR %<span class="term-info"><button type="button" class="term-info-btn" id="ti-cagr-sip-btn" aria-expanded="false" aria-controls="ti-cagr-sip" aria-label="What is CAGR?" onclick="toggleTermInfo('ti-cagr-sip')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-cagr-sip" role="note" hidden>Compound Annual Growth Rate — the average yearly return assumed for this projection. A guess about the future, not a guarantee: real markets don't return the same percentage every year, and past averages don't promise future ones.</span></span></label>
               <input type="number" class="sip-inline-input" id="sip-cagr" value="12" step="0.5" oninput="renderSIPComparison()">
             </div>
             <div class="sip-inline-field">
@@ -1488,7 +1606,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <div class="panel-card">
     <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span><span class="pch-title">Summary</span><span class="pch-tag">Live</span></div>
     <div class="panel-card-body">
-      <div class="loan-stat"><span class="ls-lbl">Total Pre-EMI Interest Paid</span><span class="ls-val red" id="disb-total-preemi">—</span></div>
+      <div class="loan-stat"><span class="ls-lbl">Total Pre-EMI Interest Paid<span class="term-info"><button type="button" class="term-info-btn" id="ti-preemi-btn" aria-expanded="false" aria-controls="ti-preemi" aria-label="What is pre-EMI?" onclick="toggleTermInfo('ti-preemi')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-preemi" role="note" hidden>Interest-only payments charged on the portion of a loan already disbursed to the builder, before construction finishes and the full EMI begins. You pay interest only on what's been released so far — not the full sanctioned loan amount.</span></span></span><span class="ls-val red" id="disb-total-preemi">—</span></div>
       <div class="loan-stat"><span class="ls-lbl">EMI after Final Disbursement</span><span class="ls-val big" id="disb-emi">—</span></div>
       <div class="loan-stat"><span class="ls-lbl">Total Interest (Pre-EMI + Amortization)</span><span class="ls-val red" id="disb-total-interest">—</span></div>
       <div class="loan-stat"><span class="ls-lbl">Total Cost of Loan</span><span class="ls-val" id="disb-total-cost">—</span></div>
@@ -1516,16 +1634,16 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <div class="panel-card" style="margin-bottom:20px;">
       <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg></span><span class="pch-title">How are you paying for the car?</span></div>
       <div class="panel-card-body">
-        <div class="action-row" id="car-mode-row" style="margin-bottom:0;">
-          <button class="action-btn active" id="car-mode-btn-loan" onclick="setCarMode('loan')" type="button">
+        <div class="action-row" id="car-mode-row" style="margin-bottom:0;" role="group" aria-label="How are you paying for the car?">
+          <button class="action-btn active" id="car-mode-btn-loan" aria-pressed="true" onclick="setCarMode('loan')" type="button">
             <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bank"></use></svg></span>
             <span class="ab-label">Loan</span>
           </button>
-          <button class="action-btn" id="car-mode-btn-lease" onclick="setCarMode('lease')" type="button">
+          <button class="action-btn" id="car-mode-btn-lease" aria-pressed="false" onclick="setCarMode('lease')" type="button">
             <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-briefcase"></use></svg></span>
             <span class="ab-label">Company Lease</span>
           </button>
-          <button class="action-btn" id="car-mode-btn-cash" onclick="setCarMode('cash')" type="button">
+          <button class="action-btn" id="car-mode-btn-cash" aria-pressed="false" onclick="setCarMode('cash')" type="button">
             <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span>
             <span class="ab-label">Cash</span>
           </button>
@@ -1582,7 +1700,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
             <input type="checkbox" id="car-has-driver" onchange="renderCarCalc()" style="accent-color:var(--accent);width:16px;height:16px;">
             Company Driver Provided
           </label>
-          <span style="margin-left:auto;font-size:11px;color:var(--text-dim);">Tax Regime:</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--text-dim);">Tax Regime:<span class="term-info"><button type="button" class="term-info-btn" id="ti-regime-btn" aria-expanded="false" aria-controls="ti-regime" aria-label="What's the difference between the two tax regimes?" onclick="toggleTermInfo('ti-regime')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-regime" role="note" hidden>Old Regime keeps deductions — standard deduction, 80C, HRA — but taxes income at higher slab rates. New Regime (this app's default) has lower slab rates and a higher §87A rebate threshold, with almost no deductions. Your actual payslip determines which one you're on — this app can't know that for you.</span></span></span>
           <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text-mid);cursor:pointer;">
             <input type="radio" name="car-regime" value="new" checked onchange="renderCarCalc()" style="accent-color:var(--accent);">
             New Regime (FY2025-26)
@@ -1605,7 +1723,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       <div class="total-value" id="car-hero-value">—</div>
       <div class="total-cr" id="car-hero-note"></div>
       <div class="total-sub">
-        <div class="total-sub-item"><div class="ts-lbl">Perquisite Value</div><div class="ts-val mono" id="car-hero-perq">—</div></div>
+        <div class="total-sub-item"><div class="ts-lbl">Perquisite Value<span class="term-info"><button type="button" class="term-info-btn" id="ti-perq-btn" aria-expanded="false" aria-controls="ti-perq" aria-label="What is perquisite value?" onclick="toggleTermInfo('ti-perq')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-perq" role="note" hidden>The taxable value the Income-tax Rules, 2026 assign to personal use of a company car — ₹5,000/mo (₹7,000 if the engine is over 1600cc), +₹3,000/mo with a company driver. Added to taxable income in Carve-out A and Additive B; Baseline never has it, since there's no company car in that scenario.</span></span></div><div class="ts-val mono" id="car-hero-perq">—</div></div>
       </div>
     </div>
 
@@ -1616,10 +1734,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
          card it restated, so keeping it too would state the same figures a
          third time. -->
     <div class="collapse-card" id="car-compare-card">
-      <div class="collapse-header" onclick="toggleCard('car-compare-card')">
+      <button type="button" class="collapse-header" onclick="toggleCard('car-compare-card')" aria-expanded="false">
         <span class="collapse-title">Compare all three scenarios</span>
         <span class="collapse-arrow">▼</span>
-      </div>
+      </button>
       <div class="collapse-body">
         <div id="car-scenario-cards" class="loan-grid"></div>
       </div>
@@ -1653,10 +1771,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     </div>
 
     <div class="collapse-card" id="cc-assumptions-card">
-      <div class="collapse-header" onclick="toggleCard('cc-assumptions-card')">
+      <button type="button" class="collapse-header" onclick="toggleCard('cc-assumptions-card')" aria-expanded="false">
         <span class="collapse-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg> Assumptions</span>
         <span class="collapse-arrow">▼</span>
-      </div>
+      </button>
       <div class="collapse-body">
         <div class="grid-3">
           <!-- Rate/term apply to every mode (loan interest, lease interest,
@@ -1827,10 +1945,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
              tenureStats(yr) helper carried across intact, just re-homed and
              keyed off the selected car's own price/down payment. -->
         <div class="collapse-card" id="cc-tenure-card" style="display:none;margin-top:16px;">
-          <div class="collapse-header" onclick="toggleCard('cc-tenure-card')">
+          <button type="button" class="collapse-header" onclick="toggleCard('cc-tenure-card')" aria-expanded="false">
             <span class="collapse-title">Compare 3 / 5 / 7-year loan tenures</span>
             <span class="collapse-arrow">▼</span>
-          </div>
+          </button>
           <div class="collapse-body">
             <div id="cc-tenure-cards" class="loan-grid"></div>
           </div>
@@ -1846,7 +1964,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
              template — same R20 discipline the rest of this card follows;
              only #cc-depr-body's table/note gets rewritten. -->
         <div id="cc-depr-section" style="margin-top:16px;display:none;">
-          <div class="panel-card-header" style="padding:0 0 10px;"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-down"></use></svg></span><span class="pch-title">Estimated Resale Value (IRDAI Depreciation)</span></div>
+          <div class="panel-card-header" style="padding:0 0 10px;"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-down"></use></svg></span><span class="pch-title">Estimated Resale Value (IRDAI Depreciation)<span class="term-info"><button type="button" class="term-info-btn" id="ti-irdai-btn" aria-expanded="false" aria-controls="ti-irdai" aria-label="What is IRDAI depreciation?" onclick="toggleTermInfo('ti-irdai')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-irdai" role="note" hidden>An insurance-industry depreciation schedule — 20% in year 1, then 15%/year — used to set insured value for motor insurance, not to predict resale prices. Treat this curve as a rough anchor, not a market quote; actual resale depends on brand, condition, and demand.</span></span></span></div>
           <div class="chart-legend" id="cc-depr-legend">
             <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Car value</span>
             <span class="chart-legend-item" id="cc-depr-legend-loan" style="display:none;"><span class="chart-legend-dot" style="background:var(--red)"></span>Outstanding loan balance</span>
@@ -1866,10 +1984,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
              to all three columns — B13's fairness rule: never a friendlier
              default treatment for one mode than another. -->
         <div class="collapse-card open" id="cc-crossmode-card" style="margin-top:16px;">
-          <div class="collapse-header" onclick="toggleCard('cc-crossmode-card')">
+          <button type="button" class="collapse-header" onclick="toggleCard('cc-crossmode-card')" aria-expanded="true">
             <span class="collapse-title">Lease vs. Loan vs. Cash — this car, three ways</span>
             <span class="collapse-arrow">▼</span>
-          </div>
+          </button>
           <div class="collapse-body">
             <p class="note-text" style="margin-bottom:10px;">Money out the door only, same as the ranking above — uses this car's own down payment and the assumptions above for all three columns. Switch mode at the top of the page to change which one actually drives the ranking and shortlist.</p>
             <p class="note-text" id="cc-crossmode-assumptions" style="margin-bottom:10px;"></p>
@@ -1894,10 +2012,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     </div>
 
     <div class="collapse-card" id="cc-chart-card" style="display:none;">
-      <div class="collapse-header" onclick="toggleChartCard('cc-chart-card', renderCCChart)">
+      <button type="button" class="collapse-header" onclick="toggleChartCard('cc-chart-card', renderCCChart)" aria-expanded="false">
         <span class="collapse-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg> Net cost vs. annual km driven</span>
         <span class="collapse-arrow">▼</span>
-      </div>
+      </button>
       <div class="collapse-body">
         <div id="cc-chart"></div>
         <div class="chart-caption" id="cc-chart-caption"></div>
@@ -1941,10 +2059,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
          (TASK-UX-REDESIGN.md) — no calculation change, no computed
          post-tax figure (that's R31, gated on B10, separate and unstarted). -->
     <div class="sip-caveat"><strong>Every figure below is pre-tax.</strong> On redemption, equity LTCG above ₹1.25L in a financial year is taxed at 12.5% (rate and exemption as of the Union Budget 2024, effective 23 Jul 2024) — actual tax depends on when you sell, how the redemption is split across financial years, and what the law says at that time, none of which this app can know. A projection, not a promise.</div>
-    <div class="sip-planner-tabs">
-      <button class="sip-planner-tab active" id="spt-monthly" onclick="switchSIPPlannerTab('monthly')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Monthly SIP</button>
-      <button class="sip-planner-tab" id="spt-stepup" onclick="switchSIPPlannerTab('stepup')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Step-up SIP</button>
-      <button class="sip-planner-tab" id="spt-lumpsum" onclick="switchSIPPlannerTab('lumpsum')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Lumpsum</button>
+    <div class="sip-planner-tabs" role="tablist" aria-label="Dhanam Grow SIP planner">
+      <button class="sip-planner-tab active" id="spt-monthly" role="tab" aria-selected="true" onclick="switchSIPPlannerTab('monthly')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Monthly SIP</button>
+      <button class="sip-planner-tab" id="spt-stepup" role="tab" aria-selected="false" onclick="switchSIPPlannerTab('stepup')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Step-up SIP</button>
+      <button class="sip-planner-tab" id="spt-lumpsum" role="tab" aria-selected="false" onclick="switchSIPPlannerTab('lumpsum')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Lumpsum</button>
     </div>
 
     <!-- Monthly SIP -->
@@ -1958,7 +2076,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
               <input type="number" id="sp-monthly" value="10000" oninput="updateSIPPlanner()">
             </div>
             <div class="field highlight">
-              <label>Expected CAGR (%)</label>
+              <label>Expected CAGR (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-cagr-grow-btn" aria-expanded="false" aria-controls="ti-cagr-grow" aria-label="What is CAGR?" onclick="toggleTermInfo('ti-cagr-grow')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-cagr-grow" role="note" hidden>Compound Annual Growth Rate — the average yearly return assumed for this projection. A guess about the future, not a guarantee: real markets don't return the same percentage every year, and past averages don't promise future ones.</span></span></label>
               <input type="number" id="sp-cagr" value="12" step="0.5" oninput="updateSIPPlanner()">
               <span class="field-hint">Equity MFs ≈12% · Index ≈11% · Balanced ≈9%</span>
             </div>
@@ -1970,7 +2088,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="sp-result-card">
-        <div class="sp-result-label">SIP Corpus after <span id="sp-years-lbl">20</span> years</div>
+        <div class="sp-result-label">SIP Corpus after <span id="sp-years-lbl">20</span> years<span class="term-info"><button type="button" class="term-info-btn" id="ti-corpus-btn" aria-expanded="false" aria-controls="ti-corpus" aria-label="What is corpus?" onclick="toggleTermInfo('ti-corpus')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-corpus" role="note" hidden>The total value of your investment at the end of the period — what you put in, plus (or minus) whatever the market returned on it. Shown pre-tax; see the caveat above this tab for what tax could take off the top on redemption.</span></span></div>
         <div class="sp-result-value" id="sp-corpus">—</div>
         <div class="sp-result-sub" id="sp-corpus-exact"></div>
         <div class="total-sub" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
@@ -2014,7 +2132,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
               <input type="number" id="su-monthly" value="10000" oninput="updateStepupSIP()">
             </div>
             <div class="field highlight">
-              <label>Annual Step-up (%)</label>
+              <label>Annual Step-up (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-stepup-btn" aria-expanded="false" aria-controls="ti-stepup" aria-label="What is step-up?" onclick="toggleTermInfo('ti-stepup')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-stepup" role="note" hidden>Increases your monthly SIP by this percentage every year instead of investing the same amount throughout. A 10% step-up on a ₹10,000 SIP means ₹11,000/mo in year 2, ₹12,100/mo in year 3, and so on.</span></span></label>
               <input type="number" id="su-stepup" value="10" step="1" min="0" oninput="updateStepupSIP()">
               <span class="field-hint">Increase SIP by this % each year</span>
             </div>
@@ -2155,10 +2273,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <!-- Trend chart — collapsed by default (D4): the tile above answers "am I
      up or down?", this answers "what shape has it been?" (2d / R3) -->
 <div class="collapse-card" id="w-trend-card" style="display:none;">
-  <div class="collapse-header" onclick="toggleChartCard('w-trend-card', renderWorthTrend)">
+  <button type="button" class="collapse-header" onclick="toggleChartCard('w-trend-card', renderWorthTrend)" aria-expanded="false">
     <span class="collapse-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-down"></use></svg> Net worth over time</span>
     <span class="collapse-arrow">▼</span>
-  </div>
+  </button>
   <div class="collapse-body">
     <div id="w-trend-chart"></div>
     <div class="chart-caption" id="w-trend-range"></div>
@@ -2188,7 +2306,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <input type="number" id="w-proj-sip" min="0" step="1000" placeholder="0" oninput="renderWorth()">
       </div>
       <div class="field">
-        <label>Expected investment growth (% p.a.)</label>
+        <label>Expected investment growth (% p.a.)<span class="term-info"><button type="button" class="term-info-btn" id="ti-cagr-worth-btn" aria-expanded="false" aria-controls="ti-cagr-worth" aria-label="What is CAGR?" onclick="toggleTermInfo('ti-cagr-worth')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-cagr-worth" role="note" hidden>Compound Annual Growth Rate — the average yearly return assumed for this projection. A guess about the future, not a guarantee: real markets don't return the same percentage every year, and past averages don't promise future ones.</span></span></label>
         <input type="number" id="w-proj-cagr" value="10" step="0.5" min="0" oninput="renderWorth()">
       </div>
       <div class="field">
@@ -2205,7 +2323,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
          letting the projection quietly assume cash the user never budgeted. -->
     <p class="note-text" id="w-proj-debt-note" style="margin-top:10px;display:none;"></p>
     <div class="total-card" style="margin:16px 0 8px;">
-      <div class="total-label">Projected Net Worth in <span id="w-proj-hero-yrs">10</span> Years</div>
+      <div class="total-label">Projected Net Worth in <span id="w-proj-hero-yrs">10</span> Years<span class="term-info"><button type="button" class="term-info-btn" id="ti-investable-btn" aria-expanded="false" aria-controls="ti-investable" aria-label="What counts as investable assets, and why is property flat?" onclick="toggleTermInfo('ti-investable')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-investable" role="note" hidden>This projection grows everything you own except property (your "investable assets") at the rate below, and holds your property's value exactly flat — this app has no basis to assume it'll appreciate. Real property values can rise, fall, or sit still; this projection deliberately doesn't guess.</span></span></div>
       <div class="total-value w-amt" id="w-proj-hero-val">—</div>
       <div class="total-cr w-amt" id="w-proj-hero-sub"></div>
     </div>
@@ -2219,13 +2337,13 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <p class="note-text" id="w-saved-at">Nothing saved yet — enter a value above and it's kept on this device.</p>
     <p class="note-text" id="w-install-nudge" style="display:none;">Tip: install Dhanam to your home screen. Browsers can clear data for sites you haven't opened in a while — installed apps keep theirs.</p>
     <div class="btn-row">
-      <button class="btn btn-secondary" onclick="toggleHideAmounts()" id="w-hide-btn"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg><span id="w-hide-btn-label">Hide amounts</span></button>
+      <button class="btn btn-secondary" onclick="toggleHideAmounts()" id="w-hide-btn" aria-pressed="false"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg><span id="w-hide-btn-label">Hide amounts</span></button>
       <button class="btn btn-secondary" onclick="exportWorthExcel()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg> Export Excel</button>
       <button class="btn btn-secondary" onclick="exportWorthBackup()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-download"></use></svg> Download backup</button>
       <button class="btn btn-secondary" onclick="el('w-import-file').click()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-upload"></use></svg> Restore backup</button>
       <button class="btn btn-secondary" onclick="eraseWorthData()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Erase my data</button>
     </div>
-    <input type="file" id="w-import-file" accept="application/json,.json" style="display:none;" onchange="importWorthBackup(this.files[0])">
+    <input type="file" id="w-import-file" aria-label="Restore backup file" accept="application/json,.json" style="display:none;" onchange="importWorthBackup(this.files[0])">
     <p class="note-text">A backup is a plain JSON file you keep. It's the way to move your figures to another device — Dhanam has no account and no server, so nothing syncs on its own.</p>
   </div>
 </div>
@@ -2379,6 +2497,128 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 <script src="calc.js"></script>
 <script>
+// =====================================================================
+// R66 — CLIENT-SIDE ERROR VISIBILITY (installed as the very first thing in
+// this inline <script>, ahead of BUILD_STAMP and everything else, so it
+// covers init-time failures too — not just ones after the page has loaded).
+// ARCHITECTURE-ANALYSIS.md's recommendation #2, open since day one: the only
+// onerror anywhere in this app used to be reader.onerror on the backup-file
+// input, so a stranger who hit a JS exception saw a silently dead calculator
+// with nothing to report — exactly as unfalsifiable as "I still see the bug"
+// was before BUILD_STAMP existed. This is the "cheap option" the owner chose
+// over splitting the file (recommendation #4, declined — see
+// ARCHITECTURE-ANALYSIS.md's Status check and CLAUDE.md).
+//
+// Hard constraints, all enforced below:
+//  - NEVER SENDS ANYTHING ANYWHERE. No fetch, no beacon, no image ping, no
+//    endpoint of any kind — it only ever writes text into a DOM node for
+//    the user to read and copy by hand. An error-reporting endpoint would
+//    forfeit the About page's "open devtools, watch the Network tab —
+//    you'll see no request leave this page" claim more cheaply than a
+//    whole backend would (same reasoning as the local feedback composer,
+//    R25/6e-i). If you are tempted to add a fetch/XHR/sendBeacon call
+//    anywhere near this code, don't — that is the one thing this feature
+//    is not allowed to become.
+//  - The handler itself must never throw and must never loop. Every DOM
+//    write is wrapped in its own try/catch with a trivial window.alert
+//    fallback, and the fallback's own try/catch gives up silently rather
+//    than re-entering window.onerror.
+//  - Capped/deduped, not stacked: the same error firing repeatedly (e.g.
+//    thrown from inside a render* function called on every keystroke)
+//    updates one panel and a repeat counter instead of piling up toasts.
+// =====================================================================
+(function () {
+  let errCount = 0;
+  let lastKey = null;
+
+  function safeStamp() {
+    try { return (typeof BUILD_STAMP !== 'undefined') ? BUILD_STAMP : 'unknown (pre-init)'; }
+    catch (e) { return 'unknown'; }
+  }
+
+  function formatDiagnostics(info) {
+    return [
+      `Dhanam — build ${safeStamp()}`,
+      `Time: ${new Date().toISOString()}`,
+      `Message: ${info.message}`,
+      info.source ? `Source: ${info.source}:${info.line || '?'}:${info.col || '?'}` : '',
+      info.stack ? `Stack:\n${info.stack}` : '',
+    ].filter(Boolean).join('\n');
+  }
+
+  function showErrorPanel(info) {
+    const key = info.message + '|' + (info.source || '') + '|' + (info.line || '');
+    try {
+      let panel = document.getElementById('err-panel');
+      if (panel && panel.style.display !== 'none' && lastKey === key) {
+        // Same error repeating — dedupe into a counter, don't stack a panel.
+        errCount++;
+        const countEl = document.getElementById('err-count');
+        if (countEl) countEl.textContent = `(×${errCount})`;
+        return;
+      }
+      lastKey = key;
+      errCount = 1;
+      const text = formatDiagnostics(info);
+      if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'err-panel';
+        panel.className = 'err-panel';
+        panel.innerHTML =
+          '<div class="err-panel-head">' +
+            '<span>Something went wrong <span id="err-count"></span></span>' +
+            '<button type="button" class="err-panel-close" aria-label="Dismiss">✕</button>' +
+          '</div>' +
+          '<pre class="err-panel-body" id="err-panel-text"></pre>' +
+          '<div class="err-panel-actions">' +
+            '<button type="button" class="err-copy-btn">Copy diagnostics</button>' +
+            '<span class="err-panel-note">Never sent anywhere — copy this and paste it into an email if you want to report it.</span>' +
+          '</div>';
+        (document.body || document.documentElement).appendChild(panel);
+        panel.querySelector('.err-panel-close').addEventListener('click', function () {
+          panel.style.display = 'none';
+        });
+        panel.querySelector('.err-copy-btn').addEventListener('click', function () {
+          const t = document.getElementById('err-panel-text');
+          const txt = t ? t.textContent : '';
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(txt);
+            } else {
+              const ta = document.createElement('textarea');
+              ta.value = txt; document.body.appendChild(ta); ta.select();
+              document.execCommand('copy'); document.body.removeChild(ta);
+            }
+            if (typeof showToast === 'function') { try { showToast('Diagnostics copied'); } catch (e) {} }
+          } catch (e) { /* clipboard denied — the text is still on screen to select by hand */ }
+        });
+      }
+      panel.style.display = '';
+      const body = document.getElementById('err-panel-text');
+      if (body) body.textContent = text;
+    } catch (e) {
+      // The error UI itself failed to render. Fall back to something that
+      // cannot itself throw, and give up — do not re-enter window.onerror.
+      try { window.alert('Dhanam hit an error (build ' + safeStamp() + '): ' + info.message); } catch (e2) { /* nothing left to try */ }
+    }
+  }
+
+  window.onerror = function (message, source, line, col, error) {
+    try {
+      showErrorPanel({ message: String(message), source: source, line: line, col: col, stack: error && error.stack });
+    } catch (e) { /* the handler itself must never throw */ }
+    return false; // still let the browser log it to the console too
+  };
+
+  window.addEventListener('unhandledrejection', function (ev) {
+    try {
+      const reason = ev.reason;
+      const message = (reason && reason.message) ? reason.message : String(reason);
+      showErrorPanel({ message: 'Unhandled promise rejection: ' + message, stack: reason && reason.stack });
+    } catch (e) { /* the handler itself must never throw */ }
+  });
+})();
+
 // R45/6e-ii: a human-readable build stamp, shown on the About page. Deliberately
 // distinct from sw.js's CACHE string — that one is bumped purely to bust old
 // caches and means nothing to a user; this one is what makes "I still see the
@@ -2386,7 +2626,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 // cached shell without knowing it). Bump this BY HAND alongside sw.js's CACHE
 // version whenever a user-visible change ships — the two are not derived from
 // one another, so both need editing.
-const BUILD_STAMP = '2026-08-11';
+const BUILD_STAMP = '2026-08-15';
 
 // =====================================================================
 // UTILITIES
@@ -2420,7 +2660,89 @@ function showToast(msg) {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3200);
 }
-function toggleCard(id) { el(id).classList.toggle('open'); }
+// R8: every toggleCard() caller's markup follows the same shape — a
+// .collapse-header <button> as the card's own first child — so updating
+// aria-expanded here, once, covers every .collapse-card in the app
+// (including the ones reached indirectly through toggleChartCard() below)
+// without touching each call site individually.
+function toggleCard(id) {
+  const card = el(id);
+  const open = card.classList.toggle('open');
+  const btn = card.querySelector(':scope > .collapse-header');
+  if (btn) btn.setAttribute('aria-expanded', open);
+}
+
+// ── R23: inline term definitions (the "ⓘ" glyph next to a term) ──────────
+// One shared toggle for every instance in the app, not twelve independent
+// ones — only one popover is ever open at a time (opening a second closes
+// the first), and it's dismissible by re-tapping its own button, tapping
+// outside, or pressing Escape (which also returns focus to the trigger
+// button, the standard disclosure-widget contract). aria-expanded on the
+// trigger button is the exact same convention toggleCard() above uses —
+// deliberately not a second pattern.
+let openTermInfoId = null;
+
+function closeTermInfo() {
+  if (!openTermInfoId) return;
+  const pop = document.getElementById(openTermInfoId);
+  const btn = document.getElementById(openTermInfoId + '-btn');
+  if (pop) pop.hidden = true;
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+  openTermInfoId = null;
+}
+
+function toggleTermInfo(id) {
+  const wasOpen = openTermInfoId === id;
+  closeTermInfo();
+  if (wasOpen) return;
+  const pop = document.getElementById(id);
+  const btn = document.getElementById(id + '-btn');
+  if (!pop || !btn) return;
+  pop.hidden = false;
+  btn.setAttribute('aria-expanded', 'true');
+  openTermInfoId = id;
+  // position:fixed — coordinates computed here, not in CSS, precisely so
+  // an ancestor .panel-card/.collapse-card's overflow:hidden can't clip
+  // it (see the .term-info-pop comment in <style>). Anchored just below
+  // the trigger button, clamped inside the viewport on both axes so it
+  // never causes horizontal scroll at 375px.
+  try {
+    const r = btn.getBoundingClientRect();
+    pop.style.top = (r.bottom + 6) + 'px';
+    pop.style.left = r.left + 'px';
+    const popRect = pop.getBoundingClientRect();
+    let left = r.left;
+    if (popRect.right > window.innerWidth - 8) left = window.innerWidth - popRect.width - 8;
+    if (left < 8) left = 8;
+    pop.style.left = left + 'px';
+    if (popRect.bottom > window.innerHeight - 8) {
+      // Not enough room below — open upward from the trigger instead.
+      pop.style.top = (r.top - popRect.height - 6) + 'px';
+    }
+  } catch (e) {}
+}
+
+document.addEventListener('click', function (e) {
+  if (!openTermInfoId) return;
+  const pop = document.getElementById(openTermInfoId);
+  const btn = document.getElementById(openTermInfoId + '-btn');
+  if ((pop && pop.contains(e.target)) || (btn && btn.contains(e.target))) return;
+  closeTermInfo();
+});
+
+// Fixed-position popovers don't move with the page, so a scroll would leave
+// one visually detached from the trigger it's meant to explain — closing on
+// scroll is simpler and safer than re-computing its position on every event.
+document.addEventListener('scroll', function () { if (openTermInfoId) closeTermInfo(); }, { passive: true, capture: true });
+window.addEventListener('resize', function () { if (openTermInfoId) closeTermInfo(); });
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && openTermInfoId) {
+    const btn = document.getElementById(openTermInfoId + '-btn');
+    closeTermInfo();
+    if (btn) btn.focus();
+  }
+});
 
 // =====================================================================
 // CHARTS — dependency-free inline SVG line/area chart
@@ -2598,6 +2920,7 @@ const MODES = { amenities: 'sqft', corpus: 'sqft', infra: 'sqft' };
 // a throw at init — they'd have to clear site data by hand.
 const STORE_KEY = 'dhanam.v1';
 const SEEN_KEY = 'dhanam.seen';
+const ORIENTATION_SEEN_KEY = 'dhanam.orientationSeen'; // R25/6e: tier-3 UI dismissal state, deliberately its own key — see eraseState() below, which must never touch it
 const STORE_VER = 1;
 const DEFAULT_RATE = 8.75;   // must match #l-rate's markup default
 const PROJ_DEFAULT_CAGR = 10;      // must match #w-proj-cagr's markup default
@@ -2662,6 +2985,12 @@ function eraseState() {
   storageEvicted = false;
   storageUnreadable = false;
   storageFailed = false;
+}
+
+function dismissOrientationLine() {
+  const el = document.getElementById('landing-orientation');
+  if (el) el.style.display = 'none';
+  try { localStorage.setItem(ORIENTATION_SEEN_KEY, '1'); } catch (e) {}
 }
 
 function savedAtLabel() {
@@ -2754,6 +3083,7 @@ function toggleSection(id) {
   if (isOpen) {
     panel.classList.remove('open');
     btn.classList.remove('active');
+    btn.setAttribute('aria-expanded', 'false');
   } else {
     // Collapse any other open panel first. CSS class change only — the
     // detailOpened/loanOpened/disbOpened latches and every input stay
@@ -2765,11 +3095,13 @@ function toggleSection(id) {
       if (otherPanel.classList.contains('open')) {
         otherPanel.classList.remove('open');
         el('btn-' + other).classList.remove('active');
+        el('btn-' + other).setAttribute('aria-expanded', 'false');
       }
     });
 
     panel.classList.add('open');
     btn.classList.add('active');
+    btn.setAttribute('aria-expanded', 'true');
 
     if (id === 'detail' && !detailOpened) {
       detailOpened = true;
@@ -3287,8 +3619,10 @@ function renderLoans() {
 // =====================================================================
 function toggleAdv() {
   const s = el('adv-section');
-  s.classList.toggle('open');
-  if (s.classList.contains('open')) renderAdvLoan();
+  const open = s.classList.toggle('open');
+  const btn = s.querySelector(':scope > .adv-header');
+  if (btn) btn.setAttribute('aria-expanded', open);
+  if (open) renderAdvLoan();
 }
 
 function renderAdvLoan() {
@@ -3302,11 +3636,13 @@ function renderAdvLoan() {
 
   if (!loan) {
     hide('adv-hero');
+    hide('adv-worth-card');
     hide('adv-compare-card');
     container.innerHTML = '<div class="note-text">Enter loan details above first.</div>';
     return;
   }
   show('adv-hero');
+  show('adv-worth-card');
   show('adv-compare-card');
 
   // Hero — opinionated default: the 20-year scenario, same convention as
@@ -3316,10 +3652,12 @@ function renderAdvLoan() {
   const heroNormal = simulateLoan(loan, rate, heroYears, 0, 0);
   const heroAdv = simulateLoan(loan, rate, heroYears, extraEmi, extraLump);
   const heroExtraAnnual = extraEmi * heroEmi + extraLump;
-  set('adv-hero-value', inCr(Math.max(0, heroNormal.totalInterest - heroAdv.totalInterest)));
+  const heroInterestSaved = Math.max(0, heroNormal.totalInterest - heroAdv.totalInterest);
+  set('adv-hero-value', inCr(heroInterestSaved));
   set('adv-hero-sub', `${heroAdv.yearsSaved} yrs shorter — pays off in ${heroAdv.actualYears} yrs instead of ${heroYears}`);
   set('adv-hero-tenure', `${heroAdv.actualYears} yrs`);
   set('adv-hero-extra', fmt(heroExtraAnnual));
+  renderAdvWorthBridge(heroInterestSaved, heroAdv.actualYears, heroExtraAnnual);
 
   const scenarios = [
     { label: '15yr', years: 15 },
@@ -3354,6 +3692,72 @@ function renderAdvLoan() {
       </div>`;
     container.appendChild(card);
   });
+}
+
+// ── R65: reverse Worth bridge — "your net worth curve, not a hypothetical
+// loan" (UX-ANALYSIS.md §Strategic-2, promise 1). The ONLY consumer of
+// worthSnapshot() today; any future feature wanting the real balance sheet
+// should call that accessor too, not read DS.worth a second way. Read-only —
+// writes nothing to DS. interestSaved is the exact figure already on screen
+// as #adv-hero-value (heroYears=20, this scenario's own extra-payments plan),
+// so this disclosure always agrees with the hero above it.
+function renderAdvWorthBridge(interestSaved, payoffYears, extraAnnual) {
+  const snap = worthSnapshot();
+  if (!snap) {
+    show('adv-worth-empty');
+    hide('adv-worth-body');
+    return;
+  }
+  hide('adv-worth-empty');
+  show('adv-worth-body');
+
+  const homeLoan = snap.lVals.home || 0;
+  set('adv-worth-fact',
+    `Your Dhanam Worth balance sheet: net worth ${inCr(snap.net)} today` +
+    (homeLoan ? `, including ${inCr(homeLoan)} in Home Loan Outstanding` : '') +
+    (snap.net < 0 ? ' (liabilities exceed assets)' : '') + '.');
+
+  // Same horizon convention renderWorthProjection()'s own hero already uses
+  // (see index.html's Worth section) — not a new one invented for this card.
+  const horizon = 10;
+  set('adv-worth-yrs', horizon);
+  const baseline = calcNetWorthProjection(snap.investable, snap.propertyVal, snap.liabs, snap.cagr, snap.debtRate, snap.debtYears, snap.monthlySip, horizon);
+  const withPlan = baseline + interestSaved;
+  const signed = n => (n < 0 ? '−' + inCr(Math.abs(n)) : inCr(n));
+  set('adv-worth-baseline', signed(baseline));
+  el('adv-worth-baseline').classList.toggle('red', baseline < 0);
+  set('adv-worth-withplan', signed(withPlan));
+  el('adv-worth-withplan').classList.toggle('red', withPlan < 0);
+  set('adv-worth-delta', '+' + inCr(interestSaved));
+
+  // Phase 16 code review: the two figures above measure different horizons,
+  // and the plan's own cost appears in neither. Both gaps are named on screen
+  // rather than modelled away — this app's "state, don't model" convention
+  // (R63), and the same both-sides honesty the Buy-vs-SIP .sip-caveat already
+  // requires of the comparison it sits above. The first build pass labelled
+  // the second line "With this plan's interest saved" under a heading reading
+  // "Projected Net Worth in 10 Years", which read as a 10-year net worth that
+  // already contained a saving still accruing at year 16.7 — overstated, and
+  // overstated again by ignoring the extra payments themselves.
+  set('adv-worth-withplan-lbl', `Plus interest saved over the full loan (through yr ${payoffYears})`);
+  set('adv-worth-delta-lbl', `Interest saved by yr ${payoffYears}`);
+
+  // Deliberately not a merged simulation — say so, per this app's own
+  // "state, don't model" convention (R63) and the sip-caveat precedent: the
+  // baseline line is the literal calcNetWorthProjection() call
+  // renderWorthProjection()'s own +10-year hero makes, so it can never
+  // disagree with the Worth hub. The second line is that same figure plus
+  // this plan's interest savings added on top as a flat number, not run
+  // through Worth's own (separate, generic) debt-payoff assumption a second
+  // time — so treat "with this plan" as two real calculations placed next to
+  // each other, not one combined model.
+  set('adv-worth-caveat',
+    `Read these as two separate figures, not one merged simulation. "Your Worth projection today" is exactly what Dhanam Worth's own +${horizon}-year projection shows right now, using its own debt-payoff assumption (${snap.debtYears} yrs at ${snap.debtRate}%) across all your liabilities together — not this loan's rate and tenure specifically. ` +
+    `Two things the second line does not account for. It adds the whole ${inCr(interestSaved)} this plan saves, but that saving accrues through year ${payoffYears} — not all of it exists at year ${horizon}. ` +
+    (extraAnnual > 0
+      ? `And the plan itself costs about ${fmt(extraAnnual)}/yr — roughly ${inCr(extraAnnual * Math.min(horizon, payoffYears))} paid in by year ${horizon} — money that is not invested and is counted nowhere above. `
+      : '') +
+    `The saving is real; treat the second line as an upper bound on this plan's effect, not a projection of your net worth.`);
 }
 
 // =====================================================================
@@ -3874,11 +4278,11 @@ function resetAll() {
 // =====================================================================
 function switchHub(tab) {
   document.querySelectorAll('.hub-content').forEach(c => c.classList.remove('active'));
-  document.querySelectorAll('.hub-tab[id^="ht-"]').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.hub-tab[id^="ht-"]').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
   const content = el('hub-' + tab);
   const btn = el('ht-' + tab);
   if (content) content.classList.add('active');
-  if (btn) btn.classList.add('active');
+  if (btn) { btn.classList.add('active'); btn.setAttribute('aria-selected', 'true'); }
   if (tab === 'sip') { updateSIPPlanner(); updateStepupSIP(); updateLumpsum(); }
   // renderCarLoan() (Car Buying — Loan Analysis, cb-*) was retired in
   // Phase 14/R59 — its EMI/tenure-grid/depreciation-chart capabilities are
@@ -4023,6 +4427,53 @@ function recordWorthHistory(net) {
   if (h.length > 120) h.splice(0, h.length - 120);   // cap; ~4 months of daily edits
 }
 
+// ── R65: the reverse Worth bridge's one and only accessor ──────────────
+// ARCHITECTURE-ANALYSIS.md §2 warned specifically about this shape of bug —
+// a calculator reaching into another hub's state via shared globals, with
+// nothing enforcing the boundary. worthSnapshot() IS that boundary: it is
+// the ONLY place outside hub-worth's own code (renderWorth() /
+// renderWorthProjection() above) that reads DS.worth. Any future feature
+// that wants the user's real balance sheet — not just renderAdvLoan()'s
+// Worth-bridge disclosure below — must call this function, never read
+// DS.worth or the w-a-*/w-l-* DOM inputs directly.
+//
+// Reading DS (the persisted blob), not the DOM, matters on its own: buildWorth()
+// only creates the w-a-*/w-l-* inputs the first time hub-worth is opened this
+// session (the worthBuilt latch above), so a user who has a saved balance
+// sheet but hasn't visited Worth yet this session has NO w-a-*/w-l-* elements
+// in the DOM at all — v('w-a-cash') would silently return 0 there, which is
+// exactly the "confidently wrong ₹0" this function exists to prevent.
+//
+// Returns null — never a fabricated ₹0 — when there is nothing real to read:
+// no DS, no DS.worth, or every stored figure is zero. Read-only: never
+// writes DS, never re-derives a tier-2 rate from anything but the stored
+// (or default) projection assumptions.
+function worthSnapshot() {
+  if (!DS || !DS.worth) return null;
+  const aVals = DS.worth.a || {};
+  const lVals = DS.worth.l || {};
+  let assets = 0, liabs = 0, any = false;
+  W_ASSETS.forEach(r => { const val = aVals[r.id] || 0; if (val) any = true; assets += val; });
+  W_LIABS.forEach(r => { const val = lVals[r.id] || 0; if (val) any = true; liabs += val; });
+  if (!any) return null;   // nothing real saved — never synthesize a ₹0 snapshot
+  const propertyVal = aVals.property || 0;
+  const investable = Math.max(0, assets - propertyVal);
+  // Same tier-2 "stored only if changed from default" values renderWorthProjection()
+  // itself writes into DS.worth.proj — see persistLoanInputs()'s comment for the
+  // same rule applied to #l-rate. Fall back to the app's maintained defaults
+  // (matching #w-proj-cagr/#w-proj-debt-rate/#w-proj-debt-years' own markup
+  // defaults) exactly as renderWorthProjection() would on an untouched field.
+  const proj = DS.worth.proj || {};
+  return {
+    assets, liabs, net: assets - liabs, aVals, lVals,
+    investable, propertyVal,
+    cagr: proj.cagr != null ? proj.cagr : PROJ_DEFAULT_CAGR,
+    debtRate: proj.debtRate != null ? proj.debtRate : PROJ_DEFAULT_DEBT_RATE,
+    debtYears: proj.debtYears != null ? proj.debtYears : 10,   // matches #w-proj-debt-years' markup default
+    monthlySip: proj.sip || 0,
+  };
+}
+
 function renderWorth() {
   buildWorth();
 
@@ -4118,11 +4569,11 @@ function renderWorthProjection(anyInput, assets, liabs, aVals) {
   const propertyVal = aVals.property || 0;
   const investable = Math.max(0, assets - propertyVal);
 
-  const projectedNet = years => {
-    const grownInvestable = investable * Math.pow(1 + cagr / 100, years) + calcSIP(monthlySip, cagr, years);
-    const remainingDebt = loanAtYear(liabs, debtRate, debtYears, years).balance;
-    return grownInvestable + propertyVal - remainingDebt;
-  };
+  // R65: this formula now lives in calc.js as calcNetWorthProjection() so the
+  // reverse Worth bridge in renderAdvLoan() (see worthSnapshot()) calls the
+  // identical function instead of a second, hand-copied model — the two can
+  // never disagree by construction. Bit-identical to the pre-R65 inline body.
+  const projectedNet = years => calcNetWorthProjection(investable, propertyVal, liabs, cagr, debtRate, debtYears, monthlySip, years);
   const signed = n => (n < 0 ? '−' + inCr(Math.abs(n)) : inCr(n));
 
   // Clearing `liabs` over `debtYears` implies this EMI. It comes out of income
@@ -4218,6 +4669,7 @@ function toggleHideAmounts() {
   amountsHidden = !amountsHidden;
   el('worth-main').classList.toggle('amounts-hidden', amountsHidden);
   el('w-hide-btn').querySelector('use').setAttribute('href', amountsHidden ? '#i-eye' : '#i-eye-off');
+  el('w-hide-btn').setAttribute('aria-pressed', amountsHidden);
   set('w-hide-btn-label', amountsHidden ? 'Show amounts' : 'Hide amounts');
 }
 
@@ -4302,7 +4754,7 @@ function disbTrancheRowHtml(t, i) {
   return `
     <div class="disb-tr-row">
       <div class="disb-tr-field">
-        <label>Tranche ${i + 1} — % of Loan</label>
+        <label>Tranche ${i + 1} — % of Loan${i === 0 ? `<span class="term-info"><button type="button" class="term-info-btn" id="ti-tranche-btn" aria-expanded="false" aria-controls="ti-tranche" aria-label="What is a tranche?" onclick="toggleTermInfo('ti-tranche')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-tranche" role="note" hidden>One stage of a staged loan disbursement — a percentage of the sanctioned loan released to the builder at a given construction month. Pre-EMI interest is charged only on what's been disbursed so far, not the full loan.</span></span>` : ''}</label>
         <input type="number" value="${t.pct}" min="0" max="100" step="1"
           oninput="disbTranches[${i}].pct = parseFloat(this.value) || 0; renderLoanDisb();">
       </div>
@@ -4311,7 +4763,7 @@ function disbTrancheRowHtml(t, i) {
         <input type="number" value="${t.month}" min="0" step="1"
           oninput="disbTranches[${i}].month = parseInt(this.value) || 0; renderLoanDisb();">
       </div>
-      <button class="disb-tr-remove" onclick="disbRemoveTranche(${i})" ${disbTranches.length <= 1 ? 'disabled' : ''} title="Remove tranche">✕</button>
+      <button class="disb-tr-remove" onclick="disbRemoveTranche(${i})" ${disbTranches.length <= 1 ? 'disabled' : ''} title="Remove tranche" aria-label="Remove tranche">✕</button>
     </div>`;
 }
 
@@ -4400,8 +4852,10 @@ function renderLoanDisb() {
 // =====================================================================
 function toggleSIP() {
   const s = el('sip-section');
-  s.classList.toggle('open');
-  if (s.classList.contains('open')) renderSIPComparison();
+  const open = s.classList.toggle('open');
+  const btn = s.querySelector(':scope > .sip-header');
+  if (btn) btn.setAttribute('aria-expanded', open);
+  if (open) renderSIPComparison();
 }
 
 // calcSIP now lives in calc.js (loaded above) — see CLAUDE.md's Testing section.
@@ -4531,8 +4985,9 @@ function switchSIPPlannerTab(tab) {
   ['monthly', 'stepup', 'lumpsum'].forEach(t => {
     const content = el('spt-content-' + t);
     const btn = el('spt-' + t);
-    if (content) content.style.display = t === tab ? '' : 'none';
-    if (btn) btn.classList.toggle('active', t === tab);
+    const active = t === tab;
+    if (content) content.style.display = active ? '' : 'none';
+    if (btn) { btn.classList.toggle('active', active); btn.setAttribute('aria-selected', active); }
   });
 }
 
@@ -4727,6 +5182,16 @@ if (rememberingInputs()) {
 }
 updateRememberHint();
 
+// R25/6e: hide the first-run orientation line if this device has already
+// dismissed it. Tier-3 UI state, its own key — never dhanam.v1, never
+// touched by eraseState() (see that function) or the backup export/import.
+try {
+  if (localStorage.getItem(ORIENTATION_SEEN_KEY)) {
+    const orientationEl = document.getElementById('landing-orientation');
+    if (orientationEl) orientationEl.style.display = 'none';
+  }
+} catch (e) {}
+
 // =====================================================================
 // DHANAM CAR — TAX & LEASE CALCULATOR
 // =====================================================================
@@ -4890,7 +5355,14 @@ function tenureStats(loanAmt, rate, yr) {
 function setCarMode(mode) {
   carMode = mode;
   ['loan', 'lease', 'cash'].forEach(m => {
-    el('car-mode-btn-' + m).classList.toggle('active', m === mode);
+    const btn = el('car-mode-btn-' + m);
+    const active = m === mode;
+    btn.classList.toggle('active', active);
+    // R8: aria-pressed, not aria-selected/role=tab — this is a toggle-button
+    // group choosing one exclusive setting (how you're paying), not
+    // navigation between separate tabbed panels of unrelated content the
+    // way .hub-tab/.sip-planner-tab are.
+    btn.setAttribute('aria-pressed', active);
   });
   el('car-lease-panel').style.display = mode === 'lease' ? '' : 'none';
   if (mode === 'lease') { renderCarCalc(); }
@@ -4970,7 +5442,7 @@ function ccRowHtml(c, i) {
       <input type="number" value="${c.downPayment || ''}" min="0" step="10000"
         oninput="ccCars[${i}].downPayment = parseFloat(this.value) || 0; renderCarCompare();">
     </div>` : ''}
-    <button class="disb-tr-remove" onclick="ccRemoveCar(${i})" ${ccCars.length <= 1 ? 'disabled' : ''} title="Remove car">✕</button>
+    <button class="disb-tr-remove" onclick="ccRemoveCar(${i})" ${ccCars.length <= 1 ? 'disabled' : ''} title="Remove car" aria-label="Remove car">✕</button>
     <div class="cc-row-hint" id="cc-row-hint-${i}">${xesc(ccRowHintText(c))}</div>
   </div>`;
 }
@@ -5153,6 +5625,8 @@ function ccToggleDetail(i) {
   if (!node) return;
   const willOpen = !node.classList.contains('open');
   node.classList.toggle('open', willOpen);
+  const btn = node.querySelector(':scope > .collapse-header');
+  if (btn) btn.setAttribute('aria-expanded', willOpen);
   if (willOpen) { ccForceOpen.add(i); ccForceClosed.delete(i); }
   else { ccForceClosed.add(i); ccForceOpen.delete(i); }
 }
@@ -5229,10 +5703,10 @@ function renderCarCompare() {
       <div class="car-stat"><span class="car-stat-lbl">Net Cost (before resale credit)</span><span class="car-stat-val big">${fmt(r.result.netCost)}</span></div>
       <div class="cc-rank-sub">${emiSub(r)}</div>
       <div class="collapse-card cc-detail-card ${isOpen ? 'open' : ''}" id="cc-detail-${r.i}">
-        <div class="collapse-header" onclick="ccToggleDetail(${r.i})">
+        <button type="button" class="collapse-header" onclick="ccToggleDetail(${r.i})" aria-expanded="${isOpen}">
           <span class="collapse-title">Full breakdown</span>
           <span class="collapse-arrow">▼</span>
-        </div>
+        </button>
         <div class="collapse-body">
           <div class="car-stat"><span class="car-stat-lbl">Raw Cash Outflow</span><span class="car-stat-val">${fmt(r.result.rawOutflow)}</span></div>
           ${carMode !== 'cash' ? `<div class="car-stat"><span class="car-stat-lbl">EMI / month${carMode === 'loan' && r.car.downPayment > 0 ? ` (down payment ${fmt(r.car.downPayment)})` : ''}</span><span class="car-stat-val">${fmt(r.result.emi)}</span></div>` : ''}
