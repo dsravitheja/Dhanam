@@ -119,33 +119,47 @@
 > `PHASE-17-REPORT.md`. **B10 was answered the same day**, per this document's own
 > recorded lean (default-off in Grow, structural in the comparisons), unblocking
 > **R31/7a**. Built as two parallel subagents in isolated worktrees, following
-> `TASK-PARALLEL-EXECUTION.md`'s conventions — and validating its own §3 caveat in
-> the process: **both** worktrees turned out to be based on stale history (one on
-> Phase 15, one even further back), exactly the failure mode that document warned
-> about. The R8 agent caught its own staleness and flagged it in its report; the
-> R25 agent did not, and its commit silently deleted large parts of Phase 16
-> (the error panel, the reverse Worth bridge) alongside its own genuine addition.
-> Caught by the integrating agent diffing against the actual tip before merging,
-> not by either subagent's own `node tests.js` pass (95–100/100 the whole time in
-> both cases, since the deletions were all in `index.html`'s DOM/inline-script
-> code that `tests.js` doesn't cover) — see `PHASE-17-REPORT.md` for the full
-> account. **Re-verify a worktree's actual parent commit before trusting its diff,
-> every time, not just when a report happens to flag it.**
+> `TASK-PARALLEL-EXECUTION.md`'s conventions. **Both worktrees branched from
+> `main`, correctly** — the *actual* bug, found later (see the Phase 18 note
+> below), was that `main` itself was missing Phase 16 at the time, because
+> PR #18 had merged Phase 16 into an already-merged, effectively abandoned
+> branch (`claude/phase-15-review-remediation`) instead of into `main`. Every
+> worktree that "looked stale" was reporting a true fact about `main`'s actual
+> state, not malfunctioning. **A real, separate bug did surface in the R25
+> subagent's own commit regardless of its base**: it silently deleted large
+> parts of Phase 16 (the error panel, the reverse Worth bridge) alongside its
+> own genuine addition, caught only because the integrating agent diffed
+> against the locally-known Phase 16 tip before merging — not by either
+> subagent's own `node tests.js` pass (95–100/100 throughout, since the
+> deletions were all in `index.html`'s DOM/inline-script code `tests.js`
+> doesn't cover). See `PHASE-17-REPORT.md` for the full account. **Diffing a
+> subagent's commit against the reviewer's own known-good tip before trusting
+> it remains the right habit — that part held up. What was wrong was blaming
+> the worktree mechanism for a missing-PR-to-`main` problem instead of
+> checking `git log origin/main` directly.**
 > **Phase 18 (R23) has now shipped 2026-08-15** — see `PHASE-18-REPORT.md`.
-> Attempted once more via an isolated-worktree subagent first; that worktree's
-> base was **also** stale (a third consecutive occurrence), and this time the
-> subagent caught it *before writing any code* and refused to build rather than
-> risk a repeat of the R25 mistake — the desired outcome, but three-for-three
-> is no longer a coincidence worth shrugging off. Built directly instead, with
-> no further worktree attempt. One layout bug was found and fixed **during**
-> the build, not after: the popover's first draft used `position:absolute`,
-> which would have been silently clipped by the `overflow:hidden` that nearly
-> every placement's ancestor (`.panel-card`/`.collapse-card`) already sets —
-> switched to `position:fixed` with JS-computed, viewport-clamped coordinates
-> before it ever reached a commit. **If isolated-worktree agents keep branching
-> from stale history in this environment, stop trying that mechanism for
-> single-agent sequential work and just build directly** — the isolation buys
-> nothing when there's no second agent to isolate from.
+> Attempted once more via an isolated-worktree subagent first; it likewise
+> (and correctly) branched from `main`, found R8's `aria-expanded` pattern
+> absent, and refused to build rather than guess — the right call, since
+> `main` genuinely didn't have it yet. Built directly instead, since this was
+> single-agent sequential work anyway (the isolation mechanism protects
+> against a *concurrent* second agent, which didn't exist here). One real
+> layout bug was found and fixed **during** the build, unrelated to any of
+> the above: the popover's first draft used `position:absolute`, which would
+> have been silently clipped by the `overflow:hidden` that nearly every
+> placement's ancestor (`.panel-card`/`.collapse-card`) already sets —
+> switched to `position:fixed` with JS-computed, viewport-clamped coordinates.
+> **Root cause of the whole episode, found 2026-08-15 when the owner asked
+> "where are the PRs?": Phases 16, 17, and 18 had been built and committed
+> across several sessions with `git push`/PR creation never actually run.**
+> `origin/main` was still sitting at Phase 15 (PR #17's merge) the entire
+> time. Fixed by pushing the branch and opening a PR straight to `main`
+> covering all three phases at once. **The standing lesson is not "don't use
+> isolated worktrees" — it's "verify what's actually on `origin/main` before
+> trusting any local branch's HEAD as 'the intended tip,' and confirm a PR
+> was actually opened after a phase report claims something 'shipped.'"**
+> A phase report saying a change shipped means it's committed and tested —
+> it does not by itself mean anyone can see it without a PR into `main`.
 > **Start at the Remaining work table
 > below**; the phase sections that follow are the full specs, annotated with what
 > is done and what is left.
