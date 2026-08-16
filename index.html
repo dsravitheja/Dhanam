@@ -649,6 +649,27 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .landing-orientation-close { flex-shrink:0; background:none; border:none; padding:2px; color:var(--text-dim); font-size:18px; cursor:pointer; line-height:1; transition:color .15s; }
 .landing-orientation-close:hover { color:var(--accent); }
 .landing-orientation-close:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+/* R68/Phase 19: landing Worth summary card. Gold-bordered like .total-card
+   (it's the hero of the page), but a compact row rather than a big-number
+   hero — B14's delta-only answer means there is no big number to show. */
+.landing-worth-card {
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  background:var(--surface); border:1px solid var(--accent); border-radius:var(--radius);
+  padding:16px 18px; margin-bottom:16px;
+}
+.lw-icon { flex-shrink:0; color:var(--accent); font-size:24px; line-height:1; }
+.lw-body { flex:1; min-width:180px; }
+.lw-title { font-family:'Playfair Display',serif; font-size:16px; font-weight:700; color:var(--accent2); }
+.lw-copy { font-size:12.5px; color:var(--text-mid); margin-top:4px; line-height:1.5; }
+.lw-notice { font-size:11.5px; color:var(--text-dim); margin-top:3px; }
+/* Reuses .worth-change/.wc-* from the hub's own change tile verbatim (same
+   arrow/up/down/colour convention, palette rule 5) — stripped of its own
+   card chrome here since .landing-worth-card already supplies the border. */
+.landing-worth-card .worth-change { margin:4px 0 0; border:none; background:none; padding:0; }
+.lw-cta { flex-shrink:0; }
+@media(max-width:480px){ .landing-worth-card { padding:14px; } }
+
 .tile-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
 @media(max-width:640px){ .tile-grid { grid-template-columns:1fr; } }
 .tile {
@@ -869,7 +890,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <img src="dhanamlogo.png" alt="Dhanam" class="header-logo">
     <div class="header-text">
       <h1>Dhanam</h1>
-      <p>Your personal financial hub · Home · Car · Grow · Worth</p>
+      <p>Your personal financial hub · Worth · Grow · Home · Car</p>
     </div>
   </div>
   <button type="button" class="header-about-link" onclick="switchHub('about')" title="About Dhanam / how this works"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg> About</button>
@@ -879,10 +900,15 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <nav class="hub-nav">
   <div class="hub-nav-inner" role="tablist" aria-label="Dhanam hubs">
     <button class="hub-tab active" id="ht-landing" role="tab" aria-selected="true" onclick="switchHub('landing')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg> Home</button>
+    <!-- R67/Phase 19: nav is frequency-of-need order, not build order — Worth
+         is the only stateful/retention hub (the anchor UX-ANALYSIS.md
+         §Strategic-3 argues for), so it sits second, right after landing,
+         ahead of the three one-off calculators. switchHub() is id-driven,
+         so this is a markup-order change only. -->
+    <button class="hub-tab" id="ht-worth" role="tab" aria-selected="false" onclick="switchHub('worth')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Dhanam Worth</button>
+    <button class="hub-tab" id="ht-sip" role="tab" aria-selected="false" onclick="switchHub('sip')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Dhanam Grow</button>
     <button class="hub-tab" id="ht-apartment" role="tab" aria-selected="false" onclick="switchHub('apartment')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg> Dhanam Home</button>
     <button class="hub-tab" id="ht-car" role="tab" aria-selected="false" onclick="switchHub('car')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg> Dhanam Car</button>
-    <button class="hub-tab" id="ht-sip" role="tab" aria-selected="false" onclick="switchHub('sip')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Dhanam Grow</button>
-    <button class="hub-tab" id="ht-worth" role="tab" aria-selected="false" onclick="switchHub('worth')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Dhanam Worth</button>
   </div>
 </nav>
 
@@ -898,18 +924,36 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <button type="button" class="landing-orientation-close" id="landing-orientation-close" aria-label="Dismiss" onclick="dismissOrientationLine()">✕</button>
 </div>
 
+<!-- R68/Phase 19: landing Worth summary card, above .tile-grid, in the old
+     Worth tile's slot. One component, two/three faces (renderLandingWorth()
+     below) — invitation, "just started" (no comparison base yet), or the
+     delta. B14 answered delta-only (2026-08-16): this card NEVER renders
+     the absolute net-worth figure, so it needs no "Hide amounts" treatment
+     (R69) — see CLAUDE.md's Dhanam Worth specifics. -->
+<div class="landing-worth-card" id="landing-worth-card">
+  <span class="lw-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span>
+  <div class="lw-body">
+    <div class="lw-title">Dhanam Worth</div>
+    <div class="lw-notice" id="landing-worth-notice" style="display:none;"></div>
+    <div class="lw-copy" id="landing-worth-invite">Add one balance — savings, a loan, anything — and this card starts tracking your net worth here, on this device only.</div>
+    <div class="lw-copy" id="landing-worth-started" style="display:none;"></div>
+    <div class="worth-change" id="landing-worth-delta" style="display:none;">
+      <span class="wc-arrow" id="landing-worth-arrow">▲</span>
+      <div class="wc-text">
+        <div class="wc-amount" id="landing-worth-amt">—</div>
+        <div class="wc-basis" id="landing-worth-basis"></div>
+      </div>
+    </div>
+  </div>
+  <button type="button" class="btn btn-secondary lw-cta" onclick="switchHub('worth')">Open Dhanam Worth</button>
+</div>
+
 <div class="tile-grid">
   <button class="tile" onclick="switchHub('sip')">
     <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg></span>
     <span class="tile-title">Grow My Money</span>
     <span class="tile-tool">Dhanam Grow</span>
     <span class="tile-desc">SIP planner — monthly, step-up & lumpsum investment growth.</span>
-  </button>
-  <button class="tile" onclick="switchHub('worth')">
-    <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span>
-    <span class="tile-title">Know My Net Worth</span>
-    <span class="tile-tool">Dhanam Worth</span>
-    <span class="tile-desc">Track assets, loans & investments in one place — saved on this device.</span>
   </button>
   <button class="tile" onclick="switchHub('apartment')">
     <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg></span>
@@ -4418,6 +4462,40 @@ function worthDelta(net) {
   return null;
 }
 
+// Shared by renderWorth()'s own change tile and renderLandingWorth() (R68,
+// Phase 19) — the one place that turns a worthDelta() result into the arrow
+// glyph and "Up/Down ₹X (±Y%)"/"No change" wording, so a future rounding or
+// copy tweak can't drift between the two call sites and silently disagree.
+// Same discipline worthSnapshot()/calcNetWorthProjection() already apply at
+// the calculation layer, applied here at the copy layer. Returns `up: null`
+// for the no-change case (kept distinct from `up: false`, which is a real
+// decrease) so callers can tell the two apart for their own basis-line text.
+function worthDeltaWords(net, d) {
+  const diff = net - d.prev;
+  const pct = d.prev ? Math.abs(diff / d.prev * 100) : 0;
+  if (Math.round(diff) === 0) return { up: null, arrow: '=', amt: 'No change' };
+  const up = diff > 0;
+  // Colour is never the only signal — the words say up/down too (rule 5)
+  return { up, arrow: up ? '▲' : '▼', amt: `${up ? 'Up' : 'Down'} ${inCr(Math.abs(diff))}${d.prev ? ` (${up ? '+' : '−'}${pct.toFixed(1)}%)` : ''}` };
+}
+
+// The only place allowed to print the previous absolute total in a delta's
+// basis line. Used by renderWorth()'s own #w-change tile — inside
+// #worth-main, reachable by "Hide amounts".
+function worthDeltaBasisWithTotal(d) {
+  return `since ${prettyDate(d.date)} · was ${inCr(d.prev)}`;
+}
+
+// D15/B14 (Phase 19): the landing-page-safe basis line — never the absolute
+// total, since #landing-worth-card sits outside #worth-main and "Hide
+// amounts" cannot reach it. The only basis-line function any code outside
+// hub-worth's own render*() functions may call — a future consumer that
+// also needs a landing-safe delta (e.g. R73's planned Grow reverse bridge,
+// which inherits this same B14 answer) should reuse this, not re-derive it.
+function worthDeltaBasisPublic(d) {
+  return `since ${prettyDate(d.date)}`;
+}
+
 function recordWorthHistory(net) {
   const today = todayKey();
   const h = DS.history;
@@ -4474,6 +4552,69 @@ function worthSnapshot() {
   };
 }
 
+// ── R68/Phase 19: landing-page Worth summary card ──────────────────────
+// Second consumer of worthSnapshot() (the first is renderAdvWorthBridge()) —
+// reads DS only, never the w-a-*/w-l-* DOM inputs, so it renders correctly
+// even when hub-worth has never been opened this session. Reuses
+// worthDelta() — the exact comparison renderWorth()'s own change tile uses —
+// so the two can never independently disagree (same rule as
+// calcNetWorthProjection()'s single call site, R65).
+//
+// B14 answered delta-only (2026-08-16): the basis line below always goes
+// through worthDeltaBasisPublic(), never worthDeltaBasisWithTotal() — the
+// latter prints "· was ₹X", an absolute net-worth figure, and "Hide
+// amounts" cannot reach the landing page (D15). The delta amount itself
+// (e.g. "Up ₹2.0L") is the one B14 approved showing here.
+function renderLandingWorth() {
+  if (!el('landing-worth-card')) return;
+  hide('landing-worth-invite');
+  hide('landing-worth-started');
+  hide('landing-worth-delta');
+
+  // Storage states must reach the landing page, not just #w-notice inside
+  // hub-worth (§2.3) — a user whose browser evicted their data must not
+  // meet a silently blank card on the app's first screen. Shares its wording
+  // with updateWorthStatus() via storageEvictedNotice()/storageFailedNotice()
+  // (below) so the two can't drift into different stories about the same
+  // event — this card just composes them onto one line instead of two.
+  const evicted = storageEvictedNotice();
+  const failed = storageFailedNotice();
+  const notice = [evicted, failed].filter(Boolean).join(' ');
+  if (notice) { set('landing-worth-notice', notice); show('landing-worth-notice'); }
+  else hide('landing-worth-notice');
+
+  const snap = worthSnapshot();
+  if (!snap) {
+    // No fabricated ₹0 — worthSnapshot() already refuses to synthesize one.
+    show('landing-worth-invite');
+    return;
+  }
+
+  const d = worthDelta(snap.net);
+  if (!d) {
+    // A balance sheet exists but there's nothing to compare against yet —
+    // renderWorth()'s own change tile shows nothing at all in this state;
+    // the landing card still names the date so a visit isn't silent. Built
+    // as one complete sentence (not a fixed template plus an injected span)
+    // so a missing/unparsable DS.lastSaved can't leave a stray "started .
+    // Come back..." — savedAtLabel() legitimately returns '' for a
+    // hand-edited or pre-lastSaved-era backup (see manual checklist item 11).
+    const at = savedAtLabel();
+    set('landing-worth-started', `Balance sheet started${at ? ` — as of ${at}` : ''}. Come back after your next update to see how you're trending.`);
+    show('landing-worth-started');
+    return;
+  }
+
+  const card = el('landing-worth-delta');
+  card.classList.remove('up', 'down');
+  const w = worthDeltaWords(snap.net, d);
+  if (w.up !== null) card.classList.add(w.up ? 'up' : 'down');
+  set('landing-worth-arrow', w.arrow);
+  set('landing-worth-amt', w.amt);
+  set('landing-worth-basis', worthDeltaBasisPublic(d));
+  show('landing-worth-delta');
+}
+
 function renderWorth() {
   buildWorth();
 
@@ -4519,22 +4660,13 @@ function renderWorth() {
     if (!d) {
       hide('w-change');   // nothing to compare against yet
     } else {
-      const diff = net - d.prev;
-      const pct = d.prev ? Math.abs(diff / d.prev * 100) : 0;
       card.style.display = '';
       card.classList.remove('up', 'down');
-      if (Math.round(diff) === 0) {
-        set('w-change-arrow', '=');
-        set('w-change-amt', 'No change');
-        set('w-change-basis', `since ${prettyDate(d.date)}`);
-      } else {
-        const up = diff > 0;
-        card.classList.add(up ? 'up' : 'down');
-        set('w-change-arrow', up ? '▲' : '▼');
-        // Colour is never the only signal — the words say up/down too (rule 5)
-        set('w-change-amt', `${up ? 'Up' : 'Down'} ${inCr(Math.abs(diff))}${d.prev ? ` (${up ? '+' : '−'}${pct.toFixed(1)}%)` : ''}`);
-        set('w-change-basis', `since ${prettyDate(d.date)} · was ${inCr(d.prev)}`);
-      }
+      const w = worthDeltaWords(net, d);
+      if (w.up !== null) card.classList.add(w.up ? 'up' : 'down');
+      set('w-change-arrow', w.arrow);
+      set('w-change-amt', w.amt);
+      set('w-change-basis', w.up === null ? worthDeltaBasisPublic(d) : worthDeltaBasisWithTotal(d));
     }
   }
 
@@ -4550,6 +4682,7 @@ function renderWorth() {
   }
   updateWorthStatus();
   renderWorthTrend();
+  renderLandingWorth();
 }
 
 // ── Projection bridge (2b / R1) ─────────────────────────────────────────
@@ -4642,11 +4775,26 @@ function renderWorthTrend() {
     `<span>${prettyDate(h[h.length - 1].date)}</span>`;
 }
 
+// Shared with renderLandingWorth() (Phase 19) — the "what happened" half of
+// the storage-failure message, so the hub's own #w-notice and the landing
+// card can't drift into two different stories about the same event. Each
+// caller may append its own call-to-action after these (e.g. "Restore a
+// backup below") since that varies by where the message renders.
+function storageEvictedNotice() {
+  if (storageUnreadable) return "Your saved data couldn't be read, so Dhanam started fresh.";
+  if (storageEvicted) return 'Your browser cleared the data saved here.';
+  return null;
+}
+function storageFailedNotice() {
+  return storageFailed ? "Couldn't save on this device — storage is full or blocked in this browser." : null;
+}
+
 function updateWorthStatus() {
   const p = el('w-saved-at');
   const notice = el('w-notice');
-  if (storageFailed) {
-    p.textContent = "Couldn't save on this device — storage is full or blocked in this browser.";
+  const failed = storageFailedNotice();
+  if (failed) {
+    p.textContent = failed;
   } else if (DS && DS.worth && DS.lastSaved) {
     const n = DS.history ? DS.history.length : 0;
     p.textContent = `Saved on this device · ${savedAtLabel()}` + (n > 1 ? ` · ${n} snapshots kept` : '');
@@ -4655,11 +4803,12 @@ function updateWorthStatus() {
   }
   // M1c — we've been here before but the data is gone. Say so plainly; an
   // unexplained blank form is the worst possible version of this.
-  if (storageEvicted || storageUnreadable) {
+  const evicted = storageEvictedNotice();
+  if (evicted) {
     notice.style.display = '';
-    notice.textContent = storageUnreadable
-      ? "Your saved data couldn't be read, so Dhanam started fresh. Restore a backup below if you have one."
-      : 'Your browser cleared the data saved here. Restore a backup below, or start fresh.';
+    notice.textContent = evicted + ' ' + (storageUnreadable
+      ? 'Restore a backup below if you have one.'
+      : 'Restore a backup below, or start fresh.');
   } else {
     notice.style.display = 'none';
   }
@@ -5191,6 +5340,14 @@ try {
     if (orientationEl) orientationEl.style.display = 'none';
   }
 } catch (e) {}
+
+// R68/Phase 19: render the landing Worth card from whatever loadState()
+// just populated (or didn't). hub-worth's own renderWorth() isn't called
+// on a cold load (buildWorth()'s worthBuilt latch only fires the first time
+// hub-worth is opened this session), so this is the one call that has to
+// happen unconditionally at init — renderWorth()'s own tail call covers
+// every update after that.
+renderLandingWorth();
 
 // =====================================================================
 // DHANAM CAR — TAX & LEASE CALCULATOR
