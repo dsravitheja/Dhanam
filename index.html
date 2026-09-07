@@ -779,7 +779,6 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .car-badge { display:inline-block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:2px 8px; border-radius:4px; margin-bottom:10px; }
 .car-badge.baseline { background:rgba(255,255,255,.08); color:var(--text-mid); }
 .car-badge.carveout { background:rgba(92,184,138,.15); color:var(--green); }
-.car-badge.additive { background:rgba(201,168,76,.12); color:var(--accent); }
 .car-stat { display:flex; justify-content:space-between; align-items:baseline; padding:5px 0; border-bottom:1px solid var(--border-subtle); }
 .car-stat:last-child { border-bottom:none; }
 .car-stat-lbl { font-size:11px; color:var(--text-dim); }
@@ -1668,6 +1667,85 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
     <div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg> Dhanam Car — Cost of Ownership</div>
 
+    <!-- "Why a lease?" glance (R74-R75, Phase 22). §Strategic-4/D17/D18
+         (UX-ANALYSIS.md): the question people actually bring to this hub is
+         "is a company lease better than just taking a car loan?", not "how
+         should my employer structure my pay?" — and the app already had the
+         engine (calcOwnershipCost({mode,...}), Phase 14) to answer it, just
+         never pointed at the question first. Placed above the mode selector
+         and visible in ALL THREE modes (B19) — a visitor who lands in Loan
+         mode (the default since R56) is exactly the person who doesn't know
+         a carve-out lease exists, so gating this behind Lease mode would
+         repeat the exact mistake §Strategic-1 found in the old landing page.
+         Ships with worked defaults (B18) so it renders a complete answer
+         with zero interaction.
+
+         Inputs, per B18: monthly fixed pay + regime (own small fields here,
+         NOT wired to the Company Car Lease panel's car-basic/car-regime
+         below — an accepted field-cost, the same shape as B15/B16's
+         decision not to wire hub-car's salary to a future app-wide profile)
+         + car price (new) + term (shared: reads Compare Cars' own cc-years,
+         per R76's "derive tenure... once" — not a third term field). Rate/
+         residual are likewise read from Compare Cars' Assumptions card
+         (cc-lease-rate/cc-loan-rate/cc-residual-pct); the engine/driver
+         perquisite flags are read from the Company Car Lease panel's own
+         car-big-engine/car-has-driver checkboxes below — genuinely shared,
+         not re-typed, since (unlike salary) D17 found these WERE the exact
+         same fact duplicated across the hub. See renderLeaseGlance() below
+         and calc.js's calcLeaseMarginalRate() for the calculation itself —
+         calcOwnershipCost() with every running/maintenance/insurance input
+         zeroed out (this is a financing-only glance; running costs are
+         Compare Cars' job), so it agrees to the rupee with R77's cross-mode
+         Lease column for the same price/term/rates/residual — same
+         function, never a second model. -->
+    <div class="panel-card" id="lg-card" style="margin-bottom:20px;">
+      <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-scope"></use></svg></span><span class="pch-title">Why a Lease? Loan vs. Carve-out — Same Car</span><span class="pch-tag">Live</span></div>
+      <div class="panel-card-body">
+        <p class="note-text" style="margin-bottom:12px;">A car loan and a company carve-out lease, for one illustrative car — worked defaults below, edit anything.</p>
+        <div class="grid-3" style="margin-bottom:14px;">
+          <div class="field">
+            <label>Monthly Fixed Pay (₹)</label>
+            <input type="number" id="lg-basic" value="100000" oninput="renderLeaseGlance()">
+          </div>
+          <div class="field">
+            <label>Car On-Road Price (₹)</label>
+            <input type="number" id="lg-price" value="1500000" oninput="renderLeaseGlance()">
+          </div>
+          <!-- Deliberately NOT class="field": .field input/.field select style
+               every nested <input>/<select> as a full-width text box (R62's
+               16px catch-all included), which would badly mis-style a radio
+               button. car-regime's own radios below avoid .field for the
+               same reason — matched here rather than reintroducing the bug
+               in a new field group. -->
+          <div style="display:flex;flex-direction:column;gap:5px;">
+            <label style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em;font-weight:500;">Tax Regime</label>
+            <div style="display:flex;gap:14px;align-items:center;height:38px;">
+              <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text-mid);cursor:pointer;">
+                <input type="radio" name="lg-regime" value="new" checked onchange="renderLeaseGlance()" style="accent-color:var(--accent);"> New
+              </label>
+              <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text-mid);cursor:pointer;">
+                <input type="radio" name="lg-regime" value="old" onchange="renderLeaseGlance()" style="accent-color:var(--accent);"> Old
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <p class="note-text" id="lg-empty" style="display:none;">Enter a car price above to see the loan-vs-lease comparison.</p>
+
+        <div class="grid-2" id="lg-cards"></div>
+
+        <div class="total-card" id="lg-hero" style="margin-top:14px;">
+          <div class="total-label">Over <span id="lg-hero-years">4</span> Years</div>
+          <div class="total-value" id="lg-hero-value">—</div>
+          <div class="total-cr" id="lg-hero-note"></div>
+        </div>
+
+        <p class="note-text" id="lg-shield-note" style="margin-top:10px;"></p>
+        <p class="note-text" style="margin-top:6px;color:var(--text-dim);font-size:11px;">Uses the term/rates/residual from Compare Cars' Assumptions below (currently <span id="lg-terms-used"></span>) and the engine/driver settings from the Company Car Lease panel below. This shield isn't a flat percentage — it's the exact tax difference at your income, including any §87A rebate/marginal-relief effect near ₹12L–₹12.7L taxable income (D17). On the old regime, this glance doesn't know your EPF — enter it in the Company Car Lease panel below and check Compare Cars for the 80C-adjusted figure.</p>
+        <button type="button" class="btn btn-secondary" style="margin-top:10px;" onclick="document.getElementById('cc-rows').scrollIntoView({behavior:'smooth',block:'center'})">See the full 3-way (with running costs) in Compare Cars ↓</button>
+      </div>
+    </div>
+
     <!-- Mode selector (R56, Phase 14). Loan is the default: car-loan EMI
          math is what most visitors need first, and a company lease policy
          is the minority case. Switching modes never clears any input —
@@ -1708,16 +1786,16 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <div class="grid-3">
           <div class="field highlight">
             <label>Basic Monthly Salary (₹)</label>
-            <input type="number" id="car-basic" value="100000" oninput="renderCarCalc()">
+            <input type="number" id="car-basic" value="100000" oninput="renderCarCalc(); renderCarCompare();">
             <span class="field-hint">Total fixed pay per month (Basic + HRA + Special Allowance combined), not Basic alone</span>
           </div>
           <div class="field">
             <label>Monthly Bonus / Variable (₹)</label>
-            <input type="number" id="car-bonus" value="0" oninput="renderCarCalc()">
+            <input type="number" id="car-bonus" value="0" oninput="renderCarCalc(); renderCarCompare();">
           </div>
           <div class="field">
             <label>Monthly EPF Deduction (₹)</label>
-            <input type="number" id="car-epf-amt" value="6000" min="0" step="100" oninput="renderCarCalc()">
+            <input type="number" id="car-epf-amt" value="6000" min="0" step="100" oninput="renderCarCalc(); renderCarCompare();">
             <span class="field-hint">Copy the employee PF line straight off your payslip — EPF applies to Basic + DA only, not your full fixed pay</span>
           </div>
         </div>
@@ -1737,53 +1815,47 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
         <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin-top:14px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);cursor:pointer;">
-            <input type="checkbox" id="car-big-engine" onchange="renderCarCalc()" style="accent-color:var(--accent);width:16px;height:16px;">
+            <input type="checkbox" id="car-big-engine" onchange="renderCarCalc(); renderCarCompare();" style="accent-color:var(--accent);width:16px;height:16px;">
             Engine &gt; 1600cc <span style="color:var(--text-dim)">(leave off for electric)</span>
           </label>
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);cursor:pointer;">
-            <input type="checkbox" id="car-has-driver" onchange="renderCarCalc()" style="accent-color:var(--accent);width:16px;height:16px;">
+            <input type="checkbox" id="car-has-driver" onchange="renderCarCalc(); renderCarCompare();" style="accent-color:var(--accent);width:16px;height:16px;">
             Company Driver Provided
           </label>
           <span style="margin-left:auto;font-size:11px;color:var(--text-dim);">Tax Regime:<span class="term-info"><button type="button" class="term-info-btn" id="ti-regime-btn" aria-expanded="false" aria-controls="ti-regime" aria-label="What's the difference between the two tax regimes?" onclick="toggleTermInfo('ti-regime')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-regime" role="note" hidden>Old Regime keeps deductions — standard deduction, 80C, HRA — but taxes income at higher slab rates. New Regime (this app's default) has lower slab rates and a higher §87A rebate threshold, with almost no deductions. Your actual payslip determines which one you're on — this app can't know that for you.</span></span></span>
           <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text-mid);cursor:pointer;">
-            <input type="radio" name="car-regime" value="new" checked onchange="renderCarCalc()" style="accent-color:var(--accent);">
+            <input type="radio" name="car-regime" value="new" checked onchange="renderCarCalc(); renderCarCompare();" style="accent-color:var(--accent);">
             New Regime (FY2025-26)
           </label>
           <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text-mid);cursor:pointer;">
-            <input type="radio" name="car-regime" value="old" onchange="renderCarCalc()" style="accent-color:var(--accent);">
+            <input type="radio" name="car-regime" value="old" onchange="renderCarCalc(); renderCarCompare();" style="accent-color:var(--accent);">
             Old Regime
           </label>
         </div>
       </div>
     </div>
 
-    <!-- Hero answer — whichever of Baseline / Carve-out A / Additive B
-         currently wins (R45, Phase 10a). Live/dynamic: recomputed on every
-         renderCarCalc() call from the exact aAdv/bAdv comparison the old
-         car-summary-box's "Best option" line used, just promoted above the
-         cards instead of buried under them. -->
+    <!-- Hero answer — Baseline vs. Carve-out, whichever wins (R45, Phase
+         10a; retired Additive B in R74/Phase 22 — see below). Live/dynamic:
+         recomputed on every renderCarCalc() call. -->
     <div class="total-card" id="car-hero">
       <div class="total-label" id="car-hero-label">Best Option</div>
       <div class="total-value" id="car-hero-value">—</div>
       <div class="total-cr" id="car-hero-note"></div>
       <div class="total-sub">
-        <div class="total-sub-item"><div class="ts-lbl">Perquisite Value<span class="term-info"><button type="button" class="term-info-btn" id="ti-perq-btn" aria-expanded="false" aria-controls="ti-perq" aria-label="What is perquisite value?" onclick="toggleTermInfo('ti-perq')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-perq" role="note" hidden>The taxable value the Income-tax Rules, 2026 assign to personal use of a company car — ₹5,000/mo (₹7,000 if the engine is over 1600cc), +₹3,000/mo with a company driver. Added to taxable income in Carve-out A and Additive B; Baseline never has it, since there's no company car in that scenario.</span></span></div><div class="ts-val mono" id="car-hero-perq">—</div></div>
+        <div class="total-sub-item"><div class="ts-lbl">Perquisite Value<span class="term-info"><button type="button" class="term-info-btn" id="ti-perq-btn" aria-expanded="false" aria-controls="ti-perq" aria-label="What is perquisite value?" onclick="toggleTermInfo('ti-perq')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-perq" role="note" hidden>The taxable value the Income-tax Rules, 2026 assign to personal use of a company car — ₹5,000/mo (₹7,000 if the engine is over 1600cc), +₹3,000/mo with a company driver. Added to taxable income in Carve-out; Baseline never has it, since there's no company car in that scenario.</span></span></div><div class="ts-val mono" id="car-hero-perq">—</div></div>
       </div>
     </div>
 
-    <!-- Full 3-card comparison — collapsed by default (R45, Phase 10a). The
-         old car-summary-box (perquisite + all three effective-net lines +
-         "Best option" verdict) was dropped rather than folded in here: every
-         one of its numbers is now either in the hero above or already on the
-         card it restated, so keeping it too would state the same figures a
-         third time. -->
+    <!-- 2-card comparison — collapsed by default (R45, Phase 10a; retired
+         Additive B in R74/Phase 22 — see below). -->
     <div class="collapse-card" id="car-compare-card">
       <button type="button" class="collapse-header" onclick="toggleCard('car-compare-card')" aria-expanded="false">
-        <span class="collapse-title">Compare all three scenarios</span>
+        <span class="collapse-title">Compare both scenarios</span>
         <span class="collapse-arrow">▼</span>
       </button>
       <div class="collapse-body">
-        <div id="car-scenario-cards" class="loan-grid"></div>
+        <div id="car-scenario-cards" class="grid-2"></div>
       </div>
     </div>
 
@@ -1794,9 +1866,9 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
           <li>Perquisite per the Income-tax Rules, 2026 (in force 1 Apr 2026): ≤1600cc or electric = ₹5,000/mo · &gt;1600cc = ₹7,000/mo · company driver = +₹3,000/mo. These replaced the long-standing ₹1,800/₹2,400/₹900 figures under the Income-tax Rules, 1962 — roughly a 3× increase, so a car package that looked worthwhile under the old table may not under this one.</li>
           <li>Old regime includes standard deduction (₹50,000) + 80C (₹1.5L) only. HRA, 80D excluded for simplicity.</li>
           <li>New regime (FY2025-26): standard deduction ₹75,000; rebate u/s 87A for taxable ≤ ₹12L, with marginal relief up to ≈₹12.71L.</li>
-          <li>EPF is taken from the amount you enter, not derived from salary — real EPF applies to Basic + DA only, which this app has no way to infer from total fixed pay. The same figure is used in all three scenarios, since a car carve-out comes out of allowances rather than Basic.</li>
-          <li>Carve-out (A): your CTC reduces by car package; employer pays EMI/fuel/driver. Your take-home reduces but no car expense.</li>
-          <li>Additive (B): car is on top of your CTC; full salary retained; only perquisite value added to taxable income.</li>
+          <li>EPF is taken from the amount you enter, not derived from salary — real EPF applies to Basic + DA only, which this app has no way to infer from total fixed pay. The same figure is used in both scenarios, since a car carve-out comes out of allowances rather than Basic.</li>
+          <li>Carve-out: your CTC reduces by the car package; employer pays EMI/fuel/driver. Your take-home reduces but you carry no car expense.</li>
+          <li>If your employer adds the car on top of your CTC rather than carving it out, you keep your full salary and are taxed only on the perquisite; that is strictly better, and rare — most employer car policies are carve-outs, which is why this hub compares against that instead.</li>
           <li>Consult a CA for personalised tax planning before restructuring your salary.</li>
         </ul>
       </div>
@@ -1821,16 +1893,24 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       </button>
       <div class="collapse-body">
         <div class="grid-3">
-          <!-- Rate/term apply to every mode (loan interest, lease interest,
-               or just the holding period in cash mode); the rest of this
-               row is lease-only or cash-only and is shown/hidden by
-               setCarMode()/updateCCModeFields() rather than greyed out —
-               one visibility rule applied consistently (R57/R58's field-
-               visibility-vs-greying decision; see CLAUDE.md). -->
-          <div class="field">
-            <label id="cc-rate-label">Interest Rate (% p.a.)</label>
+          <!-- Rate/term/residual are lease-only or loan-only or cash-only
+               and are shown/hidden by setCarMode()/updateCCModeFields()
+               rather than greyed out — one visibility rule applied
+               consistently (R57/R58's field-visibility-vs-greying decision;
+               see CLAUDE.md). R77(b), Phase 22: split into separate lease
+               and loan rate fields — one shared field priced a company
+               lease at retail car-loan rates, silently flattering it (D18).
+               Term (cc-years) still applies to every mode and stays
+               shared/unsplit — a genuinely single concept, unlike the rate. -->
+          <div class="field" id="cc-field-lease-rate" style="display:none;">
+            <label>Lease Interest Rate (% p.a.)</label>
             <input type="number" id="cc-lease-rate" value="10" step="0.25" min="0" oninput="renderCarCompare()">
-            <span class="field-hint" id="cc-rate-hint">Loan or lease interest rate — ignored in Cash mode</span>
+            <span class="field-hint">Lease only — company lease rates typically run above retail car-loan rates</span>
+          </div>
+          <div class="field" id="cc-field-loan-rate">
+            <label>Loan Interest Rate (% p.a.)</label>
+            <input type="number" id="cc-loan-rate" value="9" step="0.25" min="0" oninput="renderCarCompare()">
+            <span class="field-hint">Loan only — retail car-loan rate, typically below a company lease's</span>
           </div>
           <div class="field" id="cc-field-residual" style="display:none;">
             <label>Residual / Buyout (%)</label>
@@ -1838,25 +1918,26 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
             <span class="field-hint">Paid at lease end to own the car — lease only</span>
           </div>
           <div class="field">
-            <label id="cc-years-label">Ownership / Loan Term</label>
+            <label id="cc-years-label">Loan Term</label>
             <select id="cc-years" onchange="renderCarCompare()">
               <option value="3">3 years</option>
               <option value="4" selected>4 years</option>
               <option value="5">5 years</option>
             </select>
           </div>
-          <div class="field" id="cc-field-marginal" style="display:none;">
-            <label>Marginal Tax Rate (%)</label>
-            <input type="number" id="cc-marginal-rate" value="31.2" step="0.1" min="0" max="45" oninput="renderCarCompare()">
-            <span class="field-hint">30% slab + 4% cess at defaults (new regime) — lease only, no deduction on a loan or cash purchase</span>
-          </div>
-          <div class="field" id="cc-field-driver" style="display:none;">
-            <label>Company Driver Provided</label>
-            <select id="cc-has-driver" onchange="renderCarCompare()">
-              <option value="0" selected>No</option>
-              <option value="1">Yes</option>
-            </select>
-          </div>
+          <!-- Marginal tax rate and "Company Driver Provided" were both
+               hand-typed/re-selected here through Phase 21 — D17's fourth
+               finding: the same fact entered twice, disagreeing with the
+               Company Car Lease panel's own numbers. R76 (Phase 22) retires
+               both fields: marginal rate is now derived from that panel's
+               salary + regime via calc.js's calcLeaseMarginalRate() (never
+               hand-typed — grep confirms this is the one place it's
+               computed), and
+               "driver provided" reads that panel's own car-has-driver
+               checkbox directly (ccOwnershipInput()) rather than asking a
+               second time. Neither value is shown as an editable field
+               here anymore — both are stated in words on the cross-mode
+               card's assumptions line (renderCCCrossMode()) instead. -->
           <div class="field" id="cc-field-cash-cagr" style="display:none;">
             <label>Investment Return If Invested Instead (% p.a.)</label>
             <input type="number" id="cc-cash-cagr" value="12" step="0.5" min="0" oninput="renderCarCompare()">
@@ -2020,13 +2101,15 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
         <!-- Cross-mode comparison (R60) — the payload that justifies this
              whole restructure: lease vs. loan vs. cash for the SAME car,
-             side by side. Uses the selected car's own down payment (loan)
-             and the assumptions above (rate/term/marginal-rate/driver) for
-             all three columns regardless of which mode is currently active
-             above. One shared reveal (ccCrossRevealOpen, tier-3) applies
-             the resale credit AND the opportunity-cost forecast identically
-             to all three columns — B13's fairness rule: never a friendlier
-             default treatment for one mode than another. -->
+             side by side. Uses the selected car's own down payment (loan),
+             the shared term/residual/driver assumptions above, and (R77,
+             Phase 22) SEPARATE lease/loan rates (cc-lease-rate/cc-loan-rate,
+             no longer one shared rate) — with the marginal rate derived
+             fresh per car via calcLeaseMarginalRate() rather than typed as
+             an assumption. One shared reveal (ccCrossRevealOpen, tier-3)
+             applies the resale credit AND the opportunity-cost forecast
+             identically to all three columns — B13's fairness rule: never a
+             friendlier default treatment for one mode than another. -->
         <div class="collapse-card open" id="cc-crossmode-card" style="margin-top:16px;">
           <button type="button" class="collapse-header" onclick="toggleCard('cc-crossmode-card')" aria-expanded="true">
             <span class="collapse-title">Lease vs. Loan vs. Cash — this car, three ways</span>
@@ -2081,7 +2164,9 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
           <li>Unlike the spreadsheet this section is based on, there's no "EV driven more because it feels free" multiplier — annual km is the same figure for every car, so the ₹/km figures stay comparable across ICE and EV.</li>
           <li><strong>Loan and Cash modes carry no tax deduction — <code>Tax Saved</code> is genuinely ₹0, not a missing calculation.</strong> The lease's tax shield comes from a company reimbursing/leasing the car and taxing you only on its perquisite value; a personal car loan or a cash purchase has no equivalent deduction under either regime, so the Lease vs. Loan vs. Cash comparison correctly shows Lease alone with a tax-saved line.</li>
           <li>(Lease mode only) Perquisite per the Income-tax Rules, 2026 (in force 1 Apr 2026): ≤1600cc or electric = ₹5,000/mo · &gt;1600cc = ₹7,000/mo · company driver = +₹3,000/mo — the same table the lease analysis above uses.</li>
-          <li>(Lease mode only) Marginal tax rate is a single number you enter here, not derived from a slab calculation — it doesn't pick up the Section 87A relief the salary panel above applies. It also drives the Lease column of "Lease vs. Loan vs. Cash" even when you're not in Lease mode — see that card's own assumptions line for the exact figure in use.</li>
+          <li>(Lease mode, and the Lease column of "Lease vs. Loan vs. Cash") Marginal tax rate is derived from the Company Car Lease panel's own salary and regime — never hand-typed — using the exact tax difference the lease's shield creates, including any §87A rebate/marginal-relief effect (Phase 22). It moves with that panel's inputs even when you're not in Lease mode — see that card's own assumptions line for the exact figure in use.</li>
+          <li>Lease and Loan are priced at separate interest rates (Assumptions card) — a company lease typically costs more than a retail car loan, and pricing both the same way would flatter the lease.</li>
+          <li>A company lease is tied to your employer. Resigning mid-term usually means foreclosing the lease (paying off the remaining balance immediately) or transferring it, both at a cost — the lease's largest real-world risk, and nothing above models or prices it.</li>
           <li>The "opportunity cost of tied-up capital" reveal (per car, and in "Lease vs. Loan vs. Cash") is a forecast at whatever return rate you enter — 12% by default — not a cash cost, and not part of any ranking. It's ~₹0 for a lease by construction: a lease ties up no capital upfront, which is a real structural difference, not an omission.</li>
           <li>Consult a CA and get dealer quotes before acting on this comparison.</li>
         </ul>
@@ -2670,7 +2755,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 // cached shell without knowing it). Bump this BY HAND alongside sw.js's CACHE
 // version whenever a user-visible change ships — the two are not derived from
 // one another, so both need editing.
-const BUILD_STAMP = '2026-08-15';
+const BUILD_STAMP = '2026-09-07';
 
 // =====================================================================
 // UTILITIES
@@ -2697,6 +2782,11 @@ function set(id, txt) { const el = document.getElementById(id); if (el) el.textC
 function el(id) { return document.getElementById(id); }
 function show(id) { const e = el(id); if(e) e.style.display = ''; }
 function hide(id) { const e = el(id); if(e) e.style.display = 'none'; }
+// Inline style for a signed financial delta — red negative, green positive,
+// neutral at exactly 0 (palette rules 3/4). Shared by the "why a lease?"
+// glance and Compare Cars' cross-mode Tax Saved lines (code review, Phase 22
+// third pass — this ternary was duplicated verbatim in both).
+function signedColor(n) { return n < 0 ? 'color:var(--red)' : (n > 0 ? 'color:var(--green)' : ''); }
 
 function showToast(msg) {
   const t = el('toast');
@@ -5360,7 +5450,7 @@ function renderCarCalc() {
   // EPF is read straight off the payslip, never derived from car-basic (R33/D14):
   // car-basic holds total fixed pay, while EPF applies only to statutory
   // Basic + DA, so deriving one from the other overstated the deduction by
-  // tens of thousands a month. The same figure is used in all three scenarios —
+  // tens of thousands a month. The same figure is used in both scenarios —
   // a car carve-out comes out of the flexible/allowance side of the package,
   // not out of Basic, so the PF line on the payslip doesn't move with it.
   const epfMonthly = Math.max(0, +v('car-epf-amt') || 0);
@@ -5370,17 +5460,18 @@ function renderCarCalc() {
   const carDriverAllow = +v('car-driver-allow') || 0;
   const bigEngine = document.getElementById('car-big-engine').checked;
   const hasDriver = document.getElementById('car-has-driver').checked;
-  const regime = document.querySelector('input[name="car-regime"]:checked').value;
+  const regime = carRegime();
 
   const carPkg = carEmi + carFuel + carDriverAllow;
   const perqMonthly = calcPerquisite(bigEngine, hasDriver);
   const perqAnnual = perqMonthly * 12;
 
-  const stdDed = regime === 'new' ? 75000 : 50000;
-  const deductions80C = regime === 'old' ? 150000 : 0;
-
+  // Taxable-income formula (standard deduction + old-regime 80C cap) now
+  // lives in calc.js's calcTaxableIncome() — shared with
+  // calcLeaseMarginalRate() (code review, Phase 22 third pass) rather than
+  // reimplemented inline here a second time.
   function scenarioCalc(annualGross, carOutOfPocket) {
-    const taxable = Math.max(0, annualGross - stdDed - (regime === 'old' ? Math.min(epfAnnual, deductions80C) : 0));
+    const taxable = calcTaxableIncome(annualGross, regime, epfAnnual);
     const annualTax = calcIncomeTax(taxable, regime);
     const monthlyTax = annualTax / 12;
     const monthlyTakeHome = annualGross / 12 - epfMonthly - monthlyTax;
@@ -5391,22 +5482,14 @@ function renderCarCalc() {
   const baseGross = (basic + bonus) * 12;
   const base = scenarioCalc(baseGross, carPkg);
 
-  // Carve-out A: effective basic reduces by car package
+  // Carve-out: effective basic reduces by car package
   const effectiveBasic = Math.max(0, basic - carPkg);
   const aGross = (effectiveBasic + bonus) * 12;
-  const aTaxableAdj = Math.max(0, aGross - stdDed - (regime === 'old' ? Math.min(epfAnnual, deductions80C) : 0) + perqAnnual);
+  const aTaxableAdj = calcTaxableIncome(aGross, regime, epfAnnual, perqAnnual);
   const aTax = calcIncomeTax(aTaxableAdj, regime) ;
   const aMonthTax = aTax / 12;
   const aMonthTakeHome = aGross / 12 - epfMonthly - aMonthTax;
   const scenA = { annualGross: aGross, taxable: aTaxableAdj, annualTax: aTax, monthlyTax: aMonthTax, monthlyTakeHome: aMonthTakeHome, carOutOfPocket: 0 };
-
-  // Additive B: full salary + car on top; perquisite added to taxable
-  const bGross = baseGross;
-  const bTaxable = Math.max(0, bGross - stdDed - (regime === 'old' ? Math.min(epfAnnual, deductions80C) : 0) + perqAnnual);
-  const bTax = calcIncomeTax(bTaxable, regime);
-  const bMonthTax = bTax / 12;
-  const bMonthTakeHome = bGross / 12 - epfMonthly - bMonthTax;
-  const scenB = { annualGross: bGross, taxable: bTaxable, annualTax: bTax, monthlyTax: bMonthTax, monthlyTakeHome: bMonthTakeHome, carOutOfPocket: 0 };
 
   const baseNetPostCar = base.monthlyTakeHome - carPkg;
 
@@ -5440,35 +5523,182 @@ function renderCarCalc() {
 
   el('car-scenario-cards').innerHTML =
     buildCard(base, 'Baseline', 'baseline', true) +
-    buildCard(scenA, 'Carve-out A', 'carveout', false) +
-    buildCard(scenB, 'Additive B', 'additive', false);
+    buildCard(scenA, 'Carve-out', 'carveout', false);
 
-  // Hero — whichever scenario currently wins (R45, Phase 10a). This is the
-  // exact same aAdv/bAdv comparison the old car-summary-box's "Best option"
-  // line made — reused here, not recomputed a second way — just promoted to
-  // the top of the section and stated in words as well as a number, per the
-  // Phase 10 brief. Live/dynamic: recalculated on every renderCarCalc() call,
-  // so it always tracks whichever option wins at the current inputs.
-  const aAdv = (scenA.monthlyTakeHome) - baseNetPostCar;
-  const bAdv = (scenB.monthlyTakeHome) - baseNetPostCar;
+  // Hero — Baseline vs. Carve-out, whichever wins (R74, Phase 22). Additive
+  // B was retired here: it held the employer's spend constant at "car on
+  // top of full salary," which is free money by construction and so it won
+  // in all seven scenarios checked (D17's "7 of 7") — a comparison where one
+  // branch can't lose tells the reader nothing. Additive survives as one
+  // caveat-list line below, not as a scenario. With B gone, the honest
+  // answer at this hub's own shipped defaults is "Carve-out saves you ₹0" —
+  // see the aAdv===0 branch, which states that in words rather than reading
+  // as a broken hero.
+  const aAdv = scenA.monthlyTakeHome - baseNetPostCar;
   let heroLabel, heroValue, heroNote;
-  if (aAdv > 0 && aAdv >= bAdv) {
-    heroLabel = 'Best Option — Carve-out A';
+  if (aAdv > 0) {
+    heroLabel = 'Best Option — Carve-out';
     heroValue = scenA.monthlyTakeHome;
-    heroNote = `Carve-out A saves you ${fmt(aAdv)}/mo over owning the car yourself`;
-  } else if (bAdv > 0) {
-    heroLabel = 'Best Option — Additive B';
-    heroValue = scenB.monthlyTakeHome;
-    heroNote = `Additive B saves you ${fmt(bAdv)}/mo over owning the car yourself`;
+    heroNote = `Carve-out saves you ${fmt(aAdv)}/mo over owning the car yourself`;
   } else {
     heroLabel = 'Best Option — Baseline (Own Car)';
     heroValue = baseNetPostCar;
-    heroNote = 'Owning the car yourself beats both lease structures at your current inputs';
+    heroNote = aAdv === 0
+      ? 'At your current inputs, a carve-out saves you nothing over owning the car yourself'
+      : `Owning the car yourself beats a carve-out by ${fmt(-aAdv)}/mo at your current inputs`;
   }
   set('car-hero-label', heroLabel);
   set('car-hero-value', fmt(heroValue) + '/mo');
   set('car-hero-note', heroNote);
   set('car-hero-perq', `${fmt(perqMonthly)}/mo`);
+  // R75/code review (Phase 22): this function does NOT also call
+  // renderLeaseGlance()/renderCarCompare() here — every field that feeds
+  // the glance or Compare Cars' derived marginal rate (car-basic/-bonus/
+  // -epf-amt/-big-engine/-has-driver, the regime radios) calls
+  // renderCarCompare() alongside renderCarCalc() in its own onchange/
+  // oninput (see the markup), and renderCarCompare() renders the glance
+  // itself. car-emi/-fuel/-driver-allow only affect THIS function's own
+  // scenario cards, so they correctly don't trigger either. setCarMode()
+  // always calls renderCarCompare() once (which renders the glance), and
+  // additionally calls this function only when switching INTO lease mode
+  // (not on every mode switch) — adding a call here would double-render
+  // the glance on that specific transition (fixed stale claim, code
+  // review, Phase 22, second pass).
+}
+
+// =====================================================================
+// DHANAM CAR — "WHY A LEASE?" GLANCE (R74-R75, Phase 22)
+// =====================================================================
+// Lease vs. loan for one illustrative car, mechanism shown as line items,
+// answered with zero interaction via worked defaults — see the markup
+// comment above #lg-card for the full placement/input-sourcing rationale
+// (B18/B19/R76). Deliberately calls calcOwnershipCost() with every
+// running/maintenance/insurance input zeroed out: this is a financing-only
+// glance (EMI/tax-shield/residual), not a full TCO — running costs are
+// Compare Cars' job, one tap away via the link at the bottom of the card.
+// With those inputs zeroed, calcOwnershipCost's netCost reduces to exactly
+// capital − taxSaved (lease) or downPayment + emi*months (loan), so for the
+// same price/term/rates/residual this agrees to the rupee with R77's
+// cross-mode Lease/Loan columns — same function, never a second model.
+function renderLeaseGlance() {
+  const basic = v('lg-basic');
+  const price = v('lg-price');
+  const regime = document.querySelector('input[name="lg-regime"]:checked').value;
+  // Shares Compare Cars' own term/rate/residual/driver derivation via
+  // ccAssumptions()/carLeaseProfile() rather than re-reading cc-years/
+  // cc-lease-rate/cc-loan-rate/cc-residual-pct/car-has-driver with a second,
+  // independent set of fallbacks (code review, Phase 22, second pass) — an
+  // independent read here could silently drift from what ccAssumptions()
+  // considers "the current term/rates/residual" if that function's own
+  // defaults ever change. bigEngine stays its own chk('car-big-engine')
+  // read (documented above #lg-card) since it isn't part of
+  // ccAssumptions()/carLeaseProfile() — it's per-shortlist-car elsewhere,
+  // but this glance has no shortlist car, only the one illustrative one.
+  const a = ccAssumptions();
+  const years = a.years;
+  const leaseRate = a.leaseRate;
+  const loanRate = a.loanRate;
+  const residualPct = a.residualPct;
+  const bigEngine = chk('car-big-engine');
+  const hasDriver = a.leaseProfile.hasDriver;
+
+  // Blank/zero-price guard (code review, Phase 22 third pass) — matches
+  // Compare Cars' own `c.price > 0` blank-row filter. Without this, a
+  // cleared/zero lg-price still rendered a confident "Loan saves ₹X" /
+  // "Lease saves ₹X" headline driven entirely by a phantom perquisite tax
+  // on a nonexistent car (calcLeaseMarginalRate() taxing a ₹0 lease EMI
+  // against the flat ₹5,000+/mo perquisite regardless of price).
+  if (!(price > 0)) {
+    hide('lg-cards'); hide('lg-hero');
+    set('lg-shield-note', '');
+    set('lg-terms-used', '');
+    show('lg-empty');
+    return;
+  }
+  hide('lg-empty');
+  show('lg-cards'); show('lg-hero');
+
+  const zeroRunning = { type: 'ICE', efficiency: 0, cityKm: 0, hwyKm: 0, petrolPrice: 0,
+    iceHwyMult: 1, homeRate: 0, publicRate: 0, evHwyMult: 1, maintAnnual: 0, insRate: 0, depRate: 0 };
+
+  const loanResult = calcOwnershipCost(Object.assign({
+    mode: 'loan', price, downPayment: 0, annualRate: loanRate, years,
+  }, zeroRunning));
+
+  // The shield's own derived marginal rate (R76/B18) — see
+  // calcLeaseMarginalRate()'s own comment (calc.js) for why this reproduces
+  // the §87A dip (D17) rather than a flat slab-rate approximation. epfAnnual
+  // is 0 here, deliberately: the glance doesn't collect an EPF figure of its
+  // own (B18's accepted field-cost keeps it to fixed-pay + regime only), so
+  // for the old regime specifically this omits the min(EPF,1.5L) 80C
+  // deduction Compare Cars' own derivation applies via the real car-epf-amt
+  // figure — a disclosed simplification of the glance, not a second model.
+  const grossAnnual = basic * 12;
+  const shield = calcLeaseMarginalRate(price, leaseRate, residualPct, years, bigEngine, hasDriver, grossAnnual, regime, 0);
+  const perq = shield.perq;
+  const marginalRate = shield.marginalRate;
+
+  const leaseResult = calcOwnershipCost(Object.assign({
+    mode: 'lease', price, annualRate: leaseRate, residualPct, years,
+    bigEngine, hasDriver, marginalRate,
+  }, zeroRunning));
+
+  set('lg-hero-years', years);
+  el('lg-cards').innerHTML = `
+    <div class="car-card">
+      <div class="car-card-title">Car Loan</div>
+      <div class="car-stat"><span class="car-stat-lbl">EMI / month</span><span class="car-stat-val big">${fmt(loanResult.emi)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Paid from</span><span class="car-stat-val">your already-taxed take-home</span></div>
+      <div class="car-divider"></div>
+      <div class="car-stat"><span class="car-stat-lbl">Total cost over ${years}yr</span><span class="car-stat-val big">${fmt(loanResult.netCost)}</span></div>
+    </div>
+    <div class="car-card">
+      <div class="car-card-title">Company Carve-out Lease</div>
+      <div class="car-stat"><span class="car-stat-lbl">EMI / month</span><span class="car-stat-val big">${fmt(leaseResult.emi)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Taxed on perquisite instead</span><span class="car-stat-val">${fmt(perq)}/mo</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Tax shield (signed)</span><span class="car-stat-val" style="${signedColor(leaseResult.taxSaved)}">${fmt(leaseResult.taxSaved)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Residual buyout at year ${years}</span><span class="car-stat-val">${fmt(leaseResult.residual)}</span></div>
+      <div class="car-divider"></div>
+      <div class="car-stat"><span class="car-stat-lbl">Total cost over ${years}yr</span><span class="car-stat-val big">${fmt(leaseResult.netCost)}</span></div>
+    </div>`;
+
+  // Headline: the net difference over the full term, stated as arithmetic,
+  // never a recommendation (checklist item 42's rule applies unchanged).
+  const netDiff = loanResult.netCost - leaseResult.netCost; // positive => lease cheaper
+  let heroValue, heroNote;
+  if (Math.abs(netDiff) < 1) {
+    heroValue = 'About the same';
+    heroNote = `Loan and carve-out lease cost about the same over ${years} years at these inputs`;
+  } else if (netDiff > 0) {
+    heroValue = `Lease saves ${fmt(netDiff)}`;
+    heroNote = `The carve-out lease costs ${fmt(netDiff)} less than the car loan over ${years} years`;
+  } else {
+    heroValue = `Loan saves ${fmt(-netDiff)}`;
+    heroNote = `The car loan costs ${fmt(-netDiff)} less than the carve-out lease over ${years} years`;
+  }
+  set('lg-hero-value', heroValue);
+  set('lg-hero-note', heroNote);
+
+  // The three states R75 asks for — the two negative ones are the point,
+  // not an edge case to hide. `shield.zeroTax` (calc.js) is the genuine
+  // "you pay no tax at this income" fact, checked independently of the
+  // shield — `marginalRate === 0` alone would also fire on the coincidence
+  // of leaseEmi === perquisite (shieldAnnual === 0, a 0/0 case with nothing
+  // to do with the user's tax bracket), which is its own, separate state
+  // below rather than being misreported as "you pay no tax" (code review,
+  // Phase 22, second pass).
+  let shieldNote;
+  if (shield.zeroTax) {
+    shieldNote = `At this income, you pay no tax — a carve-out has nothing to save, so the difference above comes entirely from financing cost (rate/residual), not tax.`;
+  } else if (shield.shieldAnnual === 0) {
+    shieldNote = `Your lease EMI (${fmt(leaseResult.emi)}/mo) happens to equal the taxable perquisite (${fmt(perq)}/mo) exactly — there's nothing left to shield either way, so the difference above comes entirely from financing cost (rate/residual), not tax.`;
+  } else if (leaseResult.taxSaved < 0) {
+    shieldNote = `Your lease EMI (${fmt(leaseResult.emi)}/mo) is below the taxable perquisite (${fmt(perq)}/mo) — the carve-out is taxing you on more than it's saving, a real cost, not a rounding error.`;
+  } else {
+    shieldNote = `The carve-out shields ${fmt(Math.max(0, leaseResult.emi - perq))}/mo from tax at a derived ${(marginalRate * 100).toFixed(1)}% marginal rate — that's the reason it ${netDiff > 0 ? 'wins here' : "doesn't fully close the gap here"}.`;
+  }
+  set('lg-shield-note', shieldNote);
+  set('lg-terms-used', `${years}yr term, ${leaseRate}% lease / ${loanRate}% loan rate, ${(residualPct * 100).toFixed(0)}% residual`);
 }
 
 // =====================================================================
@@ -5525,7 +5755,7 @@ function setCarMode(mode) {
   if (mode === 'lease') { renderCarCalc(); }
   updateCCModeFields();
   renderCCRows();
-  renderCarCompare();
+  renderCarCompare(); // R75: also renders the glance (always visible, all 3 modes — B19)
 }
 
 // Shows/hides the Assumptions-card fields that only apply to some modes —
@@ -5534,14 +5764,13 @@ function setCarMode(mode) {
 // switch and once at init.
 function updateCCModeFields() {
   const isLease = carMode === 'lease';
+  const isLoan = carMode === 'loan';
   const isCash = carMode === 'cash';
+  el('cc-field-lease-rate').style.display = isLease ? '' : 'none';
+  el('cc-field-loan-rate').style.display = isLoan ? '' : 'none';
   el('cc-field-residual').style.display = isLease ? '' : 'none';
-  el('cc-field-marginal').style.display = isLease ? '' : 'none';
-  el('cc-field-driver').style.display = isLease ? '' : 'none';
   el('cc-field-cash-cagr').style.display = isCash ? '' : 'none';
-  set('cc-rate-label', isCash ? 'Interest Rate (% p.a.)' : (carMode === 'loan' ? 'Loan Interest Rate (% p.a.)' : 'Lease Interest Rate (% p.a.)'));
-  set('cc-rate-hint', isCash ? 'Ignored in Cash mode — nothing is financed' : (carMode === 'loan' ? 'Used for every car\'s loan EMI' : 'Used for every car\'s lease EMI'));
-  set('cc-years-label', carMode === 'loan' ? 'Loan Term' : (isCash ? 'Ownership Term' : 'Lease Tenure'));
+  set('cc-years-label', isLoan ? 'Loan Term' : (isCash ? 'Ownership Term' : 'Lease Tenure'));
 }
 
 // A row that's been started (any field touched) but doesn't yet pass the
@@ -5638,14 +5867,40 @@ function ccRemoveCar(i) {
   renderCarCompare();
 }
 
+// Single reader for the Company Car Lease panel's regime radios — shared by
+// renderCarCalc() and carLeaseProfile() (code review, Phase 22 third pass;
+// the selector string used to live independently in both places, so a
+// future rename of the `car-regime` radio group's `name` attribute could
+// silently break regime detection in only one of the two callers).
+function carRegime() { return document.querySelector('input[name="car-regime"]:checked').value; }
+
+// R76 (Phase 22): reads the Company Car Lease panel's own gross-pay/regime/
+// EPF/"Company Driver Provided" — the parameters that fed D17's "entered
+// twice" finding. Deliberately reused here rather than re-typed: Compare
+// Cars now prices the SAME lease the tax panel describes, instead of a
+// second, disconnected one. car-basic/car-bonus/car-epf-amt/car-regime/
+// car-has-driver stay exactly where they are (B15's accepted cost — see
+// CLAUDE.md) — this just reads them from a second place in the hub, the
+// "parameter unification, not field unification" R76 asks for. Computed
+// ONCE per `ccAssumptions()` call (code review, Phase 22) and stashed on
+// its return value (`a.leaseProfile`) rather than re-read once per
+// shortlist car — the three DOM lookups here don't change mid-render.
+function carLeaseProfile() {
+  return {
+    grossAnnual: (v('car-basic') + v('car-bonus')) * 12,
+    regime: carRegime(),
+    hasDriver: chk('car-has-driver'),
+    epfAnnual: Math.max(0, v('car-epf-amt')) * 12,
+  };
+}
+
 function ccAssumptions() {
   return {
     mode: carMode,
-    annualRate: v('cc-lease-rate'),
+    leaseRate: v('cc-lease-rate'),
+    loanRate: v('cc-loan-rate'),
     residualPct: v('cc-residual-pct') / 100,
     years: v('cc-years') || 4,
-    marginalRate: v('cc-marginal-rate') / 100,
-    hasDriver: el('cc-has-driver').value === '1',
     cashCagr: v('cc-cash-cagr') || 0,
     petrolPrice: v('cc-petrol'),
     homeRate: v('cc-home-rate'),
@@ -5659,22 +5914,43 @@ function ccAssumptions() {
     iceIns: v('cc-ice-ins') / 100,
     evIns: v('cc-ev-ins') / 100,
     depRate: v('cc-dep-rate') / 100,
+    leaseProfile: carLeaseProfile(),
   };
 }
 
 // The per-car input object calcOwnershipCost/calcOwnershipCurve share —
 // built once here so ccComputedRows(), renderCCOwnCurve(), and
-// ccCrossModeStats() can never drift apart on what "this car, under these
+// renderCCCrossMode() can never drift apart on what "this car, under these
 // assumptions" means. `mode` is an explicit parameter (not read from `a`)
-// so ccCrossModeStats() can call this three times, once per mode, for the
+// so renderCCCrossMode() can call this three times, once per mode, for the
 // SAME car (R60) — the shortlist's own ranking still always uses `a.mode`.
+// R77(b): rate is picked per mode (leaseRate/loanRate/none for cash — cash
+// mode never reads a rate, so this no longer falls back to the lease rate
+// as a harmless-today-but-latent landmine, code review Phase 22 second
+// pass). R76: marginalRate/hasDriver are derived from the Company Car
+// Lease panel's own inputs (a.leaseProfile, from carLeaseProfile()) via
+// calcLeaseMarginalRate() (calc.js) rather than a second hand-typed field —
+// computed fresh per car, since the shield (and so the derived rate)
+// depends on THIS car's own EMI. Only computed for mode 'lease': in
+// loan/cash mode calcOwnershipCost() never reads marginalRate, so running
+// this per shortlist car in those modes was pure waste (code review, Phase
+// 22 second pass) — skipped there, and callers that need to STATE the
+// lease shield (renderCCCrossMode()) read this call's own lease-mode
+// result back rather than recomputing it a second time.
 function ccOwnershipInput(c, a, mode) {
   const isEV = c.type === 'EV';
+  const bigEngine = !isEV && c.bigEngine;
+  const profile = a.leaseProfile;
+  const annualRate = mode === 'loan' ? a.loanRate : (mode === 'cash' ? 0 : a.leaseRate);
+  const marginalRate = mode === 'lease'
+    ? calcLeaseMarginalRate(c.price, a.leaseRate, a.residualPct, a.years,
+        bigEngine, profile.hasDriver, profile.grossAnnual, profile.regime, profile.epfAnnual).marginalRate
+    : 0;
   return {
     mode,
-    price: c.price, annualRate: a.annualRate, residualPct: a.residualPct, years: a.years,
+    price: c.price, annualRate, residualPct: a.residualPct, years: a.years,
     downPayment: c.downPayment || 0,
-    bigEngine: !isEV && c.bigEngine, hasDriver: a.hasDriver, marginalRate: a.marginalRate,
+    bigEngine, hasDriver: profile.hasDriver, marginalRate,
     type: c.type, efficiency: c.eff,
     cityKm: a.cityKm, hwyKm: a.hwyKm, petrolPrice: a.petrolPrice, iceHwyMult: a.iceHwyMult,
     homeRate: a.homeRate, publicRate: a.publicRate, evHwyMult: a.evHwyMult,
@@ -5703,9 +5979,16 @@ function ccComputedRows() {
     .map((c, i) => ({ c, i }))
     .filter(({ c }) => c.price > 0 && c.eff > 0)
     .map(({ c, i }) => {
-      const result = calcOwnershipCost(ccOwnershipInput(c, a, a.mode));
+      // `input` is kept on the row (not just `result`) so a caller that
+      // already has this row — renderCCOwnCurve(), for the selected car —
+      // can feed it straight to calcOwnershipCurve() without rebuilding it
+      // via a second ccOwnershipInput() call, which would re-run
+      // calcLeaseMarginalRate()/calcEMI/calcPerquisite for a car this
+      // function already computed (code review, Phase 22 third pass).
+      const input = ccOwnershipInput(c, a, a.mode);
+      const result = calcOwnershipCost(input);
       const perKm = calcRunningCost(c.type, c.eff, a).perKm;
-      return { i, car: c, result, perKm, years: a.years };
+      return { i, car: c, input, result, perKm, years: a.years };
     });
   rows.sort((x, y) => x.result.netCost - y.result.netCost);
   return rows;
@@ -5796,6 +6079,7 @@ function ccVerdict(km) {
 
 function renderCarCompare() {
   buildCC();
+  renderLeaseGlance(); // R75: shares cc-years/cc-lease-rate/cc-loan-rate/cc-residual-pct
 
   // Per-row "what's missing" hint — updated here (a text-only write, never
   // an innerHTML rebuild) so it stays live on every keystroke without
@@ -5834,7 +6118,13 @@ function renderCarCompare() {
   }
 
   // ── Cost-vs-value chart + resale reveal (R51/R52) ───────────────────
-  renderCCOwnCurve();
+  // `rows` is passed down rather than left for renderCCOwnCurve() to
+  // recompute — this call and the ccComputedRows() one two lines above it
+  // were the same computation run twice per render (code review, Phase 22,
+  // second pass); renderCCOwnCurve()'s own standalone callers (the car
+  // <select>, the reveal toggles) still omit the argument and compute it
+  // themselves, per its own comment above.
+  renderCCOwnCurve(rows);
 
   // ── Ranked result cards, stacked (not a grid — R39). Compact by default:
   // rank badge, name, one hero number (net cost), one supporting line
@@ -5906,9 +6196,11 @@ function renderCarCompare() {
   // ── Crossover chart (9e) — always recomputed, same as renderWorthTrend();
   // renderChart()'s ResizeObserver (R11) handles the redraw correctly once
   // the collapse card is actually opened, even though it's computed here
-  // whether open or not. ──────────────────────────────────────────────
+  // whether open or not. `rows` passed down for the same reason as
+  // renderCCOwnCurve() above it — renderCCChart() has no other caller, so
+  // there's no standalone-call case to preserve here. ────────────────────
   show('cc-chart-card');
-  renderCCChart();
+  renderCCChart(rows);
 
   persistCC();
 }
@@ -5916,11 +6208,14 @@ function renderCarCompare() {
 // Cost-vs-value chart + resale reveal (R51/R52, Phase 13; extended in Phase
 // 14/R57-R60 with the down-payment note, the absorbed loan-tenure grid and
 // depreciation/loan-balance chart, the cash opportunity-cost reveal, and the
-// lease/loan/cash cross-mode comparison). Self-contained like renderCCChart()
-// below — recomputes rows itself, which is what lets it be called directly
-// from the car-select's onchange (a discrete committed choice, not a
-// keystroke — same reasoning CLAUDE.md gives for the shortlist row's own
-// Type select) without re-running all of renderCarCompare().
+// lease/loan/cash cross-mode comparison). Optionally takes an already-
+// computed `rows` (renderCarCompare() passes its own, avoiding a second
+// ccComputedRows() pass per render — code review, Phase 22, second pass);
+// every other caller (the car-select's onchange, both reveal toggles) omits
+// it and this recomputes rows itself, which is what lets it be called
+// directly from those (a discrete committed choice, not a keystroke — same
+// reasoning CLAUDE.md gives for the shortlist row's own Type select)
+// without re-running all of renderCarCompare().
 //
 // One car at a time: ccOwnCurveIdx is the selected row's stable index into
 // ccCars (the same `r.i` convention ccForceOpen/ccForceClosed use), falling
@@ -5928,8 +6223,8 @@ function renderCarCompare() {
 // exists (car removed). calcOwnershipCurve() is called with the exact same
 // input ccOwnershipInput() builds for calcOwnershipCost — same assumptions,
 // same car — so the chart's endpoint always agrees with the card above it.
-function renderCCOwnCurve() {
-  const rows = ccComputedRows();
+function renderCCOwnCurve(rows) {
+  rows = rows || ccComputedRows();
   if (!rows.length) {
     hide('cc-owncurve-card');
     clearChart('cc-owncurve-chart');
@@ -5945,9 +6240,16 @@ function renderCCOwnCurve() {
   select.value = ccOwnCurveIdx;
 
   const row = rows.find(r => r.i === ccOwnCurveIdx) || rows[0];
+  // `a` is still needed below for ccOpportunityCost()/ccRenderLoanDetail()/
+  // renderCCCrossMode() (cashCagr, years, and the full assumptions object),
+  // but the curve itself reuses `row.input` — the exact object
+  // ccComputedRows() already built for this car via ccOwnershipInput() a
+  // few lines up — instead of calling ccOwnershipInput() a second time,
+  // which would re-run calcLeaseMarginalRate()/calcEMI/calcPerquisite for a
+  // car already computed (code review, Phase 22 third pass).
   const a = ccAssumptions();
   const isEV = row.car.type === 'EV';
-  const curve = calcOwnershipCurve(ccOwnershipInput(row.car, a, carMode));
+  const curve = calcOwnershipCurve(row.input);
 
   if (carMode === 'loan' && row.car.downPayment > 0) {
     el('cc-owncurve-down-note').style.display = '';
@@ -6065,7 +6367,7 @@ function ccRenderLoanDetail(car, a) {
   const price = car.price;
   const down = carMode === 'loan' ? (car.downPayment || 0) : 0;
   const loan = Math.max(0, price - down);
-  const rate = a.annualRate;
+  const rate = a.loanRate;
 
   if (carMode === 'loan' && loan > 0 && rate > 0) {
     show('cc-tenure-card');
@@ -6160,31 +6462,49 @@ function ccRenderLoanDetail(car, a) {
 
 // Lease vs. Loan vs. Cash for the SAME car, side by side (R60) — the payload
 // that justifies this whole restructure. Uses the car's own down payment
-// (loan) and the shared assumptions (rate/term/marginal-rate/driver) for all
+// (loan) and the shared assumptions (rate/term/residual/driver) for all
 // three columns, regardless of which mode currently drives the ranking.
 // resaleValue is mode-independent (calcCarDepreciation(price, N) in every
 // branch of calcOwnershipCost), so a single shared reveal can apply it — and
 // the opportunity-cost forecast — identically to all three columns at once,
 // which is exactly B13's fairness rule: never a friendlier default for one
 // mode than another.
+//
+// R77 (Phase 22), answering D18: (a) the Lease column now states its own
+// Tax Saved line — calcOwnershipCost already returns it, signed, and this
+// renderer used to discard it, so a reader saw Lease win with no way to see
+// why; (b) lease and loan are now priced at their own separate rates
+// (a.leaseRate/a.loanRate — see the Assumptions-card split above), not one
+// shared field that quietly flattered the lease.
 function renderCCCrossMode(car, a) {
   const modes = ['lease', 'loan', 'cash'];
   const labels = { lease: 'Lease', loan: 'Loan', cash: 'Cash' };
-  const results = modes.map(m => calcOwnershipCost(ccOwnershipInput(car, a, m)));
+  const inputs = modes.map(m => ccOwnershipInput(car, a, m));
+  const results = inputs.map(inp => calcOwnershipCost(inp));
 
   // This card always renders all three columns, but the Assumptions card
-  // only ever shows the ONE mode-specific field group matching the currently
+  // only ever shows the mode-specific field groups matching the currently
   // active mode (updateCCModeFields()) — so outside Lease mode, the Lease
-  // column's residual/marginal-rate/driver inputs are invisible on screen,
-  // and outside Cash mode, the Cash column's CAGR input is too. Found in
-  // code review: that left the Lease column looking unconditionally cheaper
-  // (via an invisible marginal tax rate) with no way for a Loan/Cash-mode
+  // column's rate/residual/driver inputs are invisible on screen, and
+  // outside Cash mode, the Cash column's CAGR input is too. Found in code
+  // review: that left the Lease column looking unconditionally cheaper (via
+  // an invisible marginal tax rate) with no way for a Loan/Cash-mode
   // visitor to see what number produced it. State the actual values used,
   // in words, every time — same instinct as the resale reveal's permanent
-  // label, applied to inputs instead of an output.
+  // label, applied to inputs instead of an output. The marginal rate is
+  // read straight off `inputs[0]` (modes[0] === 'lease') — the exact object
+  // ccOwnershipInput() already built the Lease column's calcOwnershipCost()
+  // call from above, which already carries `marginalRate` — rather than
+  // calling calcLeaseMarginalRate() a second, independent time here (code
+  // review, Phase 22, second pass: this used to recompute the same shield
+  // and was only "never a second formula" in the sense of using the same
+  // function, not in the sense of not redoing the work).
+  const profile = a.leaseProfile;
+  const marginalRate = inputs[0].marginalRate;
   set('cc-crossmode-assumptions',
-    `Lease column assumes a ${(a.residualPct * 100).toFixed(0)}% residual and a ${(a.marginalRate * 100).toFixed(1)}% marginal tax rate` +
-    `${a.hasDriver ? ', with a company driver' : ''} — editable in Lease mode. Cash's opportunity-cost forecast (below) assumes a ${a.cashCagr}% p.a. return — editable in Cash mode.`);
+    `Lease column: ${a.leaseRate}% lease rate, ${(a.residualPct * 100).toFixed(0)}% residual, a derived ${(marginalRate * 100).toFixed(1)}% marginal tax rate` +
+    `${profile.hasDriver ? ', with a company driver' : ''} (from the Company Car Lease panel's salary/regime below — edit there). ` +
+    `Loan column: ${a.loanRate}% loan rate. Cash's opportunity-cost forecast (below) assumes a ${a.cashCagr}% p.a. return — editable in Cash mode.`);
 
   const btn = el('cc-cross-reveal-btn');
   btn.textContent = ccCrossRevealOpen
@@ -6199,6 +6519,7 @@ function renderCCCrossMode(car, a) {
       <div class="car-card-title">${labels[m]}${isActive ? ' (current mode)' : ''}</div>
       <div class="car-stat"><span class="car-stat-lbl">Net Cost (before resale credit)</span><span class="car-stat-val big">${fmt(r.netCost)}</span></div>
       <div class="car-stat"><span class="car-stat-lbl">${m === 'cash' ? 'Paid in full' : 'EMI / month'}</span><span class="car-stat-val">${m === 'cash' ? '—' : fmt(r.emi)}</span></div>
+      ${m === 'lease' ? `<div class="car-stat"><span class="car-stat-lbl">Tax Saved (signed)</span><span class="car-stat-val" style="${signedColor(r.taxSaved)}">${fmt(r.taxSaved)}</span></div>` : ''}
       ${ccCrossRevealOpen ? `<div class="car-divider"></div>
       <div class="car-stat"><span class="car-stat-lbl">After resale credit</span><span class="car-stat-val accent">${fmt(r.netCostAfterResale)}</span></div>
       <div class="car-stat"><span class="car-stat-lbl">Opportunity cost of tied-up capital</span><span class="car-stat-val">${fmt(oppCost)}</span></div>` : ''}
@@ -6211,11 +6532,14 @@ function ccToggleCrossReveal() {
   renderCCOwnCurve();
 }
 
-// Self-contained (no params, matches the toggleChartCard(id, redraw) contract
-// used by w-trend-card) — recomputes rows itself so it can be the collapse
-// card's "first open" redraw callback as well as being called inline above.
-function renderCCChart() {
-  const rows = ccComputedRows();
+// Matches the toggleChartCard(id, redraw) contract used by w-trend-card —
+// `redraw()` there always calls with zero arguments, so this still needs to
+// recompute rows itself when used as that collapse card's "first open"
+// callback. Optionally takes an already-computed `rows` (renderCarCompare()
+// passes its own, avoiding a second ccComputedRows() pass per render — code
+// review, Phase 22, second pass) since that's its only other caller.
+function renderCCChart(rows) {
+  rows = rows || ccComputedRows();
   if (!rows.length) { clearChart('cc-chart'); return; }
 
   const years = rows[0].years;
