@@ -271,6 +271,74 @@ function calcOwnershipCost(o) {
   };
 }
 
+// A lease carve-out's tax shield, and the exact marginal rate that produces
+// it — R76 (Phase 22), answering D17's "the marginal rate is entered twice"
+// finding. Three call sites in index.html (the "why a lease?" glance, Compare
+// Cars' ccOwnershipInput(), and the cross-mode card) each used to run this
+// same emi→perquisite→shield→rate sequence inline; factored here into one
+// pure function, all three read it from calc.js instead of three
+// independently-maintained copies (code review, Phase 22 — the original
+// three copies were a real risk: a future fix to this formula applied to
+// only one or two of them would have silently reintroduced the exact
+// two-different-costs-for-one-lease bug this phase exists to fix).
+//
+// The marginal rate is the EXACT incremental tax rate over the specific
+// rupee band the shield removes from taxable income — (tax on full income −
+// tax on shielded income) / shield — not a flat slab-rate lookup. That's
+// what reproduces the new regime's §87A marginal-relief dip (D17) instead
+// of smoothing over it. `epfAnnual` only matters for the old regime's 80C
+// cap (mirrors calcIncomeTax's own callers elsewhere in this file); pass 0
+// for a caller with no EPF figure of its own (the glance, deliberately —
+// see its own comment in index.html for why it doesn't collect one).
+//
+// Bounded at 150% (`MAX_MARGINAL_RATE`): the old regime's ₹5,00,000
+// exemption is a hard cliff, not a smooth taper (CLAUDE.md's own note on
+// why that cliff must stay one) — if the shield happens to straddle it
+// while being very small, (tax jump)/(tiny shield) is unbounded as the
+// shield shrinks toward zero, which would print a nonsensical rate (and,
+// fed back into `calcOwnershipCost`'s `marginalRate * (emi - perq) *
+// months`, a wildly wrong net cost) for what is a real but numerically
+// unstable edge of the law, not a meaningfully different tax outcome. The
+// new regime's own legitimate peak (the §87A relief band, where the
+// marginal rate is a flat, exact 104% including cess) sits well under this
+// cap and is never touched by it.
+// Standard deduction (FY2025-26 — ₹75,000 new regime / ₹50,000 old regime)
+// and the old regime's ₹1,50,000 80C cap on EPF, applied to gross pay plus
+// any extra taxable amount (a lease carve-out's perquisite, e.g.) landing
+// before the floor at 0. Shared by calcLeaseMarginalRate() below and
+// index.html's renderCarCalc()/scenarioCalc() (code review, Phase 22 third
+// pass — these used to be two independently-maintained copies of the same
+// formula; a future Finance Act change to either figure applied to only one
+// would silently reintroduce the exact two-different-costs-for-one-lease
+// bug R76 was filed to eliminate). Statutory figures — date them, per
+// CLAUDE.md's "Statutory constants rot silently" rule.
+function calcTaxableIncome(grossAnnual, regime, epfAnnual = 0, extraIncome = 0) {
+  const stdDed = regime === 'new' ? 75000 : 50000;
+  const deduction80C = regime === 'old' ? Math.min(epfAnnual, 150000) : 0;
+  return Math.max(0, grossAnnual - stdDed - deduction80C + extraIncome);
+}
+
+const MAX_MARGINAL_RATE = 1.5;
+function calcLeaseMarginalRate(price, annualRate, residualPct, years, bigEngine, hasDriver, grossAnnual, regime, epfAnnual = 0) {
+  const residual = price * residualPct;
+  const leaseEmi = calcEMI(price, annualRate, years, residual);
+  const perq = calcPerquisite(bigEngine, hasDriver);
+  const shieldAnnual = (leaseEmi - perq) * 12; // signed — never clamped (R75)
+  const taxableFull = calcTaxableIncome(grossAnnual, regime, epfAnnual);
+  const taxableShielded = Math.max(0, taxableFull - shieldAnnual);
+  // zeroTax is the genuine "you pay no tax at this income" fact — tax on
+  // taxableFull alone, independent of the shield. `marginalRate` can't carry
+  // this: it's 0 whenever shieldAnnual happens to be exactly 0 (leaseEmi ===
+  // perq, a coincidence of price/rate/residual with nothing to do with the
+  // user's tax bracket), which a caller must not read as "pays no tax" (code
+  // review, Phase 22, second pass) — that 0/0 case gets its own message.
+  const zeroTax = calcIncomeTax(taxableFull, regime) === 0;
+  const marginalRate = shieldAnnual
+    ? Math.min((calcIncomeTax(taxableFull, regime) - calcIncomeTax(taxableShielded, regime)) / shieldAnnual, MAX_MARGINAL_RATE)
+    : 0;
+  return { leaseEmi, perq, shieldAnnual, marginalRate, zeroTax };
+}
+
 // Lumpsum growth at a flat CAGR — P*(1+cagr/100)^years. Extracted for
 // Compare Cars' cash-mode opportunity-cost reveal (B13, Phase 14/R58): what
 // the cash tied up in the car would have been worth if invested instead.
@@ -390,7 +458,7 @@ if (typeof module !== 'undefined' && module.exports) {
     calcSIP, calcStepupSIP,
     calcIncomeTax, calcPerquisite, calcCarDepreciation,
     calcRunningCost, calcInsuranceTotal, calcOwnershipCost, calcBreakevenKm,
-    calcOwnershipCurve, calcLumpsumGrowth,
+    calcOwnershipCurve, calcLumpsumGrowth, calcTaxableIncome, calcLeaseMarginalRate,
     calcNetWorthProjection,
   };
 }

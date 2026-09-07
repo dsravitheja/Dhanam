@@ -265,6 +265,18 @@ This boundary is also what keeps §3.2's scope defensible. The moment income is 
 
 ---
 
+## Strategic issue #4 — `hub-car` answers a question nobody asked (owner + potential users, 2026-09-06)
+
+Filed after the owner demoed `hub-car` to a colleague and then spoke to potential users. Three pieces of feedback, in the order they arrived: the section is too complicated; *"additive is not a common plan, mostly it is carve-out"*; and — the one that reframes everything — **what people want to see is how a lease is better than a loan.**
+
+The third is not a feature request, it is a diagnosis. `renderCarCalc()`'s three scenarios all hold the **car** constant and vary the **salary structure**: Baseline (own it), Carve-out A (CTC reduced), Additive B (car on top). That is the question *"how should my employer pay me?"*, and only someone already holding a lease policy asks it. The question people actually bring is *"my employer offers a lease — is that better than just taking a car loan like everyone else?"*, which holds the **car** constant and varies the **financing**.
+
+The app can already answer it. Phase 14's `calcOwnershipCost({mode, …})` is one engine over three capital layers, and R60's `renderCCCrossMode()` renders Lease / Loan / Cash for the same car side by side. The model is right; the *sequencing* is wrong — that answer sits four levels deep behind a shortlist a first-time visitor has not filled in yet, and it does not show the tax shield that produces the result. This is the same shape as §Strategic-1 (the front door is wrong) and D4 (the answer is buried in a wall of numbers), recurring in the one hub that has had six phases spent on it.
+
+So the corrective is not modelling work. It is: lead the hub with lease-vs-loan for one car, show the mechanism as line items rather than a total, and put the salary panel behind it for the people who want to reconcile against a payslip.
+
+*Tracked as **D17**, **D18**, **B18**, **B19** and **Phase 22** (**R74**–**R77**) in `TASK-UX-REDESIGN.md`.*
+
 ## Design-quality issues (Apple-lens + industry best practice)
 
 ### D1. Off-palette gray remnants undermine the theme — *severity: medium, effort: low*
@@ -390,6 +402,41 @@ There is a related product question underneath, deliberately *not* answered here
 
 *Tracked as **B17** and **R72** in `TASK-UX-REDESIGN.md`.*
 
+### D17. `hub-car`'s lease verdict is a tautology, and its own defaults make it moot — *severity: high (correctness/trust), effort: low*
+
+Found 2026-09-06 while reviewing the hub against the feedback in §Strategic-4.
+
+`renderCarCalc()` ranks three scenarios by effective net/mo against `baseNetPostCar`. Reduce the algebra and the two advantages are:
+
+- `aAdv` (Carve-out A) `= baselineMonthlyTax − carveOutMonthlyTax` — the tax saved, bounded above by roughly `marginalRate × carPkg`.
+- `bAdv` (Additive B) `= carPkg − (tax on the perquisite)` — very nearly the whole car package.
+
+So B beats A unless `carPkg < ~1.3 × marginalRate × carPkg`, which is never. Verified against `calc.js` across seven scenarios spanning ₹60,000–₹3,00,000 monthly fixed pay, both regimes, engine and driver flags on and off: **Additive B wins 7 of 7.** The hero is a constant with a variable printed on it.
+
+That is not an arithmetic bug — Additive B genuinely *is* better, because it means "your employer buys you a car and you keep your whole salary." It is a **comparison** bug: the three scenarios do not hold the employer's spend constant, so one branch is free money and the other two are not. A comparison one option always wins tells the reader nothing — and it is the branch most employers do not offer, which is precisely what the users reported.
+
+**Second: the panel's shipped defaults land in a zero-tax band.** At `car-basic` ₹1,00,000, `car-emi` ₹30,000, `car-fuel` ₹5,000, new regime, taxable income is ₹11.25L — under the §87A threshold — so tax is ₹0 in all three scenarios. Carve-out A therefore saves exactly ₹0 and the hero reads *"Best Option — Additive B saves you ₹35,000/mo"*, which is the car package restated. A tax calculator whose default screen shows no tax and a verdict of "a free car beats no free car" is the first impression this hub makes today.
+
+**Third: the carve-out saving is non-monotonic in income, unexplained.** ₹1.25L/mo → ₹8,125/mo saved; ₹1.5L/mo → ₹5,222/mo; ₹2.5L/mo and above → ₹9,360/mo. The dip is real and correct — it is R34's §87A marginal relief band being crossed — but nothing on screen says so, and it reads as instability to the first person who nudges the salary field.
+
+**Fourth: the hub gives two different lease answers on one page.** The tax panel takes EMI/fuel/driver as monthly figures with **no tenure, no car price and no residual**, so "saves you ₹X/mo" carries no term and never charges the end-of-lease buyout; Compare Cars' lease mode charges it as capital (`capital = emi*months + residual`). The perquisite flags and the marginal tax rate are also entered twice — slab-derived in the panel, hand-typed as `cc-marginal-rate` in Compare Cars — with nothing reconciling them.
+
+*Tracked as **R74**, **R76** and **B18** in `TASK-UX-REDESIGN.md`.*
+
+### D18. The lease-vs-loan comparison already exists, four levels deep, with its mechanism hidden — *severity: high (product), effort: low–medium*
+
+Phase 14's R60 built exactly what the users in §Strategic-4 are asking for. `renderCCCrossMode(car, a)` calls `calcOwnershipCost()` three times for the same car and renders Lease / Loan / Cash side by side, correctly holding the car, the driving pattern and the term constant. It is the best answer in the hub.
+
+To reach it, a first-time visitor must: open `hub-car`, add a car, type an on-road price, type a mileage or efficiency figure, scroll past the ranking hero and the cost-vs-value chart, and read the third card inside "Car Detail — Cost Over Time". Nothing above that point indicates the comparison exists.
+
+Three further things stop it from answering *why*, which is the actual ask:
+
+- **The tax shield is invisible.** Each column prints Net Cost and EMI only. In lease mode `taxSaved = marginalRate × (emi − perquisite) × months` is the entire reason the lease column can win, and `renderCCCrossMode()` discards it. A reader sees that lease is cheaper with no way to see what made it cheaper — exactly the mechanism they came to understand.
+- **One rate prices both financings.** `a.annualRate` comes from a single `cc-lease-rate` field, so the lease and the loan are quoted at the same interest rate. Company lease rates are typically above retail car-loan rates; one shared field silently flatters the lease.
+- **The lease's largest real-world risk is neither modelled nor stated.** A carve-out is tied to the employer: resigning mid-term usually means foreclosure or transfer, at a cost. Nothing anywhere in `hub-car` mentions it. Under this app's own *state-and-don't-model* convention (R63) that is a caveat line rather than a calculation — but today it is neither.
+
+*Tracked as **R75**, **R77** and **B19** in `TASK-UX-REDESIGN.md`.*
+
 ---
 
 ## Priority map
@@ -433,3 +480,5 @@ There is a related product question underneath, deliberately *not* answered here
 10. ~~**New (2026-08-16) — does Dhanam track expenses?**~~ **Answered 2026-08-16: no, permanently** (§3.3). If built, it is a separate app Dhanam links to, not a sixth hub.
 11. **New (2026-08-16) — does the landing hero show the absolute net worth, or only the delta?** This is the D15 privacy question and it gates the hero's design, not just its copy. See **B14**.
 12. **New (2026-08-16) — does the Worth projection keep growing EPF/PPF/NPS, FDs, cash and gold at a single equity CAGR?** See **D16** and **B17**. The lean is to state the simplification rather than model per-category rates, per R63's precedent.
+13. **New (2026-09-06) — does the "why a lease?" glance ask for salary, or take a marginal tax rate directly?** The glance cannot show a tax shield without a marginal rate. Deriving it from monthly fixed pay + regime through the existing `calcIncomeTax()` is the honest path and is the only one that can produce the §87A *"at your income a carve-out saves you nothing"* answer — which **D17** shows is the correct answer at the app's own default inputs. The cost is two more fields in the first three seconds, the exact wall Phase 14/R56 removed. See **B18**.
+14. **New (2026-09-06) — is the lease-vs-loan glance shown in all three financing modes, or only in Lease?** A visitor landing in Loan mode (the default) is precisely the person who does not know a carve-out exists. See **B19**.

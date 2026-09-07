@@ -16,7 +16,7 @@ const {
   calcSIP, calcStepupSIP,
   calcIncomeTax, calcPerquisite, calcCarDepreciation,
   calcRunningCost, calcInsuranceTotal, calcOwnershipCost, calcBreakevenKm,
-  calcOwnershipCurve, calcLumpsumGrowth,
+  calcOwnershipCurve, calcLumpsumGrowth, calcTaxableIncome, calcLeaseMarginalRate,
   calcNetWorthProjection,
 } = require('./calc.js');
 
@@ -503,6 +503,130 @@ ok('calcLumpsumGrowth: 0% CAGR returns principal unchanged',
   calcLumpsumGrowth(500000, 0, 10) === 500000, `got ${calcLumpsumGrowth(500000, 0, 10)}`);
 ok('calcLumpsumGrowth: 0 years returns principal unchanged',
   calcLumpsumGrowth(500000, 12, 0) === 500000, `got ${calcLumpsumGrowth(500000, 12, 0)}`);
+
+// =====================================================================
+// calcTaxableIncome (Phase 22, code review third pass) — the standard-
+// deduction + old-regime-80C-cap formula shared by calcLeaseMarginalRate()
+// below and index.html's renderCarCalc()/scenarioCalc(). Extracted because
+// the two were independently-maintained copies before this; pinned here so
+// a future Finance Act change applied to one can't silently drift from the
+// other.
+// =====================================================================
+{
+  ok('calcTaxableIncome: new regime applies the ₹75,000 standard deduction only, no 80C',
+    calcTaxableIncome(1200000, 'new', 200000) === 1125000, `got ${calcTaxableIncome(1200000, 'new', 200000)}`);
+  ok('calcTaxableIncome: old regime applies the ₹50,000 standard deduction plus min(EPF, ₹1.5L) 80C',
+    calcTaxableIncome(1200000, 'old', 100000) === 1050000, `got ${calcTaxableIncome(1200000, 'old', 100000)}`);
+  ok('calcTaxableIncome: old regime\'s 80C deduction is capped at ₹1.5L even with a larger EPF figure',
+    calcTaxableIncome(1200000, 'old', 500000) === calcTaxableIncome(1200000, 'old', 150000),
+    `got ${calcTaxableIncome(1200000, 'old', 500000)} vs ${calcTaxableIncome(1200000, 'old', 150000)}`);
+  ok('calcTaxableIncome: extraIncome (a lease carve-out\'s perquisite) is added before flooring at 0, matching renderCarCalc()\'s Carve-out scenario',
+    calcTaxableIncome(500000, 'new', 0, 60000) === 485000, `got ${calcTaxableIncome(500000, 'new', 0, 60000)}`);
+  ok('calcTaxableIncome: never goes negative even when deductions exceed gross',
+    calcTaxableIncome(50000, 'old', 200000) === 0, `got ${calcTaxableIncome(50000, 'old', 200000)}`);
+}
+
+// =====================================================================
+// calcLeaseMarginalRate (Phase 22, R76) — the "why a lease?" glance's, and
+// Compare Cars' lease pricing's, single shared shield/marginal-rate
+// derivation. Code-review found the three inline copies this replaced
+// disagreed on two real edge cases (old-regime 80C, an unbounded rate at
+// the old regime's ₹5L cliff) — pinned here so a future edit can't
+// reintroduce either silently.
+// =====================================================================
+{
+  // App's own shipped defaults (glance: ₹1L/mo, ₹15L car, 4yr, 10%/10%
+  // lease rate/residual, no EPF, new regime) — D17's own "zero-tax band"
+  // finding: taxable income sits under the §12L §87A threshold even after
+  // the shield, so there is no tax to shield at all.
+  const zeroTax = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 1200000, 'new', 0);
+  ok('calcLeaseMarginalRate: at this hub\'s own shipped defaults, the derived rate is exactly 0 (D17\'s zero-tax-band finding)',
+    zeroTax.marginalRate === 0, `got ${zeroTax.marginalRate}`);
+  ok('calcLeaseMarginalRate: zeroTax reads true for this genuine zero-tax-band case',
+    zeroTax.zeroTax === true, `got ${zeroTax.zeroTax}`);
+
+  // Code review, Phase 22 second pass: the 0/0 guard (shieldAnnual === 0,
+  // i.e. leaseEmi happens to exactly equal the perquisite) used to be
+  // indistinguishable from genuine zero tax, since both left marginalRate
+  // at 0 — a caller reading marginalRate === 0 as "you pay no tax" would
+  // misreport this coincidental case. Construct leaseEmi === perq exactly
+  // (0% lease rate, (price-residual)/months landing on the ₹5,000/mo
+  // perquisite) at a gross income clearly NOT in a zero-tax band.
+  const coincidentalZeroShield = calcLeaseMarginalRate(300000, 0, 0.20, 4, false, false, 2000000, 'new', 0);
+  ok('calcLeaseMarginalRate: a coincidental leaseEmi===perquisite reads marginalRate 0 but zeroTax false — not genuine zero tax',
+    coincidentalZeroShield.shieldAnnual === 0 && coincidentalZeroShield.marginalRate === 0 && coincidentalZeroShield.zeroTax === false,
+    `shieldAnnual=${coincidentalZeroShield.shieldAnnual} marginalRate=${coincidentalZeroShield.marginalRate} zeroTax=${coincidentalZeroShield.zeroTax}`);
+
+  // D17's dip: ₹1.25L/mo and ₹1.5L/mo fixed pay (same car/term/rates) land
+  // in different points of the new regime's §87A marginal-relief band, so
+  // the derived rate must move non-monotonically, not just up with income.
+  const at125L = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 1500000, 'new', 0);
+  const at150L = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 1800000, 'new', 0);
+  const at250L = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 3000000, 'new', 0);
+  ok('calcLeaseMarginalRate: reproduces the §87A dip — rate at ₹1.5L/mo fixed pay is LOWER than at both ₹1.25L/mo and ₹2.5L/mo (D17)',
+    at150L.marginalRate < at125L.marginalRate && at150L.marginalRate < at250L.marginalRate,
+    `1.25L=${at125L.marginalRate} 1.5L=${at150L.marginalRate} 2.5L=${at250L.marginalRate}`);
+
+  // Signed shield, never clamped (R75): a car cheap enough (or a lease rate
+  // high enough) that the EMI undercuts the perquisite must show a real
+  // negative shield, not a floor of 0.
+  const leaseLoses = calcLeaseMarginalRate(200000, 10, 0.10, 4, false, false, 3600000, 'new', 0);
+  ok('calcLeaseMarginalRate: shieldAnnual is signed and can be negative (EMI below perquisite) — not clamped to 0',
+    leaseLoses.shieldAnnual < 0, `got ${leaseLoses.shieldAnnual}`);
+  ok('calcLeaseMarginalRate: a negative shield still derives a real (non-negative) marginal rate, and feeding it back reproduces a negative taxSaved',
+    leaseLoses.marginalRate >= 0 &&
+    (leaseLoses.marginalRate * (leaseLoses.leaseEmi - leaseLoses.perq) * 48) < 0,
+    `marginalRate=${leaseLoses.marginalRate} leaseEmi=${leaseLoses.leaseEmi} perq=${leaseLoses.perq}`);
+
+  // Old regime's 80C cap (code review finding): the taxable-income base used
+  // here must match calcIncomeTax's own old-regime callers elsewhere in this
+  // app — i.e. gross minus standard deduction minus min(EPF, 1.5L) — not
+  // gross minus standard deduction alone. Compare a case with and without an
+  // EPF figure at the same gross/regime: the deduction must lower taxable
+  // income and therefore the derived rate (or leave it unchanged only if
+  // both landed in the same slab).
+  const oldNoEpf = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 1800000, 'old', 0);
+  const oldWithEpf = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 1800000, 'old', 150000);
+  ok('calcLeaseMarginalRate: old regime applies the min(EPF, 1.5L) 80C deduction to taxable income, same as calcIncomeTax\'s other callers',
+    oldWithEpf.marginalRate <= oldNoEpf.marginalRate,
+    `no-EPF=${oldNoEpf.marginalRate} with-EPF=${oldWithEpf.marginalRate}`);
+  ok('calcLeaseMarginalRate: an EPF figure above the 1.5L cap is capped, not applied in full',
+    calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 1800000, 'old', 500000).marginalRate === oldWithEpf.marginalRate,
+    `capped=${calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 1800000, 'old', 500000).marginalRate} at-cap=${oldWithEpf.marginalRate}`);
+
+  // The old regime's ₹5L rebate is a hard cliff, not a smooth taper
+  // (CLAUDE.md/tests.js both already pin this for calcIncomeTax itself) — a
+  // shield straddling it can make (tax jump)/(shield) unboundedly large as
+  // the shield shrinks. Construct exactly that: gross placed so taxableFull
+  // sits just above ₹5,00,000 and the shield is small enough to pull
+  // taxableShielded to just below it.
+  const cliffStraddle = calcLeaseMarginalRate(220000, 10, 0.10, 4, false, false, 551000, 'old', 0);
+  ok('calcLeaseMarginalRate: bounded at MAX_MARGINAL_RATE (150%) even when the shield straddles the old regime\'s ₹5L cliff (uncapped would be ~537%)',
+    approxEqual(cliffStraddle.marginalRate, 1.5, 1e-9), `got ${cliffStraddle.marginalRate}`);
+
+  // The new regime's own legitimate peak (the §87A relief band is a flat,
+  // exact 104% including cess) must never be touched by that same cap.
+  const reliefBandRate = calcLeaseMarginalRate(200000, 10, 0.10, 4, false, false, 1300000, 'new', 0);
+  ok('calcLeaseMarginalRate: the new regime\'s legitimate ~104% relief-band rate is untouched by the 150% cap',
+    approxEqual(reliefBandRate.marginalRate, 1.04, 0.01), `got ${reliefBandRate.marginalRate}`);
+
+  // Feeding this function's outputs into calcOwnershipCost's lease branch
+  // must reproduce its own taxSaved exactly — this is the whole point of
+  // sharing one function (R76's acceptance: the glance and Compare Cars
+  // "cannot legitimately differ").
+  const shared = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 1800000, 'new', 0);
+  const viaOwnershipCost = calcOwnershipCost({
+    mode: 'lease', price: 1500000, annualRate: 10, residualPct: 0.10, years: 4,
+    bigEngine: false, hasDriver: false, marginalRate: shared.marginalRate,
+    type: 'ICE', efficiency: 0, cityKm: 0, hwyKm: 0, petrolPrice: 0, iceHwyMult: 1,
+    homeRate: 0, publicRate: 0, evHwyMult: 1, maintAnnual: 0, insRate: 0, depRate: 0,
+  });
+  ok('calcLeaseMarginalRate: feeding its marginalRate into calcOwnershipCost reproduces its own leaseEmi',
+    viaOwnershipCost.emi === shared.leaseEmi, `${viaOwnershipCost.emi} vs ${shared.leaseEmi}`);
+  ok('calcLeaseMarginalRate: feeding its marginalRate into calcOwnershipCost reproduces the exact tax delta (marginalRate * shieldAnnual * years)',
+    approxEqual(viaOwnershipCost.taxSaved, shared.marginalRate * shared.shieldAnnual * 4, 0.01),
+    `taxSaved=${viaOwnershipCost.taxSaved} expected=${shared.marginalRate * shared.shieldAnnual * 4}`);
+}
 
 // =====================================================================
 // calcOwnershipCurve (Phase 13, R49) — the cost-vs-value chart's engine.
