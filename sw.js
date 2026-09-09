@@ -1,4 +1,4 @@
-const CACHE = 'apt-cost-v26';
+const CACHE = 'apt-cost-v27';
 // R29, Phase 4b: a cache write must never surface as an error — the response
 // has already been returned to the page by the time this runs, so a rejected
 // cache.put would otherwise become an unhandled promise rejection in the SW
@@ -36,17 +36,27 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   const isHTML = req.mode === 'navigate' ||
     (req.headers.get('accept') || '').includes('text/html');
+  // calc.js is shell code, not a static asset: index.html's inline <script>
+  // is version-locked to calc.js's current API. A fresh (network-first) HTML
+  // shell served against a stale (cache-first) calc.js breaks the app
+  // outright — that skew is exactly how "Can't find variable:
+  // calcLeaseMarginalRate" reached users right after the Phase 22 deploy
+  // (bumping CACHE doesn't help: the old SW serves the stale calc.js before
+  // the new SW ever activates). So calc.js gets the same network-first
+  // treatment as the HTML shell, and the two can never skew across a deploy.
+  const isCalcJs = new URL(req.url).pathname.replace(/\/+$/, '').endsWith('/calc.js');
 
-  if (isHTML) {
+  if (isHTML || isCalcJs) {
     // Network-first for the app shell so deploys appear immediately,
     // falling back to cache when offline.
+    const key = isHTML ? './index.html' : './calc.js';
     e.respondWith(
       fetch(req)
         .then(res => {
-          safePut('./index.html', res.clone());
+          safePut(key, res.clone());
           return res;
         })
-        .catch(() => caches.match('./index.html'))
+        .catch(() => caches.match(key))
     );
   } else {
     // Cache-first for static assets (manifest, fonts, etc.); a miss is
