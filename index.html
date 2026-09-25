@@ -4742,7 +4742,7 @@ function renderWorthProjection(anyInput, assets, liabs, aVals) {
   const propertyVal = anyInput ? (aVals.property || 0) : 0;
   const investable = anyInput ? Math.max(0, assets - propertyVal) : 500000;
   const projLiabs = anyInput ? liabs : 0;
-  const monthlySip = anyInput ? sipTyped : (sipTyped || 10000);
+  const monthlySip = anyInput || el('w-proj-sip').value !== '' ? sipTyped : 10000;
 
   // R65: this formula now lives in calc.js as calcNetWorthProjection() so the
   // reverse Worth bridge in renderAdvLoan() (see worthSnapshot()) calls the
