@@ -2426,13 +2426,13 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
      saved balance sheet forward, so Worth is the app's anchor rather than a
      seventh calculator. -->
 <div class="panel-card" id="w-proj-card" style="display:none;">
-  <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-scope"></use></svg></span><span class="pch-title">Projected Net Worth</span></div>
+  <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-scope"></use></svg></span><span class="pch-title" id="w-proj-title">Projected Net Worth</span></div>
   <div class="panel-card-body">
     <p class="note-text" style="margin-bottom:12px;">Assumes your investments (all assets except property) grow at the rate below with your monthly savings added in, debts amortize at the rate/years below, and property value stays flat. A projection, not a promise.</p>
     <div class="grid-2">
       <div class="field">
         <label>Monthly savings / SIP added (₹)</label>
-        <input type="number" id="w-proj-sip" min="0" step="1000" placeholder="0" oninput="renderWorth()">
+        <input type="number" id="w-proj-sip" min="0" step="1000" placeholder="10000" oninput="renderWorth()">
       </div>
       <div class="field">
         <label>Expected investment growth (% p.a.)<span class="term-info"><button type="button" class="term-info-btn" id="ti-cagr-worth-btn" aria-expanded="false" aria-controls="ti-cagr-worth" aria-label="What is CAGR?" onclick="toggleTermInfo('ti-cagr-worth')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-cagr-worth" role="note" hidden>Compound Annual Growth Rate — the average yearly return assumed for this projection. A guess about the future, not a guarantee: real markets don't return the same percentage every year, and past averages don't promise future ones.</span></span></label>
@@ -4782,31 +4782,38 @@ function renderWorth() {
 // snapshot. Property is deliberately held flat — assuming an appreciation
 // rate is a tier-2-style guess this hub has no basis to make on its own.
 function renderWorthProjection(anyInput, assets, liabs, aVals) {
-  if (!anyInput) { hide('w-proj-card'); return null; }
   show('w-proj-card');
 
-  const monthlySip = v('w-proj-sip');
+  const sipTyped = v('w-proj-sip');
   const cagr = parseFloat(el('w-proj-cagr').value) || 0;
   const debtRate = parseFloat(el('w-proj-debt-rate').value) || 0;
   const debtYears = Math.max(1, parseInt(el('w-proj-debt-years').value) || 1);
-  const propertyVal = aVals.property || 0;
-  const investable = Math.max(0, assets - propertyVal);
+
+  // With no balance sheet yet, project a worked example instead of hiding the
+  // card — illustrative numbers only, never mixed with the user's own and
+  // never persisted (the caller's save block is gated on anyInput, not on
+  // this function's return value).
+  const propertyVal = anyInput ? (aVals.property || 0) : 0;
+  const investable = anyInput ? Math.max(0, assets - propertyVal) : 500000;
+  const projLiabs = anyInput ? liabs : 0;
+  const monthlySip = anyInput ? sipTyped : (sipTyped || 10000);
 
   // R65: this formula now lives in calc.js as calcNetWorthProjection() so the
   // reverse Worth bridge in renderAdvLoan() (see worthSnapshot()) calls the
   // identical function instead of a second, hand-copied model — the two can
   // never disagree by construction. Bit-identical to the pre-R65 inline body.
-  const projectedNet = years => calcNetWorthProjection(investable, propertyVal, liabs, cagr, debtRate, debtYears, monthlySip, years);
+  const projectedNet = years => calcNetWorthProjection(investable, propertyVal, projLiabs, cagr, debtRate, debtYears, monthlySip, years);
   const signed = n => (n < 0 ? '−' + inCr(Math.abs(n)) : inCr(n));
 
-  // Clearing `liabs` over `debtYears` implies this EMI. It comes out of income
-  // the balance sheet doesn't model, and it is *on top of* the monthly savings
-  // above — so state it instead of letting the projection assume it silently.
+  // Clearing `projLiabs` over `debtYears` implies this EMI. It comes out of
+  // income the balance sheet doesn't model, and it is *on top of* the monthly
+  // savings above — so state it instead of letting the projection assume it
+  // silently. Never applies in the illustrative example (no debt in it).
   const noteEl = el('w-proj-debt-note');
-  if (liabs > 0) {
-    const impliedEmi = calcEMI(liabs, debtRate, debtYears);
+  if (projLiabs > 0) {
+    const impliedEmi = calcEMI(projLiabs, debtRate, debtYears);
     noteEl.style.display = '';
-    noteEl.innerHTML = `Clearing <span class="w-amt">${inCr(liabs)}</span> of debt in ${debtYears} year${debtYears === 1 ? '' : 's'} assumes about ` +
+    noteEl.innerHTML = `Clearing <span class="w-amt">${inCr(projLiabs)}</span> of debt in ${debtYears} year${debtYears === 1 ? '' : 's'} assumes about ` +
       `<strong class="w-amt">${fmt(impliedEmi)}/mo</strong> of repayments` +
       (monthlySip ? `, on top of the <span class="w-amt">${fmt(monthlySip)}/mo</span> you're saving` : '') +
       ` — paid from income, which this balance sheet doesn't track.`;
@@ -4819,7 +4826,14 @@ function renderWorthProjection(anyInput, assets, liabs, aVals) {
   set('w-proj-hero-yrs', heroYears);
   set('w-proj-hero-val', signed(heroNet));
   el('w-proj-hero-val').classList.toggle('negative', heroNet < 0);
-  set('w-proj-hero-sub', `vs. ${signed(assets - liabs)} today`);
+
+  if (anyInput) {
+    set('w-proj-title', 'Projected Net Worth');
+    set('w-proj-hero-sub', `vs. ${signed(assets - liabs)} today`);
+  } else {
+    set('w-proj-title', 'Projected Net Worth — example');
+    set('w-proj-hero-sub', `Example: ₹5L invested + ${fmt(monthlySip)}/mo. Add your balances above to make this yours.`);
+  }
 
   el('w-proj-grid').innerHTML = [5, 10, 20].map(y => {
     const net = projectedNet(y);
@@ -4828,6 +4842,8 @@ function renderWorthProjection(anyInput, assets, liabs, aVals) {
       <div class="loan-stat"><span class="ls-lbl">Projected Net Worth</span><span class="ls-val big w-amt${net < 0 ? ' red' : ''}">${signed(net)}</span></div>
     </div>`;
   }).join('');
+
+  if (!anyInput) return null;   // illustrative — nothing about it persists
 
   // Tier split: the monthly figure and "years to debt-free" are facts about
   // the user, always kept. The two rates are tier-2-style assumptions, so —
