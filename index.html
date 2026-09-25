@@ -916,10 +916,9 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="main">
 
 <div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg> Welcome to Dhanam</div>
-<p class="landing-intro">What do you want to do? Everything updates live as you type. Nothing is ever sent anywhere — anything you choose to save stays on this device.</p>
 
 <div class="landing-orientation" id="landing-orientation">
-  <span class="landing-orientation-text">First time here? Pick a goal below, type in your numbers, and watch everything recalculate live.</span>
+  <span class="landing-orientation-text">Pick a tool below — everything updates live as you type, and nothing you enter leaves this device.</span>
   <button type="button" class="landing-orientation-close" id="landing-orientation-close" aria-label="Dismiss" onclick="dismissOrientationLine()">✕</button>
 </div>
 
@@ -958,31 +957,13 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-home"></use></svg></span>
     <span class="tile-title">Plan a Home Purchase</span>
     <span class="tile-tool">Dhanam Home</span>
-    <span class="tile-desc">Property cost breakdown, stamp duty, registration & GST estimator.</span>
-  </button>
-  <button class="tile" onclick="openLoanCalc()">
-    <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bank"></use></svg></span>
-    <span class="tile-title">Finance My Home</span>
-    <span class="tile-tool">Dhanam Home · Loan Analysis</span>
-    <span class="tile-desc">EMI scenarios, prepayment projections & Buy-vs-SIP comparison.</span>
-  </button>
-  <button class="tile" onclick="openDisbCalc()">
-    <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span>
-    <span class="tile-title">Buying Under Construction?</span>
-    <span class="tile-tool">Dhanam Home · Pre-EMI Calculator</span>
-    <span class="tile-desc">Pre-EMI interest across a staged disbursement schedule.</span>
+    <span class="tile-desc">Property cost, home loan & prepayment, and pre-EMI for under-construction homes.</span>
   </button>
   <button class="tile" onclick="switchHub('car')">
     <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg></span>
     <span class="tile-title">Work Out My Next Car</span>
     <span class="tile-tool">Dhanam Car</span>
-    <span class="tile-desc">Compare cars, and loan, lease or cash — whichever way you're paying.</span>
-  </button>
-  <button class="tile" onclick="openPrepayCalc()">
-    <span class="tile-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-rocket"></use></svg></span>
-    <span class="tile-title">Should I Prepay My Loan?</span>
-    <span class="tile-tool">Dhanam Home · Loan Analysis</span>
-    <span class="tile-desc">Extra-payment projections, and what a SIP would earn instead.</span>
+    <span class="tile-desc">Car loan or company lease, and which car costs less to own.</span>
   </button>
 </div>
 
@@ -1142,16 +1123,18 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
         <div class="cf-row cf-disabled" id="cfrow-east">
           <input type="checkbox" class="cf-chk" id="d-incl-east" onchange="updateCfRow('east')">
-          <label class="cf-label" for="d-incl-east">East Facing Premium (₹100/sft)</label>
+          <label class="cf-label" for="d-incl-east">East Facing Premium</label>
           <div class="cf-inputs">
+            <span class="cf-unit">₹/sft</span><input type="number" class="cf-input w80" id="d-east-rate" value="100" min="0" oninput="calcDetail()">
             <span class="cf-calc" id="dc-east">—</span>
           </div>
         </div>
 
         <div class="cf-row cf-disabled" id="cfrow-corner">
           <input type="checkbox" class="cf-chk" id="d-incl-corner" onchange="updateCfRow('corner')">
-          <label class="cf-label" for="d-incl-corner">Corner Facing Premium (₹100/sft)</label>
+          <label class="cf-label" for="d-incl-corner">Corner Facing Premium</label>
           <div class="cf-inputs">
+            <span class="cf-unit">₹/sft</span><input type="number" class="cf-input w80" id="d-corner-rate" value="100" min="0" oninput="calcDetail()">
             <span class="cf-calc" id="dc-corner">—</span>
           </div>
         </div>
@@ -3447,10 +3430,12 @@ function calcDetail() {
   const parkingAmt = inclParking ? v('d-parking') : 0;
 
   const inclEast = chk('d-incl-east');
-  const eastAmt = inclEast ? sqft * 100 : 0;
+  const eastRate = inclEast ? v('d-east-rate') : 0;
+  const eastAmt = inclEast ? sqft * eastRate : 0;
 
   const inclCorner = chk('d-incl-corner');
-  const cornerAmt = inclCorner ? sqft * 100 : 0;
+  const cornerRate = inclCorner ? v('d-corner-rate') : 0;
+  const cornerAmt = inclCorner ? sqft * cornerRate : 0;
 
   // Sale value for GST & Reg
   const saleValue = baseAmt + floorRiseAmt + parkingAmt + eastAmt + cornerAmt;
@@ -3505,7 +3490,7 @@ function calcDetail() {
 
   DD = {
     sqft, rate, baseAmt, inclFloor, floor, floorrise, floorsAbove5, floorRiseAmt,
-    inclParking, parkingAmt, eastAmt, cornerAmt, inclEast, inclCorner,
+    inclParking, parkingAmt, eastRate, eastAmt, cornerRate, cornerAmt, inclEast, inclCorner,
     saleValue, uc, gstPct, gstAmt, stampPct, regPct, stampAmt, regFeeAmt, regTotal,
     inclAmenities, amenitiesAmt, inclCorpus, corpusAmt, inclInfra, infraAmt,
     inclMaint, maintRate, maintMonths, maintGstPct, maintBase, maintGst, maintTotal,
@@ -3549,8 +3534,8 @@ function renderDetail() {
   let baseHtml = brRow('Base Price', `${d.sqft} × ₹${d.rate}`, fmt(d.baseAmt));
   if (d.inclFloor && d.floorsAbove5 > 0) baseHtml += brRow('Floor Rise Charges', `${d.sqft} × ₹${d.floorrise} × ${d.floorsAbove5} fl`, fmt(d.floorRiseAmt));
   if (d.inclParking) baseHtml += brRow('Car Parking (2 slots)', '', fmt(d.parkingAmt));
-  if (d.inclEast) baseHtml += brRow('East Facing Premium', `${d.sqft} × ₹100`, fmt(d.eastAmt));
-  if (d.inclCorner) baseHtml += brRow('Corner Facing Premium', `${d.sqft} × ₹100`, fmt(d.cornerAmt));
+  if (d.inclEast) baseHtml += brRow('East Facing Premium', `${d.sqft} × ₹${d.eastRate}`, fmt(d.eastAmt));
+  if (d.inclCorner) baseHtml += brRow('Corner Facing Premium', `${d.sqft} × ₹${d.cornerRate}`, fmt(d.cornerAmt));
   baseHtml += brRowTotal('Sale Value (GST & Reg basis)', fmt(d.saleValue));
   el('d-body-base').innerHTML = baseHtml;
 
@@ -4126,8 +4111,8 @@ function buildDetailRows() {
   rows.push(['Base Price', `${d.sqft} × ₹${d.rate}`, d.baseAmt, '']);
   if (d.floorsAbove5 > 0) rows.push(['Floor Rise Charges', `${d.sqft} × ₹${d.floorrise} × ${d.floorsAbove5} fl`, d.floorRiseAmt, '']);
   if (d.inclParking) rows.push(['Car Parking (2 slots)', 'Fixed', d.parkingAmt, '']);
-  if (d.inclEast) rows.push(['East Facing Premium', `${d.sqft} × ₹100`, d.eastAmt, '']);
-  if (d.inclCorner) rows.push(['Corner Facing Premium', `${d.sqft} × ₹100`, d.cornerAmt, '']);
+  if (d.inclEast) rows.push(['East Facing Premium', `${d.sqft} × ₹${d.eastRate}`, d.eastAmt, '']);
+  if (d.inclCorner) rows.push(['Corner Facing Premium', `${d.sqft} × ₹${d.cornerRate}`, d.cornerAmt, '']);
   rows.push(['SALE VALUE (GST & Reg basis)', 'Sum above', d.saleValue, '']);
   rows.push(B());
 
@@ -4368,6 +4353,8 @@ function resetAll() {
   el('d-stamp').value = 4;
   el('d-regfee').value = 0.5;
   el('d-gst').value = 5;
+  el('d-east-rate').value = 100;
+  el('d-corner-rate').value = 100;
   ['floor','parking','east','corner','amenities','corpus','infra','maint','legal'].forEach(k => {
     const row = el(`cfrow-${k}`);
     const checked = el(`d-incl-${k}`).checked;
@@ -4428,47 +4415,6 @@ function switchHub(tab) {
   // back never leaves stale visibility from before.
   if (tab === 'car') { setCarMode(carMode); }
   if (tab === 'worth') renderWorth();
-}
-
-function openLoanCalc() {
-  switchHub('apartment');
-  if (!el('section-loan').classList.contains('open')) {
-    toggleSection('loan');
-  } else {
-    renderLoans();
-  }
-  el('section-loan').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-// R24/6d — deep-link straight to the one externally-validated use case
-// (prepayment planning), not just the loan panel it lives inside. Modeled
-// on openLoanCalc()/openDisbCalc(): routes through the same toggleSection()
-// call so it inherits R14's accordion + "second click doesn't collapse"
-// behaviour, no second code path. adv-section is a nested collapse-card
-// deliberately OUTSIDE that accordion (see CLAUDE.md) — opening it here
-// must not, and does not, touch sip-section or any other nested card the
-// user might already have open.
-function openPrepayCalc() {
-  switchHub('apartment');
-  if (!el('section-loan').classList.contains('open')) {
-    toggleSection('loan');
-  } else {
-    renderLoans();
-  }
-  if (!el('adv-section').classList.contains('open')) {
-    toggleAdv();
-  }
-  el('adv-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function openDisbCalc() {
-  switchHub('apartment');
-  if (!el('section-disb').classList.contains('open')) {
-    toggleSection('disb');
-  } else {
-    renderLoanDisb();
-  }
-  el('section-disb').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // =====================================================================
