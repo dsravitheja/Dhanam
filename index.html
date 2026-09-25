@@ -1832,7 +1832,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <div class="chart-caption" id="cc-owncurve-caption"></div>
         <p class="note-text" id="cc-owncurve-note" style="margin-top:6px;"></p>
         <div class="car-stat" style="margin-top:10px;">
-          <span class="car-stat-lbl">Resale (forecast, not part of the ranking above)</span>
+          <span class="car-stat-lbl" id="cc-owncurve-resale-lbl">Est. resale value (IRDAI schedule)</span>
           <span class="car-stat-val accent" id="cc-owncurve-resale">—</span>
         </div>
       </div>
@@ -2504,7 +2504,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 // cached shell without knowing it). Bump this BY HAND alongside sw.js's CACHE
 // version whenever a user-visible change ships — the two are not derived from
 // one another, so both need editing.
-const BUILD_STAMP = '2026-09-09';
+const BUILD_STAMP = '2026-09-25';
 
 // =====================================================================
 // UTILITIES
@@ -2535,6 +2535,8 @@ function hide(id) { const e = el(id); if(e) e.style.display = 'none'; }
 // neutral at exactly 0 (palette rules 3/4). Shared by the "why a lease?"
 // glance and Compare Cars' cross-mode Tax Saved lines (code review, Phase 22
 // third pass — this ternary was duplicated verbatim in both).
+// Explicit +/− sign (fmt() alone renders a negative as "₹-1,234").
+function fmtSigned(n) { return (n < 0 ? '−' : '+') + fmt(Math.abs(n)); }
 function signedColor(n) { return n < 0 ? 'color:var(--red)' : (n > 0 ? 'color:var(--green)' : ''); }
 
 function showToast(msg) {
@@ -5350,8 +5352,8 @@ function renderLeaseGlance() {
 
   const emiDiff = (loanResult.emi - leaseResult.emi) * years * 12;
   el('lg-lines').innerHTML = `
-    <div class="car-stat"><span class="car-stat-lbl">EMI difference over ${years} yrs</span><span class="car-stat-val" style="${signedColor(emiDiff)}">${emiDiff >= 0 ? '+' : ''}${fmt(emiDiff)}</span></div>
-    <div class="car-stat"><span class="car-stat-lbl">Tax saved</span><span class="car-stat-val" style="${signedColor(leaseResult.taxSaved)}">${leaseResult.taxSaved >= 0 ? '+' : ''}${fmt(leaseResult.taxSaved)}</span></div>
+    <div class="car-stat"><span class="car-stat-lbl">EMI difference over ${years} yrs</span><span class="car-stat-val" style="${signedColor(emiDiff)}">${fmtSigned(emiDiff)}</span></div>
+    <div class="car-stat"><span class="car-stat-lbl">Tax saved</span><span class="car-stat-val" style="${signedColor(leaseResult.taxSaved)}">${fmtSigned(leaseResult.taxSaved)}</span></div>
     <div class="car-stat"><span class="car-stat-lbl">Residual buyout</span><span class="car-stat-val" style="${signedColor(-leaseResult.residual)}">−${fmt(leaseResult.residual)}</span></div>`;
 
   set('lg-terms-used', `${years}-year term · ${leaseRate}% lease · ${loanRate}% loan · ${(residualPct * 100).toFixed(0)}% residual — edit under Explore further below.`);
@@ -5700,7 +5702,7 @@ function renderCarCompare() {
       <div class="cc-rank-type">${r.car.type === 'EV' ? 'Electric' : 'Petrol / Diesel'}${r.car.type === 'ICE' && r.car.bigEngine ? ' · >1600cc' : ''} · ${fmt(r.car.price)} on-road</div>
       <div class="car-stat"><span class="car-stat-lbl">Net Cost over ${r.years} yrs</span><span class="car-stat-val big">${fmt(r.result.netCost)}</span></div>
       <div class="car-stat"><span class="car-stat-lbl">EMI / month</span><span class="car-stat-val">${fmt(r.result.emi)}</span></div>
-      ${mode === 'lease' ? `<div class="car-stat"><span class="car-stat-lbl">Tax Saved (signed)</span><span class="car-stat-val" style="${signedColor(r.result.taxSaved)}">${fmt(r.result.taxSaved)}</span></div>` : ''}
+      ${mode === 'lease' ? `<div class="car-stat"><span class="car-stat-lbl">Tax Saved (signed)</span><span class="car-stat-val" style="${signedColor(r.result.taxSaved)}">${fmtSigned(r.result.taxSaved)}</span></div>` : ''}
       <div class="car-stat"><span class="car-stat-lbl">Cost / km</span><span class="car-stat-val">₹${r.result.costPerKm.toFixed(2)}</span></div>
       ${!isRank1 ? `<div class="car-stat"><span class="car-stat-lbl">vs. cheapest</span><span class="car-stat-val red">+${fmt(vsCheapest)}</span></div>` : ''}
     </div>`;
@@ -5789,7 +5791,8 @@ function renderCCOwnCurve(rows) {
     set('cc-owncurve-note', `A ${N}-year term is a single point — nothing to plot a crossing against.`);
   }
 
-  set('cc-owncurve-resale', `Est. resale value at year ${N} (IRDAI schedule): ${fmt(row.result.resaleValue)}`);
+  set('cc-owncurve-resale-lbl', `Est. resale value at year ${N} (IRDAI schedule) — not part of the ranking`);
+  set('cc-owncurve-resale', fmt(row.result.resaleValue));
 
   renderCCCrossMode(row.car, a);
 }
@@ -5818,7 +5821,7 @@ function renderCCCrossMode(car, a) {
       <div class="car-card-title">${labels[m]}${isActive ? ' (current)' : ''}</div>
       <div class="car-stat"><span class="car-stat-lbl">Net Cost</span><span class="car-stat-val big">${fmt(r.netCost)}</span></div>
       <div class="car-stat"><span class="car-stat-lbl">EMI / month</span><span class="car-stat-val">${fmt(r.emi)}</span></div>
-      ${m === 'lease' ? `<div class="car-stat"><span class="car-stat-lbl">Tax Saved (signed)</span><span class="car-stat-val" style="${signedColor(r.taxSaved)}">${fmt(r.taxSaved)}</span></div>` : ''}
+      ${m === 'lease' ? `<div class="car-stat"><span class="car-stat-lbl">Tax Saved (signed)</span><span class="car-stat-val" style="${signedColor(r.taxSaved)}">${fmtSigned(r.taxSaved)}</span></div>` : ''}
     </div>`;
   }).join('');
 }
