@@ -94,6 +94,14 @@ stated principle.
 - **B18 — the tax shield is derived from `lg-basic` + `lg-regime`, not a hand-typed rate.** Only the derived path produces the honest "at this income you pay no tax, so a carve-out saves nothing" answer. `lg-basic`/`lg-regime` are a small, accepted duplication of `car-basic`/`car-regime` (same shape as B15/B16) — the glance must render before Lease mode is ever opened. Everything else (term, rates, residual, engine/driver flags) is genuinely shared, read live.
 - **R75 — three states in the shield copy**, not just a number: zero-tax, negative shield (taxing more than saving), and the normal case. Persists nothing.
 
+### Dhanam Car simplification (S1–S9, 2026-09-25)
+
+- **Split into two tools: "Car loan or company lease?" (Tool A, was the glance) and "Which car costs less to own?" (Tool B, was Compare Cars).** Cash mode removed from the UI (`calcOwnershipCost({mode:'cash'})` stays in `calc.js`, still tested) — its only distinct output was the opportunity-cost reveal, deleted below. Mode is now a single `<select id="cc-mode">` inside Tool B, Loan default.
+- **Reveals, the tenure grid, the depreciation table/chart, the net-cost-vs-km crossover chart, and per-card nested collapses are all deleted**, not demoted — resale is now a plain always-shown line; the lease-vs-loan comparison lost its Cash column and moved into one "Explore further ▾" (the section's only collapse control).
+- **Running-cost assumptions (highway multipliers, maintenance, insurance, IDV depreciation, public charging) are frozen into `CAR_RUNNING_DEFAULTS`** (`calc.js`), dated on the About page — Tool B's Assumptions card dropped from 17 fields to 7. `splitAnnualKm()`/`evEfficiencyFromRange()` (`calc.js`) replace the old city/highway-km pair and EV kWh/100km field.
+- **Tool B derives lease pay from Tool A** (`lg-basic`/`lg-regime`) **until the payslip panel is opened once** — a one-way prefill copies both fields at that first open; afterwards they're independent, same shape as the pre-existing `lg-*`/`car-*` duplication.
+- **Tool B's two example cars never persist until the user actually edits something** (`ccDirty` gate) — a fresh, look-only visit writes nothing to `dhanam.v1`.
+
 ## Charts
 
 - **R11 (Phase 3b) — the `ResizeObserver` in `renderChart()` is the only redraw mechanism.** No per-caller `redraw()`, no manual resize listeners. Observer keyed by DOM node (survives `innerHTML` rebuilds of the parent). ⚠ don't remove the node-identity check as a "simplification".

@@ -173,6 +173,38 @@ function calcCarDepreciation(price, years) {
 }
 
 // ── DHANAM CAR — COMPARE CARS (Phase 9) ────────────────────────────
+// Running-cost constants, frozen out of the old editable Assumptions card
+// (as of 2026-09-25; moved from the editable Assumptions card, values
+// unchanged) — the simplified Compare Cars only exposes petrol price, home
+// charging rate, and annual km as user-editable running-cost inputs; the
+// rest reload from here every render, never persisted (CLAUDE.md's tier-2
+// rule). Dated on the About page provenance list.
+const CAR_RUNNING_DEFAULTS = Object.freeze({
+  cityShare: 2 / 3,   // of annual km driven in the city (the old 8,000 : 4,000 default split)
+  iceHwyMult: 1.35, evHwyMult: 1.15,
+  publicRate: 20,     // ₹/unit public fast charging, as of Aug 2026
+  iceMaint: 9000, evMaint: 4500,
+  iceIns: 0.030, evIns: 0.038,
+  depRate: 0.15,
+});
+
+// Splits one annual-km figure into city/highway shares at CAR_RUNNING_DEFAULTS'
+// fixed 2:1 ratio. Non-finite or negative input degrades to zeros rather than
+// NaN/negative km reaching calcRunningCost.
+function splitAnnualKm(annualKm) {
+  const km = Number.isFinite(annualKm) && annualKm > 0 ? annualKm : 0;
+  const cityKm = km * CAR_RUNNING_DEFAULTS.cityShare;
+  return { cityKm, hwyKm: km - cityKm };
+}
+
+// EV efficiency in kWh/100km, derived from a claimed range and battery size —
+// the two figures on an EV's spec sheet, rather than asking for kWh/100km
+// directly. 0 unless both inputs are genuinely positive (never NaN/Infinity).
+function evEfficiencyFromRange(rangeKm, batteryKwh) {
+  if (!(rangeKm > 0) || !(batteryKwh > 0)) return 0;
+  return 100 * batteryKwh / rangeKm;
+}
+
 // Fuel/energy running cost, annualized. City and highway km are modeled
 // separately because ICE mileage improves on the highway while EV
 // efficiency worsens on it (aero drag dominates at speed). `type` is
@@ -319,6 +351,11 @@ function calcTaxableIncome(grossAnnual, regime, epfAnnual = 0, extraIncome = 0) 
 }
 
 const MAX_MARGINAL_RATE = 1.5;
+// New regime's §87A marginal-relief ceiling — the point where slab tax falls
+// back below (taxable − 12L), so relief stops binding. Same value calcIncomeTax's
+// own comment derives (60000/0.85 above ₹12L). Shared here so rebateBoost below
+// and a future caller can't hand-copy a slightly different constant.
+const RELIEF_CEILING = 1200000 + 60000 / 0.85; // ≈ 12,70,588.24
 function calcLeaseMarginalRate(price, annualRate, residualPct, years, bigEngine, hasDriver, grossAnnual, regime, epfAnnual = 0) {
   const residual = price * residualPct;
   const leaseEmi = calcEMI(price, annualRate, years, residual);
@@ -336,7 +373,12 @@ function calcLeaseMarginalRate(price, annualRate, residualPct, years, bigEngine,
   const marginalRate = shieldAnnual
     ? Math.min((calcIncomeTax(taxableFull, regime) - calcIncomeTax(taxableShielded, regime)) / shieldAnnual, MAX_MARGINAL_RATE)
     : 0;
-  return { leaseEmi, perq, shieldAnnual, marginalRate, zeroTax };
+  // The lease's shield can pull taxable income down into the §87A relief
+  // band — that boosts the saving, not shrinks it (it tapers off again just
+  // above the ceiling). Additive on the return value, not a replacement for
+  // marginalRate: a caller states this as its own sentence, only when true.
+  const rebateBoost = regime === 'new' && taxableFull > 1200000 && taxableShielded <= RELIEF_CEILING;
+  return { leaseEmi, perq, shieldAnnual, marginalRate, zeroTax, rebateBoost };
 }
 
 // Lumpsum growth at a flat CAGR — P*(1+cagr/100)^years. Extracted for
@@ -459,6 +501,6 @@ if (typeof module !== 'undefined' && module.exports) {
     calcIncomeTax, calcPerquisite, calcCarDepreciation,
     calcRunningCost, calcInsuranceTotal, calcOwnershipCost, calcBreakevenKm,
     calcOwnershipCurve, calcLumpsumGrowth, calcTaxableIncome, calcLeaseMarginalRate,
-    calcNetWorthProjection,
+    calcNetWorthProjection, CAR_RUNNING_DEFAULTS, splitAnnualKm, evEfficiencyFromRange,
   };
 }

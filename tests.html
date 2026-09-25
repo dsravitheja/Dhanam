@@ -158,6 +158,41 @@ ok('calcCarDepreciation: year 2 is exactly 80%*85% of price', approxEqual(calcCa
 ok('calcCarDepreciation: monotonically decreasing in years', calcCarDepreciation(1000000, 1) > calcCarDepreciation(1000000, 3) && calcCarDepreciation(1000000, 3) > calcCarDepreciation(1000000, 5));
 ok('calcCarDepreciation: zero price -> zero resale', calcCarDepreciation(0, 5) === 0);
 
+// CAR_RUNNING_DEFAULTS / splitAnnualKm / evEfficiencyFromRange (S8, 2026-09-25)
+{
+  ok('CAR_RUNNING_DEFAULTS: pins the frozen constants',
+    CAR_RUNNING_DEFAULTS.cityShare === 2 / 3 &&
+    CAR_RUNNING_DEFAULTS.iceHwyMult === 1.35 && CAR_RUNNING_DEFAULTS.evHwyMult === 1.15 &&
+    CAR_RUNNING_DEFAULTS.publicRate === 20 &&
+    CAR_RUNNING_DEFAULTS.iceMaint === 9000 && CAR_RUNNING_DEFAULTS.evMaint === 4500 &&
+    CAR_RUNNING_DEFAULTS.iceIns === 0.030 && CAR_RUNNING_DEFAULTS.evIns === 0.038 &&
+    CAR_RUNNING_DEFAULTS.depRate === 0.15);
+  const split = splitAnnualKm(12000);
+  ok('splitAnnualKm: 12000 -> 8000/4000', approxEqual(split.cityKm, 8000, 0.01) && approxEqual(split.hwyKm, 4000, 0.01));
+  ok('splitAnnualKm: conserves the sum', approxEqual(split.cityKm + split.hwyKm, 12000, 0.01));
+  ok('splitAnnualKm: 0/negative/NaN -> zeros',
+    splitAnnualKm(0).cityKm === 0 && splitAnnualKm(-500).cityKm === 0 && splitAnnualKm(NaN).cityKm === 0);
+  ok('evEfficiencyFromRange: (400,40) === 10', evEfficiencyFromRange(400, 40) === 10);
+  ok('evEfficiencyFromRange: (0,40) === 0 and (400,0) === 0', evEfficiencyFromRange(0, 40) === 0 && evEfficiencyFromRange(400, 0) === 0);
+  const oldExplicit = { cityKm: 8000, hwyKm: 4000, petrolPrice: 117, iceHwyMult: 1.35, homeRate: 8, publicRate: 20, evHwyMult: 1.15 };
+  const newDerived = { cityKm: split.cityKm, hwyKm: split.hwyKm, petrolPrice: 117, iceHwyMult: CAR_RUNNING_DEFAULTS.iceHwyMult, homeRate: 8, publicRate: CAR_RUNNING_DEFAULTS.publicRate, evHwyMult: CAR_RUNNING_DEFAULTS.evHwyMult };
+  ok('calcRunningCost: splitAnnualKm(12000)+CAR_RUNNING_DEFAULTS matches the old explicit object',
+    approxEqual(calcRunningCost('ICE', 15, oldExplicit).annual, calcRunningCost('ICE', 15, newDerived).annual, 0.01));
+}
+
+// calcLeaseMarginalRate rebateBoost (S1/S2, 2026-09-25)
+{
+  const boost130k = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 1560000, 'new', 0);
+  const boost140k = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 1680000, 'new', 0);
+  const boost100k = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 1200000, 'new', 0);
+  const boost200k = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 2400000, 'new', 0);
+  const boost130kOld = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 1560000, 'old', 0);
+  ok('calcLeaseMarginalRate: rebateBoost true at ₹1.3L/mo and ₹1.4L/mo (new regime)',
+    boost130k.rebateBoost === true && boost140k.rebateBoost === true);
+  ok('calcLeaseMarginalRate: rebateBoost false at ₹1L/mo and ₹2L/mo (new regime), and on old regime',
+    boost100k.rebateBoost === false && boost200k.rebateBoost === false && boost130kOld.rebateBoost === false);
+}
+
 // calcOwnershipCost / calcOwnershipCurve (Phase 13's R49, generalised across
 // lease/loan/cash by Phase 14/R55) — mirrors tests.js's block. Reference
 // case (₹20L ICE, 10% residual, 10% rate, 4yr, app defaults): endpoint

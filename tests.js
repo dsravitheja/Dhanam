@@ -17,7 +17,7 @@ const {
   calcIncomeTax, calcPerquisite, calcCarDepreciation,
   calcRunningCost, calcInsuranceTotal, calcOwnershipCost, calcBreakevenKm,
   calcOwnershipCurve, calcLumpsumGrowth, calcTaxableIncome, calcLeaseMarginalRate,
-  calcNetWorthProjection,
+  calcNetWorthProjection, CAR_RUNNING_DEFAULTS, splitAnnualKm, evEfficiencyFromRange,
 } = require('./calc.js');
 
 let pass = 0, fail = 0;
@@ -423,6 +423,55 @@ function insuranceLoop(price, rate, depRate, years) {
 }
 
 // =====================================================================
+// CAR_RUNNING_DEFAULTS / splitAnnualKm / evEfficiencyFromRange (S8,
+// 2026-09-25) — running-cost constants frozen out of Compare Cars' old
+// 17-field Assumptions card into calc.js, plus the two small derivations
+// (annual-km split, EV efficiency from range+battery) that replace fields
+// the simplified card no longer collects directly.
+// =====================================================================
+{
+  ok('CAR_RUNNING_DEFAULTS: pins the frozen constants (values unchanged from the old editable defaults)',
+    CAR_RUNNING_DEFAULTS.cityShare === 2 / 3 &&
+    CAR_RUNNING_DEFAULTS.iceHwyMult === 1.35 && CAR_RUNNING_DEFAULTS.evHwyMult === 1.15 &&
+    CAR_RUNNING_DEFAULTS.publicRate === 20 &&
+    CAR_RUNNING_DEFAULTS.iceMaint === 9000 && CAR_RUNNING_DEFAULTS.evMaint === 4500 &&
+    CAR_RUNNING_DEFAULTS.iceIns === 0.030 && CAR_RUNNING_DEFAULTS.evIns === 0.038 &&
+    CAR_RUNNING_DEFAULTS.depRate === 0.15,
+    JSON.stringify(CAR_RUNNING_DEFAULTS));
+
+  const split = splitAnnualKm(12000);
+  ok('splitAnnualKm: 12000 -> 8000 city / 4000 highway (the old default split)',
+    approxEqual(split.cityKm, 8000, 0.01) && approxEqual(split.hwyKm, 4000, 0.01),
+    `cityKm=${split.cityKm} hwyKm=${split.hwyKm}`);
+  ok('splitAnnualKm: cityKm + hwyKm conserves the input',
+    approxEqual(split.cityKm + split.hwyKm, 12000, 0.01));
+  ok('splitAnnualKm: 0 -> zeros', splitAnnualKm(0).cityKm === 0 && splitAnnualKm(0).hwyKm === 0);
+  ok('splitAnnualKm: negative -> zeros, not negative km',
+    splitAnnualKm(-500).cityKm === 0 && splitAnnualKm(-500).hwyKm === 0);
+  ok('splitAnnualKm: NaN -> zeros, never NaN through',
+    splitAnnualKm(NaN).cityKm === 0 && splitAnnualKm(NaN).hwyKm === 0);
+
+  ok('evEfficiencyFromRange: 400km range / 40kWh battery -> exactly 10 kWh/100km',
+    evEfficiencyFromRange(400, 40) === 10, `got ${evEfficiencyFromRange(400, 40)}`);
+  ok('evEfficiencyFromRange: zero range -> 0, not Infinity', evEfficiencyFromRange(0, 40) === 0);
+  ok('evEfficiencyFromRange: zero battery -> 0', evEfficiencyFromRange(400, 0) === 0);
+
+  // Equivalence: ccAssumptions() now builds calcRunningCost's input from
+  // splitAnnualKm(annualKm) + CAR_RUNNING_DEFAULTS instead of the old
+  // explicit {cityKm:8000, hwyKm:4000, ...} object — the two must agree
+  // exactly at the old default annual km, or the ranking would silently
+  // shift the moment this refactor landed.
+  const oldExplicit = { cityKm: 8000, hwyKm: 4000, petrolPrice: 117, iceHwyMult: 1.35, homeRate: 8, publicRate: 20, evHwyMult: 1.15 };
+  const { cityKm, hwyKm } = splitAnnualKm(12000);
+  const newDerived = { cityKm, hwyKm, petrolPrice: 117, iceHwyMult: CAR_RUNNING_DEFAULTS.iceHwyMult, homeRate: 8, publicRate: CAR_RUNNING_DEFAULTS.publicRate, evHwyMult: CAR_RUNNING_DEFAULTS.evHwyMult };
+  const oldResult = calcRunningCost('ICE', 15, oldExplicit);
+  const newResult = calcRunningCost('ICE', 15, newDerived);
+  ok('calcRunningCost: splitAnnualKm(12000) + CAR_RUNNING_DEFAULTS reproduces the old explicit {cityKm:8000,hwyKm:4000,...} result exactly',
+    approxEqual(oldResult.annual, newResult.annual, 0.01) && approxEqual(oldResult.perKm, newResult.perKm, 0.0001),
+    `old=${oldResult.annual.toFixed(2)} new=${newResult.annual.toFixed(2)}`);
+}
+
+// =====================================================================
 // calcOwnershipCost (Phase 9's calcLeaseNetCost, generalised across
 // lease/loan/cash modes by Phase 14/R55 — renamed, not shimmed, so every
 // call site below explicitly states mode: 'lease' rather than relying on
@@ -626,6 +675,28 @@ ok('calcLumpsumGrowth: 0 years returns principal unchanged',
   ok('calcLeaseMarginalRate: feeding its marginalRate into calcOwnershipCost reproduces the exact tax delta (marginalRate * shieldAnnual * years)',
     approxEqual(viaOwnershipCost.taxSaved, shared.marginalRate * shared.shieldAnnual * 4, 0.01),
     `taxSaved=${viaOwnershipCost.taxSaved} expected=${shared.marginalRate * shared.shieldAnnual * 4}`);
+
+  // rebateBoost (S1/S2 simplification, 2026-09-25): the lease's shield can
+  // pull taxable income into the new regime's §87A relief band, which BOOSTS
+  // the lease's saving in that band (not shrinks it — Tool A's copy gets this
+  // backwards if this flag is wrong). Pinned at a ₹15L/10%/10%/4yr car: true
+  // at ₹1.3L and ₹1.4L/mo fixed pay (new regime), false at ₹1L and ₹2L/mo,
+  // and false on the old regime (no §87A there).
+  const boost130k = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 1560000, 'new', 0);
+  const boost140k = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 1680000, 'new', 0);
+  const boost100k = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 1200000, 'new', 0);
+  const boost200k = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 2400000, 'new', 0);
+  const boost130kOld = calcLeaseMarginalRate(1500000, 10, 0.10, 4, false, false, 1560000, 'old', 0);
+  ok('calcLeaseMarginalRate: rebateBoost is true at ₹1.3L/mo fixed pay, new regime',
+    boost130k.rebateBoost === true, `got ${boost130k.rebateBoost}`);
+  ok('calcLeaseMarginalRate: rebateBoost is true at ₹1.4L/mo fixed pay, new regime',
+    boost140k.rebateBoost === true, `got ${boost140k.rebateBoost}`);
+  ok('calcLeaseMarginalRate: rebateBoost is false at ₹1L/mo fixed pay (below the §12L threshold — zero-tax band, not the relief band)',
+    boost100k.rebateBoost === false, `got ${boost100k.rebateBoost}`);
+  ok('calcLeaseMarginalRate: rebateBoost is false at ₹2L/mo fixed pay (above the relief ceiling)',
+    boost200k.rebateBoost === false, `got ${boost200k.rebateBoost}`);
+  ok('calcLeaseMarginalRate: rebateBoost is false on the old regime (no §87A relief band there)',
+    boost130kOld.rebateBoost === false, `got ${boost130kOld.rebateBoost}`);
 }
 
 // =====================================================================
