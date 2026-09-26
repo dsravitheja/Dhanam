@@ -1546,7 +1546,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
           <div class="sip-custom-inputs">
             <span class="sip-custom-lbl">Custom scenario:</span>
             <div class="sip-inline-field">
-              <label>CAGR %<span class="term-info"><button type="button" class="term-info-btn" id="ti-cagr-sip-btn" aria-expanded="false" aria-controls="ti-cagr-sip" aria-label="What is CAGR?" onclick="toggleTermInfo('ti-cagr-sip')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-cagr-sip" role="note" hidden>Compound Annual Growth Rate — the average yearly return assumed for this projection. A guess about the future, not a guarantee: real markets don't return the same percentage every year, and past averages don't promise future ones.</span></span></label>
+              <label>CAGR %<span class="term-info"><button type="button" class="term-info-btn" id="ti-cagr-sip-btn" aria-expanded="false" aria-controls="ti-cagr-sip" aria-label="What is CAGR?" onclick="toggleTermInfo('ti-cagr-sip')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-cagr-sip" role="note" hidden>Compound Annual Growth Rate: average yearly return assumed. Real markets vary; past performance doesn't guarantee future ones.</span></span></label>
               <input type="number" class="sip-inline-input" id="sip-cagr" value="12" step="0.5" oninput="renderSIPComparison()">
             </div>
             <div class="sip-inline-field">
@@ -1933,7 +1933,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <!-- ===== SIP PLANNER HUB ===== -->
 <div class="hub-content" id="hub-sip">
   <div class="main">
-    <div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Dhanam Grow — SIP Planner</div>
+    <div class="section-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Dhanam Grow</div>
     <!-- R63: one caveat, once, above the tab row — not three per-tab copies.
          Sits here so it's visible the moment the hub opens regardless of
          which of the three tabs is active, matching the Buy-vs-SIP and
@@ -1941,7 +1941,22 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
          Copy-only, state-and-don't-model per Phase 7b's assessment
          (TASK-UX-REDESIGN.md) — no calculation change, no computed
          post-tax figure (that's R31, gated on B10, separate and unstarted). -->
-    <div class="sip-caveat"><strong>Every figure below is pre-tax.</strong> On redemption, equity LTCG above ₹1.25L in a financial year is taxed at 12.5% (rate and exemption as of the Union Budget 2024, effective 23 Jul 2024) — actual tax depends on when you sell, how the redemption is split across financial years, and what the law says at that time, none of which this app can know. A projection, not a promise.</div>
+    <div class="collapse-card" id="sp-limits-card" style="margin-bottom:14px;">
+      <button type="button" class="collapse-header" onclick="toggleCard('sp-limits-card')" aria-expanded="false">
+        <span class="collapse-title">Assumptions &amp; limits</span>
+        <span class="collapse-arrow">▼</span>
+      </button>
+      <div class="collapse-body">
+        <ul style="font-size:12px;color:var(--text-dim);line-height:2;padding-left:16px;">
+          <li>Figures are pre-tax.</li>
+          <li>Equity LTCG above ₹1.25L/year taxed at 12.5%.</li>
+          <li>Tax rate &amp; exemption per Union Budget 2024.</li>
+          <li>Tax depends on when you sell &amp; financial year.</li>
+          <li>A projection, not a promise.</li>
+          <li>Full sources and dates: <button type="button" onclick="switchHub('about')" style="background:none;border:none;color:var(--accent);cursor:pointer;text-decoration:underline;padding:0;font-size:inherit;">About</button></li>
+        </ul>
+      </div>
+    </div>
     <div class="sip-planner-tabs" role="tablist" aria-label="Dhanam Grow SIP planner">
       <button class="sip-planner-tab active" id="spt-monthly" role="tab" aria-selected="true" onclick="switchSIPPlannerTab('monthly')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Monthly SIP</button>
       <button class="sip-planner-tab" id="spt-stepup" role="tab" aria-selected="false" onclick="switchSIPPlannerTab('stepup')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Step-up SIP</button>
@@ -1959,7 +1974,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
               <input type="number" id="sp-monthly" value="10000" oninput="updateSIPPlanner()">
             </div>
             <div class="field highlight">
-              <label>Expected CAGR (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-cagr-grow-btn" aria-expanded="false" aria-controls="ti-cagr-grow" aria-label="What is CAGR?" onclick="toggleTermInfo('ti-cagr-grow')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-cagr-grow" role="note" hidden>Compound Annual Growth Rate — the average yearly return assumed for this projection. A guess about the future, not a guarantee: real markets don't return the same percentage every year, and past averages don't promise future ones.</span></span></label>
+              <label>Expected CAGR (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-cagr-grow-btn" aria-expanded="false" aria-controls="ti-cagr-grow" aria-label="What is CAGR?" onclick="toggleTermInfo('ti-cagr-grow')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-cagr-grow" role="note" hidden>Compound Annual Growth Rate: average yearly return assumed. Real markets vary; past performance doesn't guarantee future ones.</span></span></label>
               <input type="number" id="sp-cagr" value="12" step="0.5" oninput="updateSIPPlanner()">
               <span class="field-hint">Equity MFs ≈12% · Index ≈11% · Balanced ≈9%</span>
             </div>
@@ -1971,7 +1986,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
       <div class="sp-result-card">
-        <div class="sp-result-label">SIP Corpus after <span id="sp-years-lbl">20</span> years<span class="term-info"><button type="button" class="term-info-btn" id="ti-corpus-btn" aria-expanded="false" aria-controls="ti-corpus" aria-label="What is corpus?" onclick="toggleTermInfo('ti-corpus')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-corpus" role="note" hidden>The total value of your investment at the end of the period — what you put in, plus (or minus) whatever the market returned on it. Shown pre-tax; see the caveat above this tab for what tax could take off the top on redemption.</span></span></div>
+        <div class="sp-result-label">SIP Corpus after <span id="sp-years-lbl">20</span> years<span class="term-info"><button type="button" class="term-info-btn" id="ti-corpus-btn" aria-expanded="false" aria-controls="ti-corpus" aria-label="What is corpus?" onclick="toggleTermInfo('ti-corpus')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-corpus" role="note" hidden>Total investment value at the end — principal plus market gains. Shown pre-tax.</span></span></div>
         <div class="sp-result-value" id="sp-corpus">—</div>
         <div class="sp-result-sub" id="sp-corpus-exact"></div>
         <div class="total-sub" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
@@ -2015,7 +2030,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
               <input type="number" id="su-monthly" value="10000" oninput="updateStepupSIP()">
             </div>
             <div class="field highlight">
-              <label>Annual Step-up (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-stepup-btn" aria-expanded="false" aria-controls="ti-stepup" aria-label="What is step-up?" onclick="toggleTermInfo('ti-stepup')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-stepup" role="note" hidden>Increases your monthly SIP by this percentage every year instead of investing the same amount throughout. A 10% step-up on a ₹10,000 SIP means ₹11,000/mo in year 2, ₹12,100/mo in year 3, and so on.</span></span></label>
+              <label>Annual Step-up (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-stepup-btn" aria-expanded="false" aria-controls="ti-stepup" aria-label="What is step-up?" onclick="toggleTermInfo('ti-stepup')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-stepup" role="note" hidden>Increases your SIP by this % yearly. A 10% step-up on ₹10K means ₹11K/mo next year.</span></span></label>
               <input type="number" id="su-stepup" value="10" step="1" min="0" oninput="updateStepupSIP()">
               <span class="field-hint">Increase SIP by this % each year</span>
             </div>
@@ -2167,12 +2182,12 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 </div>
 
 <div class="panel-card">
-  <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span><span class="pch-title">Assets — what you own</span><span class="pch-total mono w-amt" id="w-assets-sub">—</span></div>
+  <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span><span class="pch-title">What you own</span><span class="pch-total mono w-amt" id="w-assets-sub">—</span></div>
   <div class="panel-card-body" style="padding:0;" id="w-assets-rows"></div>
 </div>
 
 <div class="panel-card">
-  <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-receipt"></use></svg></span><span class="pch-title">Liabilities — what you owe</span><span class="pch-total mono w-amt" id="w-liab-sub">—</span></div>
+  <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-receipt"></use></svg></span><span class="pch-title">What you owe</span><span class="pch-total mono w-amt" id="w-liab-sub">—</span></div>
   <div class="panel-card-body" style="padding:0;" id="w-liab-rows"></div>
 </div>
 
@@ -2182,14 +2197,14 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="panel-card" id="w-proj-card" style="display:none;">
   <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-scope"></use></svg></span><span class="pch-title" id="w-proj-title">Projected Net Worth</span></div>
   <div class="panel-card-body">
-    <p class="note-text" style="margin-bottom:12px;">Assumes your investments (all assets except property) grow at the rate below with your monthly savings added in, debts amortize at the rate/years below, and property value stays flat. A projection, not a promise.</p>
+    <p class="note-text" style="margin-bottom:12px;">Assumes your investments (all assets except property) grow at the rate below with your monthly savings added in, debts amortize at the rate/years below, and property value stays flat.</p>
     <div class="grid-2">
       <div class="field">
         <label>Monthly savings / SIP added (₹)</label>
         <input type="number" id="w-proj-sip" min="0" step="1000" placeholder="10000" oninput="renderWorth()">
       </div>
       <div class="field">
-        <label>Expected investment growth (% p.a.)<span class="term-info"><button type="button" class="term-info-btn" id="ti-cagr-worth-btn" aria-expanded="false" aria-controls="ti-cagr-worth" aria-label="What is CAGR?" onclick="toggleTermInfo('ti-cagr-worth')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-cagr-worth" role="note" hidden>Compound Annual Growth Rate — the average yearly return assumed for this projection. A guess about the future, not a guarantee: real markets don't return the same percentage every year, and past averages don't promise future ones.</span></span></label>
+        <label>Expected investment growth (% p.a.)<span class="term-info"><button type="button" class="term-info-btn" id="ti-cagr-worth-btn" aria-expanded="false" aria-controls="ti-cagr-worth" aria-label="What is CAGR?" onclick="toggleTermInfo('ti-cagr-worth')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-cagr-worth" role="note" hidden>Compound Annual Growth Rate: average yearly return assumed. Real markets vary; past performance doesn't guarantee future ones.</span></span></label>
         <input type="number" id="w-proj-cagr" value="10" step="0.5" min="0" oninput="renderWorth()">
       </div>
       <div class="field">
@@ -2206,11 +2221,26 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
          letting the projection quietly assume cash the user never budgeted. -->
     <p class="note-text" id="w-proj-debt-note" style="margin-top:10px;display:none;"></p>
     <div class="total-card" style="margin:16px 0 8px;">
-      <div class="total-label">Projected Net Worth in <span id="w-proj-hero-yrs">10</span> Years<span class="term-info"><button type="button" class="term-info-btn" id="ti-investable-btn" aria-expanded="false" aria-controls="ti-investable" aria-label="What counts as investable assets, and why is property flat?" onclick="toggleTermInfo('ti-investable')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-investable" role="note" hidden>This projection grows everything you own except property (your "investable assets") at the rate below, and holds your property's value exactly flat — this app has no basis to assume it'll appreciate. Real property values can rise, fall, or sit still; this projection deliberately doesn't guess.</span></span></div>
+      <div class="total-label">Projected Net Worth in <span id="w-proj-hero-yrs">10</span> Years<span class="term-info"><button type="button" class="term-info-btn" id="ti-investable-btn" aria-expanded="false" aria-controls="ti-investable" aria-label="What counts as investable assets, and why is property flat?" onclick="toggleTermInfo('ti-investable')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-investable" role="note" hidden>Grows non-property assets only; property value stays flat. This app can't predict real estate markets.</span></span></div>
       <div class="total-value w-amt" id="w-proj-hero-val">—</div>
       <div class="total-cr w-amt" id="w-proj-hero-sub"></div>
     </div>
     <div class="grid-3" id="w-proj-grid"></div>
+  </div>
+</div>
+
+<div class="collapse-card" id="w-limits-card">
+  <button type="button" class="collapse-header" onclick="toggleCard('w-limits-card')" aria-expanded="false">
+    <span class="collapse-title">Assumptions &amp; limits</span>
+    <span class="collapse-arrow">▼</span>
+  </button>
+  <div class="collapse-body">
+    <ul style="font-size:12px;color:var(--text-dim);line-height:2;padding-left:16px;">
+      <li>Investable assets grow; property stays flat.</li>
+      <li>Debts amortize at rates and years you set.</li>
+      <li>A projection, not a promise.</li>
+      <li>Full sources and dates: <button type="button" onclick="switchHub('about')" style="background:none;border:none;color:var(--accent);cursor:pointer;text-decoration:underline;padding:0;font-size:inherit;">About</button></li>
+    </ul>
   </div>
 </div>
 
@@ -4381,7 +4411,7 @@ function renderLandingWorth() {
     // Come back..." — savedAtLabel() legitimately returns '' for a
     // hand-edited or pre-lastSaved-era backup (see manual checklist item 11).
     const at = savedAtLabel();
-    set('landing-worth-started', `Balance sheet started${at ? ` — as of ${at}` : ''}. Come back after your next update to see how you're trending.`);
+    set('landing-worth-started', `Balance sheet started${at ? ` as of ${at}` : ''}. Come back after your next update to see how you're trending.`);
     show('landing-worth-started');
     return;
   }
@@ -4522,7 +4552,7 @@ function renderWorthProjection(anyInput, assets, liabs, aVals) {
     set('w-proj-title', 'Projected Net Worth');
     set('w-proj-hero-sub', `vs. ${signed(assets - liabs)} today`);
   } else {
-    set('w-proj-title', 'Projected Net Worth — example');
+    set('w-proj-title', 'Projected Net Worth (example)');
     set('w-proj-hero-sub', `Example: ₹5L invested + ${fmt(monthlySip)}/mo. Add your balances above to make this yours.`);
   }
 
