@@ -1007,7 +1007,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <option value="GJ">Gujarat</option>
         <option value="WB">West Bengal</option>
       </select>
-      <span class="field-hint">Sets Stamp Duty + Reg below — indicative, edit if yours differs</span>
+      <span class="field-hint">Sets stamp duty and registration for your state</span>
     </div>
     <div class="qf">
       <label>Stamp Duty + Reg (%)</label>
@@ -1044,17 +1044,17 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 <div class="action-row">
   <button class="action-btn" id="btn-detail" aria-expanded="false" aria-controls="section-detail" onclick="toggleSection('detail')">
     <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg></span>
-    <span class="ab-label">Detailed Cost Analysis</span>
+    <span class="ab-label">What will this property cost?</span>
     <span class="ab-arrow">▼</span>
   </button>
   <button class="action-btn" id="btn-loan" aria-expanded="false" aria-controls="section-loan" onclick="toggleSection('loan')">
     <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bank"></use></svg></span>
-    <span class="ab-label">Loan Analysis</span>
+    <span class="ab-label">What will the loan cost?</span>
     <span class="ab-arrow">▼</span>
   </button>
   <button class="action-btn" id="btn-disb" aria-expanded="false" aria-controls="section-disb" onclick="toggleSection('disb')">
     <span class="ab-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-construction"></use></svg></span>
-    <span class="ab-label">Loan Disbursement (Pre-EMI)</span>
+    <span class="ab-label">What will I pay before possession?</span>
     <span class="ab-arrow">▼</span>
   </button>
   <div class="action-utils">
@@ -1095,7 +1095,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
         <div class="cf-row" id="cfrow-floor">
           <input type="checkbox" class="cf-chk" id="d-incl-floor" checked onchange="updateCfRow('floor')">
-          <label class="cf-label" for="d-incl-floor">Floor / Rise Charges</label><span class="term-info"><button type="button" class="term-info-btn" id="ti-floorrise-btn" aria-expanded="false" aria-controls="ti-floorrise" aria-label="What is Floor Rise Charges?" onclick="toggleTermInfo('ti-floorrise')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-floorrise" role="note" hidden>A per-square-foot premium some builders charge for higher floors, applied here only from the 6th floor upward. Whether your builder actually charges this — and how much — varies; edit the rate below if yours differs.</span></span>
+          <label class="cf-label" for="d-incl-floor">Floor / Rise Charges</label><span class="term-info"><button type="button" class="term-info-btn" id="ti-floorrise-btn" aria-expanded="false" aria-controls="ti-floorrise" aria-label="What is Floor Rise Charges?" onclick="toggleTermInfo('ti-floorrise')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-floorrise" role="note" hidden>Per-sft premium some builders charge above the 5th floor.</span></span>
           <div class="cf-inputs">
             <span class="cf-unit">Floor</span>
             <input type="number" class="cf-input w70" id="d-floor" value="1" min="1" oninput="calcDetail()">
@@ -1146,7 +1146,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <!-- Amenities -->
         <div class="cf-row" id="cfrow-amenities">
           <input type="checkbox" class="cf-chk" id="d-incl-amenities" checked onchange="updateCfRow('amenities')">
-          <label class="cf-label" for="d-incl-amenities">Amenities / Clubhouse</label><span class="term-info"><button type="button" class="term-info-btn" id="ti-amenities-btn" aria-expanded="false" aria-controls="ti-amenities" aria-label="What is the Amenities / Clubhouse charge?" onclick="toggleTermInfo('ti-amenities')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-amenities" role="note" hidden>A one-time charge some builders levy for shared amenities — clubhouse, gym, pool, gardens — separate from the base sale price. Uncheck this if your builder already includes it in the quoted price.</span></span>
+          <label class="cf-label" for="d-incl-amenities">Amenities / Clubhouse</label><span class="term-info"><button type="button" class="term-info-btn" id="ti-amenities-btn" aria-expanded="false" aria-controls="ti-amenities" aria-label="What is the Amenities / Clubhouse charge?" onclick="toggleTermInfo('ti-amenities')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-amenities" role="note" hidden>One-time charge for shared amenities like clubhouse and gym.</span></span>
           <div class="cf-inputs">
             <div class="mode-toggle">
               <button class="mode-btn active" id="mb-amenities-sqft" onclick="setMode('amenities','sqft')">₹/sft</button>
@@ -1162,7 +1162,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <!-- Corpus Fund -->
         <div class="cf-row" id="cfrow-corpus">
           <input type="checkbox" class="cf-chk" id="d-incl-corpus" checked onchange="updateCfRow('corpus')">
-          <label class="cf-label" for="d-incl-corpus">Corpus Fund</label><span class="term-info"><button type="button" class="term-info-btn" id="ti-corpusfund-btn" aria-expanded="false" aria-controls="ti-corpusfund" aria-label="What is the Corpus Fund charge?" onclick="toggleTermInfo('ti-corpusfund')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-corpusfund" role="note" hidden>A one-time contribution to the building's maintenance reserve, collected at possession — different from the recurring monthly maintenance you'll pay afterward. Not every builder charges this separately; uncheck it if yours doesn't.</span></span>
+          <label class="cf-label" for="d-incl-corpus">Corpus Fund</label><span class="term-info"><button type="button" class="term-info-btn" id="ti-corpusfund-btn" aria-expanded="false" aria-controls="ti-corpusfund" aria-label="What is the Corpus Fund charge?" onclick="toggleTermInfo('ti-corpusfund')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-corpusfund" role="note" hidden>Contribution to the building's maintenance reserve, collected at possession.</span></span>
           <div class="cf-inputs">
             <div class="mode-toggle">
               <button class="mode-btn active" id="mb-corpus-sqft" onclick="setMode('corpus','sqft')">₹/sft</button>
@@ -1233,17 +1233,17 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <div class="panel-card-body">
       <div class="grid-3">
         <div class="field">
-          <label>Stamp Duty (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-stampduty-btn" aria-expanded="false" aria-controls="ti-stampduty" aria-label="What is stamp duty?" onclick="toggleTermInfo('ti-stampduty')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-stampduty" role="note" hidden>A state government tax on registering the property in your name, charged as a percentage of the property's value. Rates vary by state — this app's default is a starting point, not a quote; edit it if your state differs (see the About page's dated state table).</span></span></label>
+          <label>Stamp Duty (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-stampduty-btn" aria-expanded="false" aria-controls="ti-stampduty" aria-label="What is stamp duty?" onclick="toggleTermInfo('ti-stampduty')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-stampduty" role="note" hidden>State tax for registering property in your name, a % of value.</span></span></label>
           <input type="number" id="d-stamp" value="4" step="0.1" oninput="calcDetail()">
           <span class="field-hint" id="d-stamp-hint">Telangana: 4%</span>
         </div>
         <div class="field">
-          <label>Registration Fee (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-regfee-btn" aria-expanded="false" aria-controls="ti-regfee" aria-label="What is registration fee?" onclick="toggleTermInfo('ti-regfee')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-regfee" role="note" hidden>A separate state fee for recording the sale deed in government land records, on top of stamp duty. Also state-specific and editable — see the About page's dated state table for what's assumed here.</span></span></label>
+          <label>Registration Fee (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-regfee-btn" aria-expanded="false" aria-controls="ti-regfee" aria-label="What is registration fee?" onclick="toggleTermInfo('ti-regfee')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-regfee" role="note" hidden>State fee for recording the sale deed, on top of stamp duty.</span></span></label>
           <input type="number" id="d-regfee" value="0.5" step="0.1" oninput="calcDetail()">
           <span class="field-hint" id="d-regfee-hint">Telangana: 0.5%</span>
         </div>
         <div class="field" id="d-gst-field" style="display:none;">
-          <label>GST on Construction (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-gst-btn" aria-expanded="false" aria-controls="ti-gst" aria-label="What is GST on construction?" onclick="toggleTermInfo('ti-gst')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-gst" role="note" hidden>Goods & Services Tax on an under-construction property, currently 5% with no input tax credit. A ready-to-move-in property with an occupancy certificate owes no GST at all — this field only applies because the property was marked under construction in Quick Estimate.</span></span></label>
+          <label>GST on Construction (%)<span class="term-info"><button type="button" class="term-info-btn" id="ti-gst-btn" aria-expanded="false" aria-controls="ti-gst" aria-label="What is GST on construction?" onclick="toggleTermInfo('ti-gst')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-gst" role="note" hidden>Tax on under-construction property, currently 5% with no input credit. Ready-to-move-in owes none.</span></span></label>
           <!-- GST rate for under-construction residential property, no input
                tax credit — current GST law; the GST Council moved real
                estate to this rate (from 12%/8% with ITC) effective
@@ -1406,7 +1406,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
   <!-- Principal vs. interest over the tenure (R4) -->
   <div class="panel-card" id="l-chart-card" style="display:none;">
-    <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg></span><span class="pch-title">Principal vs. Interest — 20-Year Tenure</span></div>
+    <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg></span><span class="pch-title">Principal vs. Interest (20 Years)</span></div>
     <div class="panel-card-body">
       <div class="chart-legend">
         <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Cumulative principal paid</span>
@@ -1440,23 +1440,22 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <div class="adv-section" id="adv-section">
     <button type="button" class="adv-header" onclick="toggleAdv()" aria-expanded="false">
       <span style="font-size:16px;"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-rocket"></use></svg></span>
-      <span class="adv-title">Advanced: Extra Payments Projection</span>
+      <span class="adv-title">What if I prepay?</span>
       <span class="adv-arrow">▼</span>
     </button>
     <div class="adv-body">
       <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">
-        Making extra principal payments reduces tenure significantly. For example, one extra EMI per year on a 20-year loan can cut 4–5 years off your tenure.
+        Extra payments shorten your loan tenure.
       </p>
       <div class="adv-inputs-grid">
         <div class="field">
           <label>Extra EMIs per year</label>
           <input type="number" id="adv-extra-emi" value="1" min="0" step="1" oninput="renderAdvLoan()">
-          <span class="field-hint">e.g. 1 = one additional EMI/year</span>
         </div>
         <div class="field">
           <label>Extra Lumpsum / year (₹)</label>
           <input type="number" id="adv-extra-lump" value="0" min="0" oninput="renderAdvLoan()">
-          <span class="field-hint">Annual bonus / savings towards principal</span>
+          <span class="field-hint">Annual bonus towards principal</span>
         </div>
       </div>
       <!-- Hero answer for this section too (R2) -->
@@ -1471,39 +1470,32 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       </div>
       <!-- R65: reverse Worth bridge, narrow half only (UX-ANALYSIS.md §Strategic-2,
            promise 1 — promise 2, personal-advice verdict cards, was explicitly
-           declined; see that document). Closed by default: this is the lighter
-           of the two honest options for a real balance sheet appearing outside
-           #worth-main, where "Hide amounts"/.amounts-hidden has no effect
-           (that mechanism is scoped to #worth-main only) — see CLAUDE.md. -->
-      <div class="collapse-card" id="adv-worth-card" style="margin:0 0 12px;">
-        <button type="button" class="collapse-header" onclick="toggleCard('adv-worth-card')" aria-expanded="false">
-          <span class="collapse-title">What this does to your net worth</span>
-          <span class="collapse-arrow">▼</span>
-        </button>
-        <div class="collapse-body">
-          <div id="adv-worth-empty" class="note-text" style="display:none;">
-            You haven't saved a balance sheet in <strong>Dhanam Worth</strong> yet — once you do, this section will show what this extra-payments plan does to your actual net worth, not a hypothetical loan. <a href="#" onclick="switchHub('worth');return false;" style="color:var(--accent);">Open Dhanam Worth →</a>
+           declined; see that document), where "Hide amounts"/.amounts-hidden
+           has no effect (that mechanism is scoped to #worth-main only) — see
+           CLAUDE.md. S12: flattened out of its own collapse-card — #adv-section
+           is already one collapse level, so this and #adv-compare-card below
+           render flat inline instead of nesting a second collapse inside it.
+           #adv-worth-card stays a plain div only so renderAdvLoan()'s existing
+           show('adv-worth-card')/hide('adv-worth-card') keep working unchanged. -->
+      <div id="adv-worth-card" style="margin:0 0 12px;">
+        <div class="collapse-title" style="display:block;padding-bottom:8px;">What this does to your net worth</div>
+        <div id="adv-worth-empty" class="note-text" style="display:none;">
+          You haven't saved a balance sheet in <strong>Dhanam Worth</strong> yet — once you do, this section will show what this extra-payments plan does to your actual net worth, not a hypothetical loan. <a href="#" onclick="switchHub('worth');return false;" style="color:var(--accent);">Open Dhanam Worth →</a>
+        </div>
+        <div id="adv-worth-body" style="display:none;">
+          <p class="note-text" id="adv-worth-fact" style="margin-bottom:12px;"></p>
+          <div class="loan-card">
+            <div class="lc-title">Projected Net Worth in <span id="adv-worth-yrs">10</span> Years</div>
+            <div class="loan-stat"><span class="ls-lbl">Your Worth projection today</span><span class="ls-val big" id="adv-worth-baseline">—</span></div>
+            <div class="loan-stat"><span class="ls-lbl" id="adv-worth-withplan-lbl">Plus this plan's interest saved</span><span class="ls-val big" id="adv-worth-withplan">—</span></div>
+            <div class="loan-stat"><span class="ls-lbl" id="adv-worth-delta-lbl">Interest saved</span><span class="ls-val" style="color:var(--green)" id="adv-worth-delta">—</span></div>
           </div>
-          <div id="adv-worth-body" style="display:none;">
-            <p class="note-text" id="adv-worth-fact" style="margin-bottom:12px;"></p>
-            <div class="loan-card">
-              <div class="lc-title">Projected Net Worth in <span id="adv-worth-yrs">10</span> Years</div>
-              <div class="loan-stat"><span class="ls-lbl">Your Worth projection today</span><span class="ls-val big" id="adv-worth-baseline">—</span></div>
-              <div class="loan-stat"><span class="ls-lbl" id="adv-worth-withplan-lbl">Plus this plan's interest saved</span><span class="ls-val big" id="adv-worth-withplan">—</span></div>
-              <div class="loan-stat"><span class="ls-lbl" id="adv-worth-delta-lbl">Interest saved</span><span class="ls-val" style="color:var(--green)" id="adv-worth-delta">—</span></div>
-            </div>
-            <p class="note-text" id="adv-worth-caveat" style="margin-top:10px;"></p>
-          </div>
+          <p class="note-text" id="adv-worth-caveat" style="margin-top:10px;"></p>
         </div>
       </div>
-      <div class="collapse-card" id="adv-compare-card">
-        <button type="button" class="collapse-header" onclick="toggleCard('adv-compare-card')" aria-expanded="false">
-          <span class="collapse-title">Compare 15 / 20 / 30-year tenures</span>
-          <span class="collapse-arrow">▼</span>
-        </button>
-        <div class="collapse-body">
-          <div class="adv-compare-grid" id="adv-cards"></div>
-        </div>
+      <div id="adv-compare-card" style="margin:0 0 12px;">
+        <div class="collapse-title" style="display:block;padding-bottom:8px;">Compare 15 / 20 / 30-year tenures</div>
+        <div class="adv-compare-grid" id="adv-cards"></div>
       </div>
     </div>
   </div>
@@ -1512,20 +1504,22 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <div class="sip-section" id="sip-section">
     <button type="button" class="sip-header" onclick="toggleSIP()" aria-expanded="false">
       <span style="font-size:16px;"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg></span>
-      <span class="sip-title">Buy vs. SIP: What if you invested instead?</span>
+      <span class="sip-title">What if I invested instead?</span>
       <span class="sip-arrow">▼</span>
     </button>
     <div class="sip-body">
       <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">
-        If instead of buying, you invested the same EMI amount monthly in a SIP — how much corpus would you accumulate?
-        Compare across 3 return scenarios for each loan tenure.
+        If invested instead, here's your SIP corpus.
       </p>
       <!-- R24's 6d-i: this is the panel the tile above leads with, so the
            caveat has to sit where a reader who only looks at the hero and
            nothing else will still see it — above #sip-hero, not inside the
-           closed-by-default #sip-compare-card. Copy only, no calc.js
-           change; see CLAUDE.md's Dhanam Grow / prepayment sections. -->
-      <div class="sip-caveat"><strong>Read this before the number below:</strong> prepaying — or simply not taking — the loan returns your loan's interest rate, guaranteed, with no tax on it. The SIP side is not guaranteed: actual market returns can fall short of whatever rate is assumed here, and any gain is taxed when you redeem it. This comparison also leaves out the loan side's own tax benefits — the Section 24 interest deduction, and 80C on principal under the old regime — so neither figure below is the whole picture. Treat it as a rough, pre-tax sketch, not a verdict.</div>
+           closed-by-default #sip-compare-card. Full framing (S10) now lives
+           in #home-limits-card; this line alone keeps the comparison from
+           reading as a verdict for a reader who scrolls no further. Copy
+           only, no calc.js change; see CLAUDE.md's Dhanam Grow / prepayment
+           sections. -->
+      <div class="sip-caveat">Loan side is guaranteed and tax-free; SIP side is not.</div>
       <!-- Hero answer for this section too (R2) -->
       <div class="total-card" id="sip-hero" style="margin:0 0 12px;">
         <div class="total-label">SIP vs. Buying — 20 Years @ 12% CAGR</div>
@@ -1536,27 +1530,27 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
           <div class="total-sub-item"><div class="ts-lbl">SIP Corpus</div><div class="ts-val mono" id="sip-hero-corpus">—</div></div>
         </div>
       </div>
-      <div class="collapse-card" id="sip-compare-card">
-        <button type="button" class="collapse-header" onclick="toggleCard('sip-compare-card')" aria-expanded="false">
-          <span class="collapse-title">Compare across CAGR &amp; tenure scenarios</span>
-          <span class="collapse-arrow">▼</span>
-        </button>
-        <div class="collapse-body">
-          <div class="sip-grid" id="sip-cards"></div>
-          <div class="sip-custom-inputs">
-            <span class="sip-custom-lbl">Custom scenario:</span>
-            <div class="sip-inline-field">
-              <label>CAGR %<span class="term-info"><button type="button" class="term-info-btn" id="ti-cagr-sip-btn" aria-expanded="false" aria-controls="ti-cagr-sip" aria-label="What is CAGR?" onclick="toggleTermInfo('ti-cagr-sip')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-cagr-sip" role="note" hidden>Compound Annual Growth Rate — the average yearly return assumed for this projection. A guess about the future, not a guarantee: real markets don't return the same percentage every year, and past averages don't promise future ones.</span></span></label>
-              <input type="number" class="sip-inline-input" id="sip-cagr" value="12" step="0.5" oninput="renderSIPComparison()">
-            </div>
-            <div class="sip-inline-field">
-              <label>Duration (yrs)</label>
-              <input type="number" class="sip-inline-input" id="sip-years" value="20" min="1" max="50" oninput="renderSIPComparison()">
-            </div>
-            <span style="font-size:10px;color:var(--text-dim);">Equity MFs ≈12% · Index ≈11% · Balanced ≈9%</span>
+      <!-- S12: flattened out of its own collapse-card — #sip-section is
+           already one collapse level (see .sip-section/toggleSIP() above).
+           #sip-compare-card stays a plain div only so renderSIPComparison()'s
+           existing show('sip-compare-card')/hide('sip-compare-card') keep
+           working unchanged. -->
+      <div id="sip-compare-card">
+        <div class="collapse-title" style="display:block;padding-bottom:8px;">Compare across CAGR &amp; tenure scenarios</div>
+        <div class="sip-grid" id="sip-cards"></div>
+        <div class="sip-custom-inputs">
+          <span class="sip-custom-lbl">Custom scenario:</span>
+          <div class="sip-inline-field">
+            <label>CAGR %<span class="term-info"><button type="button" class="term-info-btn" id="ti-cagr-sip-btn" aria-expanded="false" aria-controls="ti-cagr-sip" aria-label="What is CAGR?" onclick="toggleTermInfo('ti-cagr-sip')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-cagr-sip" role="note" hidden>Compound Annual Growth Rate — the average yearly return assumed here. Not guaranteed.</span></span></label>
+            <input type="number" class="sip-inline-input" id="sip-cagr" value="12" step="0.5" oninput="renderSIPComparison()">
           </div>
-          <div class="sip-custom-grid" id="sip-custom-cards"></div>
+          <div class="sip-inline-field">
+            <label>Duration (yrs)</label>
+            <input type="number" class="sip-inline-input" id="sip-years" value="20" min="1" max="50" oninput="renderSIPComparison()">
+          </div>
+          <span style="font-size:10px;color:var(--text-dim);">Equity MFs ≈12% · Index ≈11% · Balanced ≈9%</span>
         </div>
+        <div class="sip-custom-grid" id="sip-custom-cards"></div>
       </div>
     </div>
   </div>
@@ -1603,7 +1597,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
     <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg></span><span class="pch-title">Disbursement Tranches</span><span class="pch-tag">Live</span></div>
     <div class="panel-card-body">
       <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">
-        Add each stage the builder/bank releases funds — as a % of the sanctioned loan, and the month it's disbursed. During this phase, pre-EMI interest is charged only on the amount disbursed so far.
+        Add each stage the builder releases funds, and when.
       </p>
       <div id="disb-tranche-rows"></div>
       <button class="btn btn-secondary" onclick="disbAddTranche()"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-plus"></use></svg> Add Tranche</button>
@@ -1626,7 +1620,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <div class="panel-card">
     <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span><span class="pch-title">Summary</span><span class="pch-tag">Live</span></div>
     <div class="panel-card-body">
-      <div class="loan-stat"><span class="ls-lbl">Total Pre-EMI Interest Paid<span class="term-info"><button type="button" class="term-info-btn" id="ti-preemi-btn" aria-expanded="false" aria-controls="ti-preemi" aria-label="What is pre-EMI?" onclick="toggleTermInfo('ti-preemi')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-preemi" role="note" hidden>Interest-only payments charged on the portion of a loan already disbursed to the builder, before construction finishes and the full EMI begins. You pay interest only on what's been released so far — not the full sanctioned loan amount.</span></span></span><span class="ls-val red" id="disb-total-preemi">—</span></div>
+      <div class="loan-stat"><span class="ls-lbl">Total Pre-EMI Interest Paid<span class="term-info"><button type="button" class="term-info-btn" id="ti-preemi-btn" aria-expanded="false" aria-controls="ti-preemi" aria-label="What is pre-EMI?" onclick="toggleTermInfo('ti-preemi')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-preemi" role="note" hidden>Interest paid only on the loan amount disbursed so far.</span></span></span><span class="ls-val red" id="disb-total-preemi">—</span></div>
       <div class="loan-stat"><span class="ls-lbl">EMI after Final Disbursement</span><span class="ls-val big" id="disb-emi">—</span></div>
       <div class="loan-stat"><span class="ls-lbl">Total Interest (Pre-EMI + Amortization)</span><span class="ls-val red" id="disb-total-interest">—</span></div>
       <div class="loan-stat"><span class="ls-lbl">Total Cost of Loan</span><span class="ls-val" id="disb-total-cost">—</span></div>
@@ -1634,6 +1628,32 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   </div>
 
 </div><!-- /section-disb -->
+
+<!-- S10: the one collapsed caveat panel for the whole Home hub, closed by
+     default, sitting outside the 3-panel accordion so it's reachable no
+     matter which section is open. Folds in what used to be the 93-word
+     .sip-caveat plus the other statutory/assumption caveats scattered
+     through this hub. -->
+<div class="collapse-card" id="home-limits-card">
+  <button type="button" class="collapse-header" onclick="toggleCard('home-limits-card')" aria-expanded="false">
+    <span class="collapse-title">Assumptions &amp; limits</span>
+    <span class="collapse-arrow">▼</span>
+  </button>
+  <div class="collapse-body">
+    <ul class="note-text" style="margin:0;padding-left:18px;">
+      <li>Property costs are estimates; your quote may differ.</li>
+      <li>Stamp duty and registration vary by state; edit yours.</li>
+      <li>GST applies only to under-construction property, 5%, no credit.</li>
+      <li>Loan rate defaults to SBI's ~8.75% average (2025).</li>
+      <li>Extra-payment projections assume the interest rate never changes.</li>
+      <li>SIP returns aren't guaranteed; loan savings are, tax-free.</li>
+      <li>Buy-vs-SIP ignores the loan's Section 24 and 80C benefits.</li>
+      <li>Net-worth figures reuse Dhanam Worth's projection.</li>
+      <li>Pre-EMI assumes tranches disburse exactly as scheduled.</li>
+      <li>Full sources and dates: <button type="button" class="landing-footer-link" style="padding:0;font-size:inherit;color:var(--accent);" onclick="switchHub('about')">About</button></li>
+    </ul>
+  </div>
+</div>
 
 </div><!-- /main -->
 </div><!-- /hub-apartment -->
@@ -3613,22 +3633,18 @@ function renderAdvWorthBridge(interestSaved, payoffYears, extraAnnual) {
   set('adv-worth-withplan-lbl', `Plus interest saved over the full loan (through yr ${payoffYears})`);
   set('adv-worth-delta-lbl', `Interest saved by yr ${payoffYears}`);
 
-  // Deliberately not a merged simulation — say so, per this app's own
-  // "state, don't model" convention (R63) and the sip-caveat precedent: the
-  // baseline line is the literal calcNetWorthProjection() call
-  // renderWorthProjection()'s own +10-year hero makes, so it can never
-  // disagree with the Worth hub. The second line is that same figure plus
-  // this plan's interest savings added on top as a flat number, not run
-  // through Worth's own (separate, generic) debt-payoff assumption a second
-  // time — so treat "with this plan" as two real calculations placed next to
-  // each other, not one combined model.
+  // S10: was a ~130-word paragraph; the full reasoning (why these are two
+  // separate calculations, not one merged model — the baseline reuses
+  // Worth's own blended debt-payoff assumption across *all* liabilities,
+  // not this loan's specific rate/tenure, and the interest-saved figure
+  // accrues over the loan's remaining life, not all by the horizon year)
+  // still lives here in this comment per "state, don't model" (R63); the
+  // on-screen copy now states only the two facts a reader needs to not
+  // misread the numbers above as a single combined projection.
   set('adv-worth-caveat',
-    `Read these as two separate figures, not one merged simulation. "Your Worth projection today" is exactly what Dhanam Worth's own +${horizon}-year projection shows right now, using its own debt-payoff assumption (${snap.debtYears} yrs at ${snap.debtRate}%) across all your liabilities together — not this loan's rate and tenure specifically. ` +
-    `Two things the second line does not account for. It adds the whole ${inCr(interestSaved)} this plan saves, but that saving accrues through year ${payoffYears} — not all of it exists at year ${horizon}. ` +
-    (extraAnnual > 0
-      ? `And the plan itself costs about ${fmt(extraAnnual)}/yr — roughly ${inCr(extraAnnual * Math.min(horizon, payoffYears))} paid in by year ${horizon} — money that is not invested and is counted nowhere above. `
-      : '') +
-    `The saving is real; treat the second line as an upper bound on this plan's effect, not a projection of your net worth.`);
+    `Two separate figures, not one merged model — the baseline uses Worth's own debt-payoff assumption (${snap.debtYears} yrs at ${snap.debtRate}%), not this loan specifically. The ${inCr(interestSaved)} saved accrues through year ${payoffYears}, not all by year ${horizon}` +
+    (extraAnnual > 0 ? `, and the plan itself costs about ${fmt(extraAnnual)}/yr, not counted above` : '') +
+    `.`);
 }
 
 // =====================================================================
@@ -4701,7 +4717,7 @@ function disbTrancheRowHtml(t, i) {
   return `
     <div class="disb-tr-row">
       <div class="disb-tr-field">
-        <label>Tranche ${i + 1} — % of Loan${i === 0 ? `<span class="term-info"><button type="button" class="term-info-btn" id="ti-tranche-btn" aria-expanded="false" aria-controls="ti-tranche" aria-label="What is a tranche?" onclick="toggleTermInfo('ti-tranche')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-tranche" role="note" hidden>One stage of a staged loan disbursement — a percentage of the sanctioned loan released to the builder at a given construction month. Pre-EMI interest is charged only on what's been disbursed so far, not the full loan.</span></span>` : ''}</label>
+        <label>Tranche ${i + 1} — % of Loan${i === 0 ? `<span class="term-info"><button type="button" class="term-info-btn" id="ti-tranche-btn" aria-expanded="false" aria-controls="ti-tranche" aria-label="What is a tranche?" onclick="toggleTermInfo('ti-tranche')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-tranche" role="note" hidden>One stage of a staged disbursement: a % of the loan, released at a given month.</span></span>` : ''}</label>
         <input type="number" value="${t.pct}" min="0" max="100" step="1"
           oninput="disbTranches[${i}].pct = parseFloat(this.value) || 0; renderLoanDisb();">
       </div>
