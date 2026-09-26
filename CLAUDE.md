@@ -24,7 +24,7 @@ Dependency-free static site. The only automated tests cover `calc.js`'s pure fun
 Most of the app is one file, `index.html` (~5,600 lines: inline `<style>` then inline `<script>`). Support files:
 
 - `calc.js` — the app's **pure** financial-calculation functions (no DOM access). Loaded by `index.html` via `<script src>` **before** the inline script, and by `tests.js`/`tests.html` in Node/browser. Any new calculation that doesn't touch the DOM belongs here; anything DOM-coupled (`render*`, `calc*` reading `v()`/`chk()`/`el()`) stays in `index.html`. **Served network-first by `sw.js`, like the HTML shell** — it's API-locked to the inline script and must never skew from it across a deploy.
-- `sw.js` — service worker. Network-first for the app shell (`index.html` **and** `calc.js`); cache-first for everything else, `cache.put`-ing misses. `ASSETS` precaches the shell, `calc.js`, `manifest.json`, the logo, both manifest icons, and all 8 font files. `CACHE` is a hand-bumped version string (`apt-cost-v29` as of Wave 2 integration) — bump it on any change that should bust old caches.
+- `sw.js` — service worker. Network-first for the app shell (`index.html` **and** `calc.js`); cache-first for everything else, `cache.put`-ing misses. `ASSETS` precaches the shell, `calc.js`, `manifest.json`, the logo, both manifest icons, and all 8 font files. `CACHE` is a hand-bumped version string (`apt-cost-v30` as of the public-beta feedback link) — bump it on any change that should bust old caches.
 - `manifest.json` — PWA metadata. `fonts/` — 8 self-hosted `woff2` files (each family ships **latin + latin-ext** `@font-face` rules; latin-ext carries `₹` U+20B9 — never drop it).
 
 ### The hubs
@@ -41,11 +41,13 @@ The UI is "hubs" (top-level tabs) toggled via `switchHub(tab)`, each a `<div cla
 
 Nav order is `⌂ Home · Dhanam Worth · Dhanam Grow · Dhanam Home · Dhanam Car`. Each hub has one `render*`/`calc*` entry point (see **Core calculation functions**); wire new fields through it.
 
+A **BETA** badge sits next to the header wordmark, and every hub carries a quiet "Beta — tell us what worked and what didn't →" link (Dhanam Car also has a second one under Tool A) to a public feedback Google Form. `openFeedback(key)` / `prepFeedbackLink(a, key)` build the prefilled URL from the frozen `FEEDBACK_PARTS` map (short key → the form's exact Q1 option string) plus `BUILD_STAMP`; the on-screen controls are real `<a target="_blank">` elements so they still work even if the JS fails. **Q1's option strings in `FEEDBACK_PARTS` must match the live Google Form exactly** — see `ARCHITECTURE.md` and `DECISIONS.md`'s 2026-09-26 entry.
+
 ## Cross-cutting invariants
 
 These apply to almost any change. The reasoning and history for each is in `DECISIONS.md` / `ARCHITECTURE.md`.
 
-1. **Nothing leaves the device.** No `fetch`/`XHR`/`sendBeacon`/tracking pixel/CDN asset anywhere — not for fonts, not for analytics, not for error reporting. The About page's "watch the Network tab" claim depends on it.
+1. **Nothing leaves the device.** No `fetch`/`XHR`/`sendBeacon`/tracking pixel/CDN asset anywhere — not for fonts, not for analytics, not for error reporting. The About page's "watch the Network tab" claim depends on it. The one outbound link is the beta feedback Google Form, opened only on a user click in a new tab, carrying only the tool name and `BUILD_STAMP`.
 2. **`calc.js` purity.** DOM-free functions with a matching `tests.js` assertion. Run `node tests.js` after any `calc.js` change — it must stay 100%.
 3. **One entry point per feature.** Each section has a single `render*`/`calc*` that reads all its inputs and writes all its outputs. Add fields to the section's array/function, not a new update path.
 4. **Persistence is tier-1 only.** One key `dhanam.v1` (+ `dhanam.seen`). Store facts about the user; **never** store tier-2 market/statutory assumptions (rates, stamp duty, tax slabs, depreciation) — they reload from code. A field with a default persists only when changed. Reads/writes never throw; hydration runs after first paint. `history` is append-only (cap 120). Tier-3 UI state (dismissals, reveal open/closed) never touches `dhanam.v1`. `worthSnapshot()` is the only reader of `DS.worth` outside `hub-worth`.
@@ -81,7 +83,7 @@ These apply to almost any change. The reasoning and history for each is in `DECI
 
 - **`ARCHITECTURE.md`** — how each subsystem works and the non-obvious constraints (the old per-hub "specifics" sections).
 - **`DECISIONS.md`** — append-only "we chose X over Y, don't revert" log, indexed by R / B / D number.
-- **`MANUAL-TESTS.md`** — the 80-item by-hand regression checklist.
+- **`MANUAL-TESTS.md`** — the 81-item by-hand regression checklist.
 - `UX-ANALYSIS.md` / `ARCHITECTURE-ANALYSIS.md` / `COLOR-PALETTE-ANALYSIS.md` — the D-numbered findings and full rationale.
 - `TASK-UX-REDESIGN.md` — the R-numbered work items and B-numbered owner calls.
 - `PHASE-*-REPORT.md` — what shipped in each phase.

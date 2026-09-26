@@ -2,7 +2,7 @@
 
 No DOM-level test framework exists. `node tests.js` covers `calc.js`'s pure
 functions only (see *Testing* in `CLAUDE.md`); everything DOM-coupled is
-verified by hand against this list (80 items).
+verified by hand against this list (81 items).
 
 Re-run the relevant items by hand (`python3 -m http.server`) whenever touching
 `hub-landing`, `section-disb`, `hub-worth`, the persistence layer, navigation,
@@ -126,3 +126,5 @@ page and report back if behaviour doesn't match.
     — it must return `[]` (a trailing "— ▼" value placeholder isn't a title dash).
 
 80. **Max two nesting levels: no collapse-card inside collapse-card inside section-panel (S12, Wave 2 integration)**: the Loan panel's `#adv-section` (`adv-header` button, with `#adv-worth-card` *inside* it) used to be three-level nesting — that's been flattened. Verify in devtools console: `document.querySelectorAll('.collapse-card .collapse-card, .adv-section .collapse-card, .sip-section .collapse-card').length === 0`. Exception: term popovers (`.term-info-pop`) are not collapse-cards and don't count.
+
+81. **Beta feedback links never call home until clicked, and each opens the right prefilled form (2026-09-26)**: with devtools open on the Network tab, reload the app and visit every hub (Worth, Grow, Home — including opening each of its three accordion panels, Car) — confirm **zero** requests to `google.com`/`gstatic.com`/`docs.google.com` appear until a feedback link is actually clicked (loading the page, switching hubs, and opening/closing panels must not trigger any). Then click each link and confirm it opens `docs.google.com/forms/.../viewform` in a **new tab** with Q1 ("Which part of Dhanam did you try?") preselected to the matching option and "App version" = `BETA <BUILD_STAMP>`: Dhanam Worth → 'Dhanam Worth (net worth)'; Dhanam Grow → 'Dhanam Grow (SIP planner)'; Dhanam Home's single link → whichever of the three "Dhanam Home: …" options matches the accordion panel that's open (default/none open → "what the property will cost"); Dhanam Car's Tool A link (under `#lg-card`) → 'Dhanam Car: car loan or company lease?'; Dhanam Car's hub-bottom link → 'Dhanam Car: which car costs less to own?'; the landing-page and About-page links → 'The app overall / first screen'. Also confirm the header's **BETA** badge doesn't overlap `.header-about-link` or wrap the header oddly at 375px width.
