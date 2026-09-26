@@ -110,6 +110,14 @@ stated principle.
 - **R19 — every year-based chart states its x-axis extent in the caption.**
 - **R20 (Phase 3c) — a chart host must be a static DOM node**, not markup regenerated inside a parent's `innerHTML` template (rebuilding a `ResizeObserver` every keystroke). Applies to `cc-owncurve-chart`, `cc-depr-chart`, `cc-tenure-cards`, `cc-crossmode-cards`.
 
+### Wave 2 integration (S10–S12, 2026-09-26)
+
+- **Copy budget adopted:** hero (one number + one sentence), field hint (≤8 words), term popover (≤20 words), one "Assumptions & limits" collapse per hub (≤10 words/line, links to About). Long-form caveats consolidated on About page.
+- **Per-hub caveats merged:** old per-section caveat lists (the 10+ bullet "Assumptions & limits" on each hub) now one collapsed card per hub, with long-form moved to About's "Known gaps" section. No internal IDs, no "tier-2" mention, no advice.
+- **Nested collapse flattened:** two-level max (`panel → collapse`). Loan panel's `#adv-section` contains `#adv-worth-card` and `#adv-compare-card` as inline divs (no inner collapse); Buy-vs-SIP's `#sip-compare-card` renders inline inside `sip-section` (no collapse). Reduces cognitive load, surfaces full content on expand.
+- **Naming unified:** hub headers are brand names (Dhanam Worth/Grow/Home/Car), tile sublines are goal phrasing, in-hub section headers are questions (no " — " form). Aligns mental models.
+- **Home loan rate:** line updated from "SBI's ~8.75% average (2025)" to neutral "8.75% p.a. default — edit to your own quote", matching About page's stance on tier-2 assumptions.
+
 ## Icons (R7, Phase 4)
 
 - Inline SVG `<symbol>` sprite; usage is `<svg class="icon" aria-hidden="true" focusable="false">` (R27). `.icon` is `em`-sized and `currentColor` — except `.tile-icon`/`.ab-icon`, pinned to `--text-mid` so they don't inherit `.tile-title`'s permanent gold (R28). Reuse a symbol across related concepts rather than 1:1 emoji mapping; delete unused symbols (R30). Emoji stay in body/warning copy.

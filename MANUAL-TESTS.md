@@ -2,7 +2,7 @@
 
 No DOM-level test framework exists. `node tests.js` covers `calc.js`'s pure
 functions only (see *Testing* in `CLAUDE.md`); everything DOM-coupled is
-verified by hand against this list.
+verified by hand against this list (80 items).
 
 Re-run the relevant items by hand (`python3 -m http.server`) whenever touching
 `hub-landing`, `section-disb`, `hub-worth`, the persistence layer, navigation,
@@ -10,7 +10,7 @@ Re-run the relevant items by hand (`python3 -m http.server`) whenever touching
 decision numbers — the full reasoning for each is in `DECISIONS.md`,
 `ARCHITECTURE.md`, and the `PHASE-*-REPORT.md` files.
 
-Several late items (60–68) were written from code inspection only — this
+Several items (60–68) were written from code inspection only — this
 environment has no browser. They're flagged inline; run them against a live
 page and report back if behaviour doesn't match.
 
@@ -114,3 +114,13 @@ page and report back if behaviour doesn't match.
 73. **Tool B's example cars render on first paint and are never persisted until edited (S5/S9, 2026-09-25)**: opening `hub-car` on a completely fresh profile shows two ranked cards ("Petrol hatchback" and "Electric hatchback") and a populated hero with no typing — confirm `dhanam.v1` is still entirely absent from devtools' Local Storage after merely viewing the hub (switching hubs away and back, resizing the window). Editing any shortlist field, adding/removing a car, or changing "Annual driving (km)" causes the very next render to write `DS.carCompare` — verify by reloading and confirming the edit survived.
 74. **A pre-S5 backup restores without error and ranks the same cars (S9, 2026-09-25)**: construct (or keep from before this phase) a backup JSON whose `carCompare` has `cars` with `eff`/`bigEngine`/`downPayment` but no `range`/`battery`, and `cityKm`/`hwyKm` instead of `annualKm`. Restoring it via "Restore backup" must not throw, must populate `cc-annual-km` with `cityKm + hwyKm`, and must rank the same cars in the same order as before — an EV row with no saved range/battery keeps its old `eff` and its shortlist row shows "Using your saved efficiency of X kWh/100km — enter range and battery to update" instead of a blocking "missing" message.
 75. **Tool B's "Explore further" is the section's only collapse control (S7, 2026-09-25)**: inside `hub-car`'s Tool B, `#cc-explore-card` is the only `.collapse-card`/collapse-header in the whole section — no nested collapse inside it, and no element anywhere in `hub-car` whose visible label starts with "Reveal" (`grep -n '>Reveal' index.html` returns nothing). Each ranked result card shows its full (short) line set immediately, with no "Full breakdown ▾" toggle.
+
+76. **No visible text node outside About exceeds 60 words (S10, Wave 2 integration)**: render every hub at least once and check the copy. With devtools open, select a `<p>`, `<li>`, `<div>`, etc. with text content outside `#hub-about` — count the words in its `.textContent` and verify none exceed 60. (A linter: `[...document.querySelectorAll('.hub-content:not(#hub-about) *')].filter(el=>el.children.length===0).map(el=>({words:el.textContent.trim().split(/\s+/).length,text:el.textContent})).filter(x=>x.words>60)` returns `[]`.)
+
+77. **Every term popover is ≤ 20 words (S10, Wave 2 integration)**: `grep -c 'class="term-info-pop"' index.html` shows the number of popovers. Tap each one and count the words in `.textContent` — none must exceed 20 words. (Linter: `[...document.querySelectorAll('.term-info-pop')].map(el=>({words:el.textContent.trim().split(/\s+/).length,text:el.textContent})).filter(x=>x.words>20)` returns `[]`.)
+
+78. **Each hub has at most one "Assumptions & limits" collapse; each line ≤ 10 words; it links to About (S10, Wave 2 integration)**: in each hub's content (`#hub-sip`, `#hub-car`, `#hub-apartment`, `#hub-worth`), search for `.collapse-card` with "Assumptions & limits" — there's exactly one. Expand it. Each `<li>` inside must be ≤ 10 words (`wc -w` style counting), and the last line must link to About via a button with `onclick="switchHub('about')"`.
+
+79. **No section header contains " — " (S11, Wave 2 integration)**: section headers are **questions** (in-hub) or **brand names** (nav/tile sublines/hero phrases), never "X — Y Analysis" form. In `index.html`, `grep -n 'class="section-title"' | head -20` lists the section headers — none of their `.textContent` must contain " — " (three characters: space, two dashes, space). One exception: value placeholders like "(₹/kWh) — ▼" and "Month ▼" (a header with an optional select below are fine).
+
+80. **Max two nesting levels: no collapse-card inside collapse-card inside section-panel (S12, Wave 2 integration)**: the Loan panel's `#adv-section` (`adv-header` button, `collapse-body` with `#adv-worth-card` *inside* it) used to be three-level nesting — that's been flattened. Verify: `grep -c 'collapse-card.*collapse-card.*section' index.html` returns 0 (no nesting of two collapse-cards within one panel). Exception: term popovers (`.term-info-pop`) are not collapse-cards and don't count.

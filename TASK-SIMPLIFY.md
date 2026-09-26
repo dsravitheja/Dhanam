@@ -100,6 +100,7 @@ Move to constants in `calc.js` (dated, on the About page provenance list, pinned
 - Pass every hub. Current worst offenders: Car (2,730 words static copy), Home Loan panel, the 16 popovers at 32–52 words.
 - Add to `MANUAL-TESTS.md`: "no visible text node outside About exceeds 60 words."
 - **Done when:** Car ≤ 800 static words, Home ≤ 700, every popover ≤ 20 words, one caveat panel per hub.
+- **Status: done 2026-09-26**
 
 ### S11. One naming system
 - Nav + hub headers: brand names (Dhanam Worth / Grow / Home / Car).
@@ -107,11 +108,13 @@ Move to constants in `calc.js` (dated, on the About page provenance list, pinned
 - In-hub section headers: questions ("Which car costs less to own?", "What will this property cost?").
 - Delete headers of the form "X — Y Analysis".
 - **Done when:** no section header contains " — ".
+- **Status: done 2026-09-26**
 
 ### S12. Nesting cap
 - Max two levels anywhere: panel → one collapse. The Loan panel's `adv-section` → `adv-worth-card` nesting is three; flatten `#adv-worth-card`'s content into `adv-section` directly (still closed-by-default at the `adv-section` level).
 - Term popovers: with S10's 20-word cap, the close-on-scroll behaviour is fine; leave it.
 - **Done when:** no `.collapse-card` inside a `.collapse-card` inside a `.section-panel`.
+- **Status: done 2026-09-26**
 
 ---
 
@@ -123,6 +126,7 @@ Move to constants in `calc.js` (dated, on the About page provenance list, pinned
 - Record per task: **seconds to first meaningful number**, **furthest scroll depth**, **abandoned Y/N**, one quote.
 - Launch metric: every hub ≤ 20 s to first number. If Car is still > 60 s after Wave 1, Wave 1 isn't finished.
 - **Done when:** a 1-page `BETA-1-FINDINGS.md` exists with the table above filled in for 5 × 5 tasks.
+- **Status: skipped by owner 2026-09-26 (human beta, not agent work)**
 
 ---
 
