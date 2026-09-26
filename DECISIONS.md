@@ -126,3 +126,12 @@ stated principle.
 ## Client-side error visibility (R66, Phase 16)
 
 - `window.onerror` **and** `unhandledrejection`, both. Writes to a dismissible `#err-panel` only — ⚠ **never** `fetch`/`XHR`/`sendBeacon`/pixel, not even to a free third-party logger (forfeits the privacy claim). Deduped with a `(×N)` counter; the handler is fully `try/catch`-wrapped and falls back to one `alert`. `--red` header is the one sanctioned use outside a financial delta.
+
+## Public-beta feedback link (2026-09-26)
+
+- **A Google Form, not a shared doc or an in-app composer.** A form's per-question breakdown (which tool, free text) is more useful for a public beta than a single shared inbox, and it needed zero new UI beyond a prefilled link — no textarea, no submit handler, no local draft state to persist.
+- **Prefill carries exactly two facts: which part of the app (`FEEDBACK_PARTS[key]`) and `BUILD_STAMP`** — never anything the user typed into a calculator. This is what keeps the About page's "nothing leaves this page" claim true: the one outbound link only ever fires on a click, never on load, and carries no calculator input.
+- **`FEEDBACK_PARTS`'s eight strings must match the live form's Q1 options character-for-character.** Google Forms preselects a prefilled radio by matching the parameter's text against the choice text; ⚠ renaming a choice in the form (even fixing a typo) silently stops that option from preselecting — no error, no console warning, just a blank Q1. Check both sides whenever either changes.
+- **⚠ Don't embed or iframe the form.** An embedded form would load `docs.google.com` the moment the page (or the embedding hub) renders, not on a click — the exact background request invariant 1 exists to prevent. A same-tab redirect was also rejected: it would navigate the user's only tab away from a live calculator session mid-input. `target="_blank"` keeps the app tab alive.
+- **The controls are real `<a target="_blank" rel="noopener noreferrer">` elements with a static (un-prefilled) `href`, not buttons that call `window.open()`.** `prepFeedbackLink()` swaps in the prefilled URL from the `onclick`, but if that throws for any reason the anchor's original `href` still opens the plain form — the link is never fully dead.
+- **`hub-apartment`'s single feedback link resolves `home` → `home-cost`/`home-loan`/`home-disb` at click time** from whichever `.section-panel` currently has the `open` class (the same check `toggleSection()` uses) — one link, not three, for a hub whose actual sub-tool varies by which accordion panel is open.

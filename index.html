@@ -356,6 +356,17 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .collapse-card.open .collapse-body { display:block; }
 .limits-about-link { background:none; border:none; padding:0; font:inherit; color:var(--accent); text-decoration:underline; cursor:pointer; }
 
+/* ── BETA FEEDBACK LINK (public-beta) ──────
+   A quiet text link, deliberately neutral (not gold/green/red — palette
+   rules 2-4 reserve those for hero emphasis and real financial deltas, and
+   this is neither). Underline appears on hover/focus rather than a color
+   change, so it reads as "more link" rather than competing with the gold
+   accent used everywhere else. Real <a target="_blank" rel="noopener
+   noreferrer"> elements with a static href; prepFeedbackLink() swaps in the
+   prefilled URL on click. */
+.beta-feedback-link { display:inline-block; font-size:12px; color:var(--text-dim); text-decoration:none; cursor:pointer; }
+.beta-feedback-link:hover, .beta-feedback-link:focus-visible { color:var(--text-mid); text-decoration:underline; }
+
 /* ── BREAKDOWN ROWS ──────────────────────── */
 .br-row { display:flex; justify-content:space-between; align-items:baseline; padding:5px 0; border-bottom:1px solid var(--border-subtle); gap:12px; flex-wrap:wrap; }
 .br-row:last-child { border-bottom:none; }
@@ -640,6 +651,13 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .header-about-link:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 @media(max-width:480px){ .header-about-link { top:12px; right:12px; padding:4px 9px; font-size:10px; } }
 
+/* ── BETA BADGE (public-beta label, header) ─
+   Neutral outline pill next to the brand name — not gold/green/red (palette
+   rule 1), since this is a status label, not a hero figure or a financial
+   delta. Sits inline with h1 inside a flex row so it wraps under the
+   wordmark rather than overlapping .header-about-link at narrow widths. */
+.beta-badge { display:inline-block; padding:2px 7px; border:1px solid var(--border); border-radius:10px; font-family:'Inter','Segoe UI',system-ui,sans-serif; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-mid); vertical-align:middle; }
+
 /* ── LANDING PAGE ─────────────────────────── */
 .landing-intro { color:var(--text-mid); font-size:13.5px; margin-bottom:20px; }
 /* R25/6e: first-run orientation line — one dismissible line, not a tour.
@@ -883,7 +901,10 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <div class="header-inner clickable" onclick="switchHub('landing')" title="Back to home">
     <img src="dhanamlogo.png" alt="Dhanam" class="header-logo">
     <div class="header-text">
-      <h1>Dhanam</h1>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <h1>Dhanam</h1>
+        <span class="beta-badge" aria-label="Beta version">BETA</span>
+      </div>
       <p>Your personal financial hub · Worth · Grow · Home · Car</p>
     </div>
   </div>
@@ -964,6 +985,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
 <div class="landing-footer">
   <button type="button" class="landing-footer-link" onclick="switchHub('about')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg> About · How this works</button>
+  <a class="beta-feedback-link" href="https://docs.google.com/forms/d/e/1FAIpQLSck6y3OBoAn1YGm5FUTK_DQCN-2z9limfjtANjdUHHn4ZMwHQ/viewform" target="_blank" rel="noopener noreferrer" onclick="return prepFeedbackLink(this,'overall')">Give beta feedback</a>
   <a class="landing-footer-link" href="mailto:dsravitheja@gmail.com">Have feedback? Email us</a>
 </div>
 
@@ -1643,18 +1665,20 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <div class="collapse-body">
     <ul style="font-size:12px;color:var(--text-dim);line-height:2;padding-left:16px;margin:0;">
       <li>Property costs are estimates.</li>
-      <li>Stamp duty and registration vary by state; edit yours.</li>
+      <li>Stamp duty &amp; registration vary by state; edit yours.</li>
       <li>GST applies only to under-construction property, 5%, no credit.</li>
       <li>Loan rate: 8.75% p.a. default; edit yours.</li>
       <li>Prepayment projections assume a fixed interest rate.</li>
       <li>SIP returns aren't guaranteed; loan savings are, tax-free.</li>
-      <li>Buy-vs-SIP ignores the loan's Section 24 and 80C benefits.</li>
+      <li>Buy-vs-SIP ignores the loan's Section 24 &amp; 80C benefits.</li>
       <li>Net-worth figures reuse Dhanam Worth's projection.</li>
       <li>Pre-EMI assumes tranches disburse exactly as scheduled.</li>
-      <li>Full sources and dates: <button type="button" class="limits-about-link" onclick="switchHub('about')">About</button></li>
+      <li>Full sources &amp; dates: <button type="button" class="limits-about-link" onclick="switchHub('about')">About</button></li>
     </ul>
   </div>
 </div>
+
+<p style="margin-top:10px;"><a class="beta-feedback-link" href="https://docs.google.com/forms/d/e/1FAIpQLSck6y3OBoAn1YGm5FUTK_DQCN-2z9limfjtANjdUHHn4ZMwHQ/viewform" target="_blank" rel="noopener noreferrer" onclick="return prepFeedbackLink(this,'home')">Beta — tell us what worked and what didn't →</a></p>
 
 </div><!-- /main -->
 </div><!-- /hub-apartment -->
@@ -1714,6 +1738,8 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <button type="button" class="btn btn-secondary" id="car-lease-toggle" aria-expanded="false" aria-controls="car-lease-panel" style="margin-top:10px;" onclick="toggleLeasePanel()">Reconcile against my payslip ▾</button>
       </div>
     </div>
+
+    <p style="margin:0 0 20px;"><a class="beta-feedback-link" href="https://docs.google.com/forms/d/e/1FAIpQLSck6y3OBoAn1YGm5FUTK_DQCN-2z9limfjtANjdUHHn4ZMwHQ/viewform" target="_blank" rel="noopener noreferrer" onclick="return prepFeedbackLink(this,'car-lease')">Feedback on this tool (beta) →</a></p>
 
     <!-- Lease Tax Analysis — a deep dive reached via the toggle above, not
          a first screen. Unchanged from before except car-basic's label/
@@ -1949,6 +1975,8 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       </div>
     </div>
 
+    <p style="margin-top:10px;"><a class="beta-feedback-link" href="https://docs.google.com/forms/d/e/1FAIpQLSck6y3OBoAn1YGm5FUTK_DQCN-2z9limfjtANjdUHHn4ZMwHQ/viewform" target="_blank" rel="noopener noreferrer" onclick="return prepFeedbackLink(this,'car-compare')">Beta — tell us what worked and what didn't →</a></p>
+
   </div>
 </div>
 
@@ -2159,6 +2187,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       </div>
     </div>
 
+    <p style="margin:10px 0 0;"><a class="beta-feedback-link" href="https://docs.google.com/forms/d/e/1FAIpQLSck6y3OBoAn1YGm5FUTK_DQCN-2z9limfjtANjdUHHn4ZMwHQ/viewform" target="_blank" rel="noopener noreferrer" onclick="return prepFeedbackLink(this,'grow')">Beta — tell us what worked and what didn't →</a></p>
   </div>
 </div><!-- /hub-sip -->
 
@@ -2265,6 +2294,8 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   </div>
 </div>
 
+<p style="margin:10px 0 0;"><a class="beta-feedback-link" href="https://docs.google.com/forms/d/e/1FAIpQLSck6y3OBoAn1YGm5FUTK_DQCN-2z9limfjtANjdUHHn4ZMwHQ/viewform" target="_blank" rel="noopener noreferrer" onclick="return prepFeedbackLink(this,'worth')">Beta — tell us what worked and what didn't →</a></p>
+
 <div class="panel-card">
   <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg></span><span class="pch-title">Your data</span></div>
   <div class="panel-card-body">
@@ -2317,7 +2348,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg></span><span class="pch-title">Privacy</span></div>
   <div class="panel-card-body">
     <p style="font-size:13px;color:var(--text);line-height:1.7;">
-      Nothing you type is ever sent anywhere. This is checkable, not just claimed: open your browser's developer tools, switch to the Network tab, and use the app — you'll see no request leave this page. (The one exception is the app's own offline-caching service worker asking this same site for its own files, so the app still works with no signal — that's the app loading itself, not sending anything about you.)
+      Nothing you type is ever sent anywhere. This is checkable, not just claimed: open your browser's developer tools, switch to the Network tab, and use the app — you'll see no request leave this page. (The one exception is the app's own offline-caching service worker asking this same site for its own files, so the app still works with no signal — that's the app loading itself, not sending anything about you.) The feedback link opens a Google Form in a new tab. It carries only which tool you were on and the app version — never anything you've entered.
     </p>
     <ul style="font-size:12px;color:var(--text-dim);line-height:2;padding-left:16px;margin-top:8px;">
       <li>No accounts, no login, no password.</li>
@@ -2420,6 +2451,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
   <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-briefcase"></use></svg></span><span class="pch-title">Build &amp; contact</span></div>
   <div class="panel-card-body">
     <p class="note-text">Build <span id="about-build-stamp">—</span>. Dhanam works offline and caches its own files — if a change you were told about isn't showing up, reload the page and check this number moved.</p>
+    <p class="note-text" style="margin-top:6px;">This is a public beta. <a class="beta-feedback-link" href="https://docs.google.com/forms/d/e/1FAIpQLSck6y3OBoAn1YGm5FUTK_DQCN-2z9limfjtANjdUHHn4ZMwHQ/viewform" target="_blank" rel="noopener noreferrer" onclick="return prepFeedbackLink(this,'overall')">Give beta feedback</a> — a short Google Form, opens in a new tab.</p>
     <p class="note-text" style="margin-top:6px;">Found something that looks wrong, or have a suggestion? <a href="mailto:dsravitheja@gmail.com" style="color:var(--accent);">dsravitheja@gmail.com</a> — mention what you were doing and what looked off; that's more useful than "it's broken."</p>
   </div>
 </div>
@@ -2561,6 +2593,64 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 // version whenever a user-visible change ships — the two are not derived from
 // one another, so both need editing.
 const BUILD_STAMP = '2026-09-26';
+
+// =====================================================================
+// PUBLIC-BETA FEEDBACK LINK (2026-09-26)
+// A Google Form prefilled with which part of the app the tap came from and
+// the current BUILD_STAMP — see DECISIONS.md's 2026-09-26 entry. This is
+// the one link in the app that ever points off-device, and it only ever
+// fires on a real click, never on load or in the background (invariant 1,
+// CLAUDE.md) — nothing here calls fetch/XHR/sendBeacon, and nothing
+// preconnects or embeds the form. Q1's option strings below must match the
+// live form's choices EXACTLY (Google Forms preselects a radio by matching
+// the prefilled value's text) — renaming a choice in the form silently
+// breaks preselection here, not an error either side would surface.
+// =====================================================================
+const FEEDBACK_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSck6y3OBoAn1YGm5FUTK_DQCN-2z9limfjtANjdUHHn4ZMwHQ/viewform';
+const FEEDBACK_ENTRY_PART = 'entry.1880033907';    // Q1: "Which part of Dhanam did you try?"
+const FEEDBACK_ENTRY_VERSION = 'entry.1796010273'; // "App version"
+const FEEDBACK_PARTS = Object.freeze({
+  'worth':       'Dhanam Worth (net worth)',
+  'grow':        'Dhanam Grow (SIP planner)',
+  'home-cost':   'Dhanam Home: what the property will cost',
+  'home-loan':   'Dhanam Home: loan, prepaying, or investing instead',
+  'home-disb':   'Dhanam Home: paying before possession (pre-EMI)',
+  'car-lease':   'Dhanam Car: car loan or company lease?',
+  'car-compare': 'Dhanam Car: which car costs less to own?',
+  'overall':     'The app overall / first screen'
+});
+
+// 'home' resolves at click time to whichever hub-apartment accordion panel
+// is open (same .open class the accordion's own toggleSection() checks),
+// so one link can point Home feedback at the right sub-tool without a
+// separate control per panel. Falls back to home-cost (the panel open by
+// default / most likely tried first) if nothing is open or the DOM lookup
+// fails for any reason.
+function resolveFeedbackKey(key) {
+  if (key !== 'home') return key;
+  try {
+    if (el('section-disb') && el('section-disb').classList.contains('open')) return 'home-disb';
+    if (el('section-loan') && el('section-loan').classList.contains('open')) return 'home-loan';
+  } catch (e) {}
+  return 'home-cost';
+}
+
+function buildFeedbackUrl(key) {
+  const part = FEEDBACK_PARTS[resolveFeedbackKey(key)] || FEEDBACK_PARTS.overall;
+  return FEEDBACK_FORM_URL + '?usp=pp_url&' + FEEDBACK_ENTRY_PART + '=' + encodeURIComponent(part) +
+    '&' + FEEDBACK_ENTRY_VERSION + '=' + encodeURIComponent('BETA ' + BUILD_STAMP);
+}
+
+// Called from a feedback <a>'s onclick, just before the browser follows its
+// href. Swaps the anchor's static, un-prefilled viewform href for the
+// prefilled one; if this throws for any reason the anchor's original href
+// still opens the plain form, so the link is never dead. Always returns
+// true so the click's default navigation (to whichever href ends up set)
+// proceeds normally.
+function prepFeedbackLink(a, key) {
+  try { a.href = buildFeedbackUrl(key); } catch (e) {}
+  return true;
+}
 
 // =====================================================================
 // UTILITIES

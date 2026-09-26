@@ -217,6 +217,19 @@ Since Phase 2a there *is* a small `localStorage` layer, and the rules around it 
 
 ---
 
+## Public-beta feedback link (2026-09-26)
+
+A **BETA** pill sits next to the header wordmark (inside `.header-text`, a sibling of the `<h1>`, so it wraps under the brand name rather than colliding with the absolutely-positioned `.header-about-link` at narrow widths), and a quiet "Beta — tell us what worked and what didn't →" line sits right after each hub's "Assumptions & limits" collapse-card (`hub-worth`, `hub-sip`, `hub-apartment`, `hub-car`) plus a second, shorter "Feedback on this tool (beta) →" directly under Dhanam Car's Tool A card (`#lg-card`). The landing footer and the About page's "Build & contact" panel carry one too. All of them point at the same public Google Form.
+
+- **`FEEDBACK_PARTS`** (frozen, in the inline `<script>` next to `BUILD_STAMP`) maps a short key (`worth`, `grow`, `home-cost`, `home-loan`, `home-disb`, `car-lease`, `car-compare`, `overall`) to the form's Q1 option text, exactly as the form spells it — Google Forms preselects a prefilled radio by matching that text, so the two must never drift apart.
+- **`buildFeedbackUrl(key)`** appends `?usp=pp_url&<part-entry>=<Q1 text>&<version-entry>=BETA <BUILD_STAMP>` to `FEEDBACK_FORM_URL`. `resolveFeedbackKey(key)` handles the one dynamic case: `hub-apartment` has a single feedback link (not one per accordion panel), and its key `'home'` resolves at click time to `home-disb`/`home-loan`/`home-cost` by checking which `#section-*` panel currently has the `open` class — the same check `toggleSection()` itself uses.
+- **The on-screen controls are real `<a target="_blank" rel="noopener noreferrer">` elements whose `href` starts as the plain, un-prefilled viewform URL.** `onclick="return prepFeedbackLink(this, key)"` swaps in the prefilled URL immediately before the browser follows the link; if that throws for any reason, the anchor's original `href` still opens the plain form, so a link is never fully dead.
+- **Never fires on load or in the background** — invariant 1 (`CLAUDE.md`) covers this link specifically now: no `fetch`/`XHR`/`sendBeacon`, no `<link rel="preconnect">`, no iframe/embed of the form. The only network activity Google ever sees is the tab the browser opens after a real click.
+- **Neutral colours only** — `.beta-badge` and `.beta-feedback-link` are new, deliberately outside the gold/green/red three-hue rule (a beta label and a feedback link are neither a hero figure nor a financial delta). `.beta-feedback-link` underlines on hover/focus instead of shifting to `--accent`, so it doesn't read as another gold call-to-action.
+- See `DECISIONS.md`'s 2026-09-26 entry for why a Google Form (not a shared doc or an in-app composer) and why real `<a>` tags over a button-only `window.open()` flow.
+
+---
+
 ## Keyboard & ARIA accessibility (R8, Phase 17)
 
 D8/`ARCHITECTURE-ANALYSIS.md`'s accessibility gap, re-rated Medium → High once B4 answered "general audience": before Phase 17 there were zero `aria-expanded`, `role="tablist"`, `aria-selected`, or `tabindex` occurrences anywhere in the file, and every collapse header was a clickable `<div>`, not a `<button>`. This is an app-wide sweep, not scoped to one hub.
