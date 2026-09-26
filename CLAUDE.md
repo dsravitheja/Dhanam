@@ -41,7 +41,7 @@ The UI is "hubs" (top-level tabs) toggled via `switchHub(tab)`, each a `<div cla
 
 Nav order is `⌂ Home · Dhanam Worth · Dhanam Grow · Dhanam Home · Dhanam Car`. Each hub has one `render*`/`calc*` entry point (see **Core calculation functions**); wire new fields through it.
 
-A **BETA** badge sits next to the header wordmark, and every hub carries a quiet "Beta — tell us what worked and what didn't →" link (Dhanam Car also has a second one under Tool A) to a public feedback Google Form. `openFeedback(key)` / `prepFeedbackLink(a, key)` build the prefilled URL from the frozen `FEEDBACK_PARTS` map (short key → the form's exact Q1 option string) plus `BUILD_STAMP`; the on-screen controls are real `<a target="_blank">` elements so they still work even if the JS fails. **Q1's option strings in `FEEDBACK_PARTS` must match the live Google Form exactly** — see `ARCHITECTURE.md` and `DECISIONS.md`'s 2026-09-26 entry.
+A **BETA** badge sits next to the header wordmark, and every hub carries a quiet "Beta — tell us what worked and what didn't →" link (Dhanam Car also has a second one under Tool A) to a public feedback Google Form. The on-screen controls are real `<a target="_blank" rel="noopener noreferrer">` elements with a static (plain-form) `href`; `prepFeedbackLink()` swaps in the prefilled URL from the `onclick`, building it from the frozen `FEEDBACK_PARTS` map (short key → the form's exact Q1 option string) plus `BUILD_STAMP`. If `prepFeedbackLink()` throws for any reason, the anchor's original `href` still opens the plain form — the link is never fully dead. **Q1's option strings in `FEEDBACK_PARTS` must match the live Google Form exactly** — see `ARCHITECTURE.md` and `DECISIONS.md`'s 2026-09-26 entry.
 
 ## Cross-cutting invariants
 

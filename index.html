@@ -362,8 +362,8 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
    this is neither). Underline appears on hover/focus rather than a color
    change, so it reads as "more link" rather than competing with the gold
    accent used everywhere else. Real <a target="_blank" rel="noopener
-   noreferrer"> elements — see openFeedback()/prepFeedbackLink() in the
-   inline script. */
+   noreferrer"> elements with a static href; prepFeedbackLink() swaps in the
+   prefilled URL on click. */
 .beta-feedback-link { display:inline-block; font-size:12px; color:var(--text-dim); text-decoration:none; cursor:pointer; }
 .beta-feedback-link:hover, .beta-feedback-link:focus-visible { color:var(--text-mid); text-decoration:underline; }
 
@@ -2007,7 +2007,6 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </ul>
       </div>
     </div>
-    <p style="margin:0 0 14px;"><a class="beta-feedback-link" href="https://docs.google.com/forms/d/e/1FAIpQLSck6y3OBoAn1YGm5FUTK_DQCN-2z9limfjtANjdUHHn4ZMwHQ/viewform" target="_blank" rel="noopener noreferrer" onclick="return prepFeedbackLink(this,'grow')">Beta — tell us what worked and what didn't →</a></p>
     <div class="sip-planner-tabs" role="tablist" aria-label="Dhanam Grow SIP planner">
       <button class="sip-planner-tab active" id="spt-monthly" role="tab" aria-selected="true" onclick="switchSIPPlannerTab('monthly')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg> Monthly SIP</button>
       <button class="sip-planner-tab" id="spt-stepup" role="tab" aria-selected="false" onclick="switchSIPPlannerTab('stepup')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> Step-up SIP</button>
@@ -2188,6 +2187,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       </div>
     </div>
 
+    <p style="margin:10px 0 0;"><a class="beta-feedback-link" href="https://docs.google.com/forms/d/e/1FAIpQLSck6y3OBoAn1YGm5FUTK_DQCN-2z9limfjtANjdUHHn4ZMwHQ/viewform" target="_blank" rel="noopener noreferrer" onclick="return prepFeedbackLink(this,'grow')">Beta — tell us what worked and what didn't →</a></p>
   </div>
 </div><!-- /hub-sip -->
 
@@ -2639,16 +2639,6 @@ function buildFeedbackUrl(key) {
   const part = FEEDBACK_PARTS[resolveFeedbackKey(key)] || FEEDBACK_PARTS.overall;
   return FEEDBACK_FORM_URL + '?usp=pp_url&' + FEEDBACK_ENTRY_PART + '=' + encodeURIComponent(part) +
     '&' + FEEDBACK_ENTRY_VERSION + '=' + encodeURIComponent('BETA ' + BUILD_STAMP);
-}
-
-// Opens the prefilled form directly. Never throws — a failure here (e.g. a
-// popup blocker) just means nothing happens, which is why every on-screen
-// feedback control is a real <a target="_blank"> to the plain form (see
-// prepFeedbackLink) rather than a button that depends on this succeeding.
-function openFeedback(key) {
-  try {
-    window.open(buildFeedbackUrl(key), '_blank', 'noopener,noreferrer');
-  } catch (e) {}
 }
 
 // Called from a feedback <a>'s onclick, just before the browser follows its
