@@ -57,14 +57,14 @@ stated principle.
 
 - **R14 (Phase 3b) — `section-detail`/`section-loan`/`section-disb` are an exclusive accordion.** Opening one closes the others; clicking an open one collapses it. Scoped to exactly these three — nested `.collapse-card`s are legitimate parallel drill-downs and are **not** part of it. Panels lazy-init once (`*Opened` latches); collapse is a CSS change, never a re-render.
 - **R21 (Phase 6a) — `q-state` drives stamp duty / registration** from `PROPERTY_STATES` (9 states, dated, non-exhaustive). All three rate fields stay editable; the active state's name flows into every label + export header. Telangana default reproduces every pre-R21 number.
-- **R24's 6d-i — the Buy-vs-SIP `.sip-caveat` sits above the hero**, outside the closed compare card, and names *both* sides' ignored factors (SIP tax/uncertainty; the loan's own §24/80C benefits). No tax rate printed in it.
+- **R24's 6d-i — the Buy-vs-SIP `.sip-caveat` sits above the hero**, outside the closed compare card, and names *both* sides' ignored factors (SIP tax/uncertainty; the loan's own §24/80C benefits). No tax rate printed in it. **Superseded by S10 (2026-09-26):** the on-hero line is now one sentence ("Loan side is guaranteed and tax-free; SIP side is not."); the full framing moved to `#home-limits-card`, the hub's one collapsed "Assumptions & limits" panel.
 - **Loan disbursement (`section-disb`)** was once its own hub; folded in as a sub-topic of home buying. ⚠ don't call `renderDisbTranches()` from `renderLoanDisb()` (D6 focus trap).
 
 ## Dhanam Grow (`hub-sip`)
 
 - **R16/R18 (Phase 3c) — `su-stepup` treats a typed `0` as a real value** (not blank); years inputs clamp to 1–50 on the field itself, not just in the calc.
 - **B6 — `calcSIP` (annuity-due) and `calcStepupSIP` (ordinary-annuity) disagree ~1% even at 0% step-up.** Documented and bounded in `tests.js`, not "fixed". ⚠ don't plot the two functions against each other as two lines — the step-up chart compares `calcStepupSIP` at the real vs 0% step-up instead.
-- **R63 (Phase 15) — one pre-tax `.sip-caveat` above the tab row** (D4: once, not per-tab — every tab-open path already crosses it). Copy only; **R31** (an actual post-tax figure) remains unbuilt, gated on **B10** (unanswered).
+- **R63 (Phase 15) — one pre-tax `.sip-caveat` above the tab row** (D4: once, not per-tab — every tab-open path already crosses it). Copy only; **R31** (an actual post-tax figure) remains unbuilt, gated on **B10** (unanswered). **Superseded by S10 (2026-09-26):** the above-tab-row `.sip-caveat` is gone; the pre-tax facts (₹1.25L exemption, 12.5% rate, 23 Jul 2024) now live in `#sp-limits-card`, a collapsed panel below the section title, plus a "Shown pre-tax" note on the `ti-corpus` popover.
 
 ## Dhanam Car (`hub-car`)
 
@@ -109,6 +109,15 @@ stated principle.
 - **R17 (Phase 3c) — `chartSvg()` spaces by array index.** Non-uniform sequences must be expanded to uniform before `renderChart()`.
 - **R19 — every year-based chart states its x-axis extent in the caption.**
 - **R20 (Phase 3c) — a chart host must be a static DOM node**, not markup regenerated inside a parent's `innerHTML` template (rebuilding a `ResizeObserver` every keystroke). Applies to `cc-owncurve-chart`, `cc-depr-chart`, `cc-tenure-cards`, `cc-crossmode-cards`.
+
+### Wave 2 integration (S10–S12, 2026-09-26)
+
+- **Copy budget adopted:** hero (one number + one sentence), field hint (≤8 words), term popover (≤20 words), one "Assumptions & limits" collapse per hub (≤10 words/line, links to About). Long-form caveats consolidated on About page.
+- **Per-hub caveats merged:** Car had the only pre-existing caveat lists — the lease panel's 7-bullet "Important Notes & Caveats" and Compare Cars' own 8-bullet "Assumptions & limits" — folded into one `#car-limits-card`. Home's 93-word Buy-vs-SIP `.sip-caveat` and Grow's 67-word pre-tax `.sip-caveat` are similarly folded into `#home-limits-card`/`#sp-limits-card`. Every hub now has exactly one collapsed "Assumptions & limits" card, long-form moved to About's "Known gaps" section. No internal IDs, no "tier-2" mention, no advice.
+- **Nested collapse flattened:** two-level max (`panel → collapse`). Loan panel's `#adv-section` contains `#adv-worth-card` and `#adv-compare-card` as inline divs (no inner collapse); Buy-vs-SIP's `#sip-compare-card` renders inline inside `sip-section` (no collapse). Reduces cognitive load, surfaces full content on expand.
+- **R65's "net-worth card closed by default" mitigation now applies at the `#adv-section` level (S12):** with `#adv-worth-card` flattened to a plain div (no collapse control of its own), the privacy protection is that `adv-section` itself starts closed — opening "What if I prepay?" now shows the real net-worth figures immediately, with no second expand step inside it.
+- **Naming unified:** hub headers are brand names (Dhanam Worth/Grow/Home/Car), tile sublines are goal phrasing, in-hub section headers are questions (no " — " form). Aligns mental models.
+- **Home loan rate:** line updated from "SBI's ~8.75% average (2025)" to neutral "8.75% p.a. default — edit to your own quote", matching About page's stance on tier-2 assumptions.
 
 ## Icons (R7, Phase 4)
 

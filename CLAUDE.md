@@ -24,7 +24,7 @@ Dependency-free static site. The only automated tests cover `calc.js`'s pure fun
 Most of the app is one file, `index.html` (~5,600 lines: inline `<style>` then inline `<script>`). Support files:
 
 - `calc.js` — the app's **pure** financial-calculation functions (no DOM access). Loaded by `index.html` via `<script src>` **before** the inline script, and by `tests.js`/`tests.html` in Node/browser. Any new calculation that doesn't touch the DOM belongs here; anything DOM-coupled (`render*`, `calc*` reading `v()`/`chk()`/`el()`) stays in `index.html`. **Served network-first by `sw.js`, like the HTML shell** — it's API-locked to the inline script and must never skew from it across a deploy.
-- `sw.js` — service worker. Network-first for the app shell (`index.html` **and** `calc.js`); cache-first for everything else, `cache.put`-ing misses. `ASSETS` precaches the shell, `calc.js`, `manifest.json`, the logo, both manifest icons, and all 8 font files. `CACHE` is a hand-bumped version string (`apt-cost-v28` as of the S1–S9 simplify pass) — bump it on any change that should bust old caches.
+- `sw.js` — service worker. Network-first for the app shell (`index.html` **and** `calc.js`); cache-first for everything else, `cache.put`-ing misses. `ASSETS` precaches the shell, `calc.js`, `manifest.json`, the logo, both manifest icons, and all 8 font files. `CACHE` is a hand-bumped version string (`apt-cost-v29` as of Wave 2 integration) — bump it on any change that should bust old caches.
 - `manifest.json` — PWA metadata. `fonts/` — 8 self-hosted `woff2` files (each family ships **latin + latin-ext** `@font-face` rules; latin-ext carries `₹` U+20B9 — never drop it).
 
 ### The hubs
@@ -55,7 +55,8 @@ These apply to almost any change. The reasoning and history for each is in `DECI
 8. **New collapse/expand controls set `aria-expanded`** (call `toggleCard()` or set it explicitly). Both tab bars use `role="tablist"`/`aria-selected`.
 9. **Statutory constants:** date them in a comment, state the date in visible caveat copy, pin them in `tests.js`.
 10. **Advice-free.** No sentence reads as a recommendation. Comparisons state arithmetic and name their own biases.
-11. **On every user-visible ship:** bump `sw.js`'s `CACHE` **and** `index.html`'s `BUILD_STAMP` (neither derives from the other).
+11. **Copy budget — every hub (S10–S12, Wave 2).** Hero: one number + one sentence. Field hint: ≤ 8 words. Term popover: ≤ 20 words. One "Assumptions & limits" collapse per hub; ≤ 10 words per line; link to About for long form. Projections disclosed once per hub and once on About, never on a hero. Section headers are questions, no " — " form.
+12. **On every user-visible ship:** bump `sw.js`'s `CACHE` **and** `index.html`'s `BUILD_STAMP` (neither derives from the other).
 
 ## Read before you touch X
 
@@ -80,7 +81,7 @@ These apply to almost any change. The reasoning and history for each is in `DECI
 
 - **`ARCHITECTURE.md`** — how each subsystem works and the non-obvious constraints (the old per-hub "specifics" sections).
 - **`DECISIONS.md`** — append-only "we chose X over Y, don't revert" log, indexed by R / B / D number.
-- **`MANUAL-TESTS.md`** — the 68-item by-hand regression checklist.
+- **`MANUAL-TESTS.md`** — the 80-item by-hand regression checklist.
 - `UX-ANALYSIS.md` / `ARCHITECTURE-ANALYSIS.md` / `COLOR-PALETTE-ANALYSIS.md` — the D-numbered findings and full rationale.
 - `TASK-UX-REDESIGN.md` — the R-numbered work items and B-numbered owner calls.
 - `PHASE-*-REPORT.md` — what shipped in each phase.
