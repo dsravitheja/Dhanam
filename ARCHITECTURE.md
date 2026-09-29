@@ -65,6 +65,8 @@ For under-construction property loans where the bank disburses funds in stages a
 
 ## Dhanam Car (`hub-car`)
 
+> **Redesign planned (2026-09-29):** three tiles, buyer first — see `TASK-CAR-REDESIGN.md` and `DECISIONS.md` §Dhanam Car tile redesign. This section describes the **shipped** two-tool hub until CR12 rewrites it.
+
 Two independent tools, stacked, no hub-level mode selector. `calc.js`'s
 `calcOwnershipCost`/`calcOwnershipCurve`/`calcLeaseMarginalRate`/
 `CAR_RUNNING_DEFAULTS`/`splitAnnualKm`/`evEfficiencyFromRange` are the shared
@@ -111,9 +113,9 @@ figure, never derived from `car-basic` (real EPF applies to Basic + DA
 only). `calcPerquisite()` holds the Income-tax Rules, 2026 table (₹5,000 /
 ₹7,000 / +₹3,000, in force 2026-04-01). S10 removed the panel's own
 "Important Notes & Caveats" list; its disclosures (old-regime scope, EPF
-as-entered, carve-out vs. on-top CTC) now live in `#car-limits-card`, the
-one collapsed "Assumptions & limits" panel at the bottom of the hub, shared
-with Tool B.
+as-entered, carve-out vs. on-top CTC) now live in `#car-limits-lease`, the "Company car lease" tile's one
+collapsed "Assumptions & limits" panel (split from the old shared
+`#car-limits-card` per CD-6; Tool B's half is `#car-limits-compare`).
 
 ### Tool B — "Which car costs less to own?" (`cc-*`)
 

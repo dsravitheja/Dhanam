@@ -18,6 +18,8 @@ const {
   calcRunningCost, calcInsuranceTotal, calcOwnershipCost, calcBreakevenKm,
   calcOwnershipCurve, calcLumpsumGrowth, calcTaxableIncome, calcLeaseMarginalRate,
   calcNetWorthProjection, CAR_RUNNING_DEFAULTS, splitAnnualKm, evEfficiencyFromRange,
+  CAR_STATE_CHARGES, CAR_REG_CHARGES_DEFAULT, CAR_TCS_THRESHOLD, CAR_TCS_RATE_PCT,
+  calcOnRoadCost,
 } = require('./calc.js');
 
 let pass = 0, fail = 0;
@@ -880,6 +882,155 @@ ok('calcNetWorthProjection: property is held flat — with investable/liabilitie
   ok('calcNetWorthProjection: debt fully paid off by the horizon leaves only the grown investable amount (no negative liability)',
     approxEqual(result, expectedGrown, 0.01),
     `got ${result} expected ${expectedGrown}`);
+}
+
+// =====================================================================
+// calcOnRoadCost / CAR_STATE_CHARGES (Wave 0, CR1, 2026-09-29) — "Buy a
+// car"'s on-road cost engine. Pins each state's resolved road-tax %
+// (including a slab boundary), the EV exemption/slab paths, the "Other"
+// fallback, overrides, TCS's >₹10L threshold (strictly greater, per
+// Income-tax Act 2025 s.394(1) Sl.No.6), and the no-NaN-on-bad-input
+// contract. Every pinned % here mirrors CAR_STATE_CHARGES itself — if a
+// future Finance Act / state notification changes one, this test and the
+// comment above the constant both need updating (invariant 9: no
+// superseded value survives quietly).
+// =====================================================================
+{
+  // ── Slab resolution + an exact slab boundary. Convention: `upTo` is an
+  // EXCLUSIVE upper bound — a price sitting exactly AT the boundary
+  // resolves to the NEXT (higher) slab (see the comment above
+  // CAR_STATE_CHARGES). Telangana: <500000 -> 13%, [500000, 1000000) -> 14%. ──
+  const tgLow = calcOnRoadCost({ exShowroom: 400000, stateCode: 'TG', fuel: 'petrol' });
+  ok('calcOnRoadCost (TG petrol, below first slab): 13% road tax',
+    tgLow.roadTaxPct === 13 && approxEqual(tgLow.roadTax, 52000, 0.01), JSON.stringify(tgLow));
+
+  const tgBoundary = calcOnRoadCost({ exShowroom: 500000, stateCode: 'TG', fuel: 'diesel' });
+  ok('calcOnRoadCost (TG, exactly AT the 500000 slab boundary): rolls into the HIGHER 14% band (exclusive upper bound)',
+    tgBoundary.roadTaxPct === 14, `got ${tgBoundary.roadTaxPct}`);
+
+  const tgOverBoundary = calcOnRoadCost({ exShowroom: 500001, stateCode: 'TG', fuel: 'petrol' });
+  ok('calcOnRoadCost (TG, one rupee over the boundary): stays in the 14% band',
+    tgOverBoundary.roadTaxPct === 14, `got ${tgOverBoundary.roadTaxPct}`);
+
+  // ── A second, independently-modeled state confirms the same convention:
+  // Delhi's own source phrases this boundary explicitly ("below ₹6L" is the
+  // 4% band, so exactly ₹6L must NOT be 4%) ──
+  const dlBoundary = calcOnRoadCost({ exShowroom: 600000, stateCode: 'DL', fuel: 'petrol' });
+  ok('calcOnRoadCost (DL, exactly AT the 600000 slab boundary): rolls into the higher 7% band, not the 4% one',
+    dlBoundary.roadTaxPct === 7, `got ${dlBoundary.roadTaxPct}`);
+
+  // ── fuelUniform states apply the same % to every fuel (Telangana) ──
+  const tgDiesel = calcOnRoadCost({ exShowroom: 400000, stateCode: 'TG', fuel: 'diesel' });
+  const tgCng = calcOnRoadCost({ exShowroom: 400000, stateCode: 'TG', fuel: 'cng' });
+  ok('calcOnRoadCost (TG): fuelUniform state prices petrol/diesel/CNG identically at the same price',
+    tgLow.roadTaxPct === tgDiesel.roadTaxPct && tgDiesel.roadTaxPct === tgCng.roadTaxPct,
+    `petrol=${tgLow.roadTaxPct} diesel=${tgDiesel.roadTaxPct} cng=${tgCng.roadTaxPct}`);
+
+  // ── Karnataka: diesel surcharge AND the 11% Section-3 cess both apply, in
+  // that order — base slab -> +dieselSurchargePct (diesel only) ->
+  // xtaxCessMultiplier (both fuels) — pinned against the raw constants, not
+  // hand-copied numbers, so a future edit to either constant is caught here ──
+  const kaBasePct = 14; // resolveSlabPct(KA.slabs, 800000) — the source's own "₹8L -> 14% band" example
+  const kaPetrol = calcOnRoadCost({ exShowroom: 800000, stateCode: 'KA', fuel: 'petrol' });
+  const kaDiesel = calcOnRoadCost({ exShowroom: 800000, stateCode: 'KA', fuel: 'diesel' });
+  ok('calcOnRoadCost (KA petrol): base slab x taxCessMultiplier',
+    approxEqual(kaPetrol.roadTaxPct, kaBasePct * CAR_STATE_CHARGES.KA.taxCessMultiplier, 1e-9),
+    `expected ${kaBasePct * CAR_STATE_CHARGES.KA.taxCessMultiplier} got ${kaPetrol.roadTaxPct}`);
+  ok('calcOnRoadCost (KA diesel): (base slab + dieselSurchargePct) x taxCessMultiplier — cess applies AFTER the diesel surcharge, to both',
+    approxEqual(kaDiesel.roadTaxPct, (kaBasePct + CAR_STATE_CHARGES.KA.dieselSurchargePct) * CAR_STATE_CHARGES.KA.taxCessMultiplier, 1e-9),
+    `expected ${(kaBasePct + CAR_STATE_CHARGES.KA.dieselSurchargePct) * CAR_STATE_CHARGES.KA.taxCessMultiplier} got ${kaDiesel.roadTaxPct}`);
+
+  const kaEv = calcOnRoadCost({ exShowroom: 1200000, stateCode: 'KA', fuel: 'ev' });
+  ok('calcOnRoadCost (KA EV, not exempt post-2026-04-01): priced off its own EV slab table (8%), NOT the ICE slab x cess',
+    kaEv.roadTaxPct === 8 && kaEv.roadTax > 0 && !!kaEv.roadTaxReason, JSON.stringify(kaEv));
+
+  // ── Delhi: diesel is the petrol slab x dieselMultiplier (a confirmed flat
+  // 25% extra), not a separately-shifted slab table — this is exactly what
+  // reproduces the commonly-cited 5% / 8.75% / 12.5% diesel figures ──
+  const dlPetrol800 = calcOnRoadCost({ exShowroom: 800000, stateCode: 'DL', fuel: 'petrol' });
+  const dlDiesel800 = calcOnRoadCost({ exShowroom: 800000, stateCode: 'DL', fuel: 'diesel' });
+  ok('calcOnRoadCost (DL): diesel pct === petrol pct x dieselMultiplier (1.25)',
+    approxEqual(dlDiesel800.roadTaxPct, dlPetrol800.roadTaxPct * CAR_STATE_CHARGES.DL.dieselMultiplier, 1e-9),
+    `petrol=${dlPetrol800.roadTaxPct} diesel=${dlDiesel800.roadTaxPct}`);
+  ok('calcOnRoadCost (DL diesel, ₹8L): matches the commonly-cited 8.75% figure exactly',
+    dlDiesel800.roadTaxPct === 8.75, `got ${dlDiesel800.roadTaxPct}`);
+
+  // ── EV exemption states: TG, DL (under its price cap), TN, UP, MH, WB ──
+  const tgEv = calcOnRoadCost({ exShowroom: 900000, stateCode: 'TG', fuel: 'ev' });
+  ok('calcOnRoadCost (TG EV, exempt): zero road tax with a human-readable reason',
+    tgEv.roadTax === 0 && tgEv.roadTaxPct === 0 && typeof tgEv.roadTaxReason === 'string' && tgEv.roadTaxReason.length > 0,
+    JSON.stringify(tgEv));
+
+  const dlEvUnderCap = calcOnRoadCost({ exShowroom: 2500000, stateCode: 'DL', fuel: 'ev' });
+  ok('calcOnRoadCost (DL EV, under the ₹30L exemption cap): zero road tax',
+    dlEvUnderCap.roadTax === 0 && !!dlEvUnderCap.roadTaxReason, JSON.stringify(dlEvUnderCap));
+
+  const dlEvOverCap = calcOnRoadCost({ exShowroom: 3500000, stateCode: 'DL', fuel: 'ev' });
+  ok('calcOnRoadCost (DL EV, over the ₹30L exemption cap): falls back to the normal EV/petrol-style slab, road tax > 0',
+    dlEvOverCap.roadTax > 0 && dlEvOverCap.roadTaxPct === 10, `got pct=${dlEvOverCap.roadTaxPct} tax=${dlEvOverCap.roadTax}`);
+
+  // ── Gujarat: EV concession lapsed 2026-03-31 -> NOT exempt (standard 6%) ──
+  const gjEv = calcOnRoadCost({ exShowroom: 900000, stateCode: 'GJ', fuel: 'ev' });
+  ok('calcOnRoadCost (GJ EV): lapsed concession means the standard 6% applies, not a 0/1% exemption',
+    gjEv.roadTaxPct === 6 && gjEv.roadTax === 54000, JSON.stringify(gjEv));
+
+  // ── "Other" (unknown/unlisted state code) falls back to OT, never throws ──
+  const other = calcOnRoadCost({ exShowroom: 500000, stateCode: 'ZZ', fuel: 'petrol' });
+  ok('calcOnRoadCost (unknown state code): falls back to the OT default (10%), not a crash or NaN',
+    other.roadTaxPct === CAR_STATE_CHARGES.OT.slabs[0][1] && other.roadTax === 50000, JSON.stringify(other));
+
+  // ── Every user-facing line stays editable via override (Home's q-state pattern) ──
+  const overridden = calcOnRoadCost({ exShowroom: 500000, stateCode: 'TG', fuel: 'petrol', roadTaxPct: 5, regCharges: 9999, insurance: 1234 });
+  ok('calcOnRoadCost: roadTaxPct/regCharges/insurance overrides are honoured exactly, and an override clears the "why" reason',
+    overridden.roadTaxPct === 5 && overridden.roadTax === 25000 && overridden.regCharges === 9999 &&
+    overridden.insurance === 1234 && overridden.roadTaxReason === null,
+    JSON.stringify(overridden));
+
+  // ── TCS: strictly greater than ₹10,00,000, never at-or-below ──
+  ok('calcOnRoadCost: TCS does NOT apply at exactly the ₹10,00,000 threshold',
+    calcOnRoadCost({ exShowroom: CAR_TCS_THRESHOLD, stateCode: 'TG', fuel: 'petrol' }).tcsApplies === false);
+  ok('calcOnRoadCost: TCS DOES apply one rupee over the ₹10,00,000 threshold',
+    calcOnRoadCost({ exShowroom: CAR_TCS_THRESHOLD + 1, stateCode: 'TG', fuel: 'petrol' }).tcsApplies === true);
+
+  const tcsCar = calcOnRoadCost({ exShowroom: 1200000, stateCode: 'KA', fuel: 'ev' });
+  ok('calcOnRoadCost: tcs amount is exactly CAR_TCS_RATE_PCT% of ex-showroom price when it applies',
+    approxEqual(tcsCar.tcs, 1200000 * CAR_TCS_RATE_PCT / 100, 0.01), `got ${tcsCar.tcs}`);
+  ok('calcOnRoadCost: onRoad === onRoadExTcs + tcs (TCS is cash paid, folded into the on-road total, but broken out as creditable)',
+    approxEqual(tcsCar.onRoad, tcsCar.onRoadExTcs + tcsCar.tcs, 0.01), `onRoad=${tcsCar.onRoad} onRoadExTcs=${tcsCar.onRoadExTcs} tcs=${tcsCar.tcs}`);
+
+  // ── total = sum of its own parts, in every case above (internal consistency) ──
+  [tgLow, tgBoundary, tgOverBoundary, dlBoundary, kaPetrol, kaDiesel, kaEv, dlPetrol800, dlDiesel800,
+   tgEv, dlEvUnderCap, dlEvOverCap, gjEv, other, overridden, tcsCar].forEach((r, i) => {
+    ok(`calcOnRoadCost: onRoadExTcs === exShowroom + roadTax + regCharges + insurance (case #${i})`,
+      approxEqual(r.onRoadExTcs, r.exShowroom + r.roadTax + r.regCharges + r.insurance, 0.01),
+      `onRoadExTcs=${r.onRoadExTcs} sum=${r.exShowroom + r.roadTax + r.regCharges + r.insurance}`);
+  });
+
+  // ── No NaN on bad input: zero/negative/non-finite price, blank/unknown fuel ──
+  [0, -500000, NaN, undefined, Infinity].forEach(bad => {
+    const r = calcOnRoadCost({ exShowroom: bad, stateCode: 'TG', fuel: bad === Infinity ? 'petrol' : 'petrol' });
+    const isBadFinite = Number.isFinite(bad) && bad > 0;
+    if (!isBadFinite) {
+      ok(`calcOnRoadCost: non-finite/zero/negative exShowroom (${bad}) degrades to an all-zero result, never NaN`,
+        r.onRoad === 0 && Object.values(r).every(v => v === null || v === false || Number.isFinite(v)),
+        JSON.stringify(r));
+    }
+  });
+  const blankFuel = calcOnRoadCost({ exShowroom: 400000, stateCode: 'TG', fuel: '' });
+  ok('calcOnRoadCost: blank/unknown fuel falls back to petrol pricing, not NaN',
+    blankFuel.roadTaxPct === 13 && Number.isFinite(blankFuel.onRoad), JSON.stringify(blankFuel));
+
+  // ── Called with no argument at all — never throws, degrades to all-zero ──
+  ok('calcOnRoadCost(): no argument at all does not throw, returns the all-zero result',
+    calcOnRoadCost().onRoad === 0, JSON.stringify(calcOnRoadCost()));
+  ok('calcOnRoadCost(undefined): explicit undefined does not throw, returns the all-zero result',
+    calcOnRoadCost(undefined).onRoad === 0, JSON.stringify(calcOnRoadCost(undefined)));
+
+  // ── Defaults: CAR_REG_CHARGES_DEFAULT / CAR_TCS_RATE_PCT are pinned, so a
+  // future edit to either is a deliberate, reviewed change, not a silent drift ──
+  ok('CAR_REG_CHARGES_DEFAULT is pinned at ₹12,000 (as of 2026-09-29)', CAR_REG_CHARGES_DEFAULT === 12000);
+  ok('CAR_TCS_RATE_PCT is pinned at 1% (Income-tax Act 2025, s.394(1) Sl.No.6, as of 2026-09-29)', CAR_TCS_RATE_PCT === 1);
+  ok('CAR_TCS_THRESHOLD is pinned at ₹10,00,000', CAR_TCS_THRESHOLD === 1000000);
 }
 
 // =====================================================================
