@@ -102,7 +102,7 @@ stated principle.
 - **Tool B derives lease pay from Tool A** (`lg-basic`/`lg-regime`) **until the payslip panel is opened once** — a one-way prefill copies both fields at that first open; afterwards they're independent, same shape as the pre-existing `lg-*`/`car-*` duplication.
 - **Tool B's two example cars never persist until the user actually edits something** (`ccDirty` gate) — a fresh, look-only visit writes nothing to `dhanam.v1`.
 
-### Dhanam Car tile redesign (CR1–CR13, decided 2026-09-29, **planned — not yet built**)
+### Dhanam Car tile redesign (CR1–CR13, decided 2026-09-29; **Waves 0–1 (CR1–CR3) shipped 2026-09-29**, CR4–CR13 planned)
 
 Full plan and task breakdown: `TASK-CAR-REDESIGN.md`. Flip these entries to "shipped" when CR12 lands.
 
@@ -111,6 +111,9 @@ Full plan and task breakdown: `TASK-CAR-REDESIGN.md`. Flip these entries to "shi
 - **The lease analysis keeps its depth — it moves, it isn't simplified.** "Gate, don't simplify" still holds; the gate is now the lease tile instead of a toggle on the first screen.
 - **Partly reverses S6/S7 (and D-A): Cash, the loan-vs-cash comparison, and loan-balance-vs-car-value come back, in the Buy tile.** The S pass optimised for the lease persona and cut the plain buyer's features. ⚠ don't re-delete them citing S6/S7. The engine (`calcOwnershipCost({mode:'cash'})`, `calcOwnershipCurve`, `calcCarDepreciation`, `loanAtYear`) was kept in `calc.js`, so this is UI work.
 - **New tier-2 on-road constants (road tax by state/fuel, registration, TCS above ₹10L) — indicative, editable, dated, pinned**, same posture as `PROPERTY_STATES`. TCS is shown as creditable against income tax, not as a cost (R32 "state, don't model").
+- **Waves 0–1 shipped (2026-09-29): tile row is a real tab bar, not three links.** `switchCarTile()` is the one switch; `switchHub('car')` re-renders only the visible tile. Selected tile is tier-3 (in memory; reload returns to **Buy a car**). Hidden-tile charts rely on the existing `renderChart` `ResizeObserver` — ⚠ don't add a redraw call to `switchCarTile()`. Active tile carries a gold inset bottom bar (shape, not colour alone); the in-hub tiles deliberately drop `.tile`'s hover lift so an unselected tile never looks selected.
+- **CD-6 applied: `#car-limits-card` split into `#car-limits-compare` (tile 2) and `#car-limits-lease` (tile 3)**, bullet text unchanged; bullets true of both (Tax Saved ₹0, employer tie, estimates) sit in both. Invariant 11 now reads "one per tool".
+- **Feedback: one link per tile; new `car-buy` key** (`'Dhanam Car: buying a car (on-road cost, EMI)'`) — the matching Q1 choice must exist on the live form (see §Public-beta feedback link).
 - **Business-owner / self-employed business-use car tax (depreciation, interest as expense, GST credit) — parked (CD-1).** Owner call: complex tax logic, not the target now; a good-to-have once the app has traction. ⚠ don't build it in as a "missing feature" before the owner reopens it; at most one caveat line.
 
 ## Charts

@@ -1,7 +1,7 @@
 # TASK-CAR-REDESIGN — Dhanam Car as three tiles, buyer-first
 
-Design agreed 2026-09-29. **Planned, not yet built** — `CLAUDE.md` and
-`ARCHITECTURE.md` describe the shipped two-tool hub until this lands. Each
+Design agreed 2026-09-29. **Waves 0–1 (CR1–CR3) shipped 2026-09-29; Waves 2–4 planned** — `CLAUDE.md` describes the
+shipped tile shell; `ARCHITECTURE.md` §Dhanam Car is rewritten in CR12. Each
 item below is sized to hand to Claude Code as one task and has a **Done when**
 line; if it can't be checked, it isn't done. IDs are `CR<n>` (Car Redesign)
 so they don't collide with R / B / D / S.
@@ -266,3 +266,80 @@ Copy budget (invariant 11) applies: hero = one number + one sentence.
 
 - Any change to the lease tax engine or its statutory constants.
 - New hubs, accounts, sync, backend.
+
+---
+
+## CR1 research notes (2026-09-29)
+
+Source list for the About page (CR10). All figures are indicative and
+editable, same posture as `PROPERTY_STATES` — a single flat % of
+ex-showroom price is a modeling simplification (see the comment above
+`CAR_STATE_CHARGES` in `calc.js`): several states actually tax on
+ex-showroom-including-GST, or use a flat-fee table by engine cc (West
+Bengal) rather than a price %. Where a state didn't publish a fuel-specific
+split, diesel and CNG are modeled the same as petrol (noted per row).
+
+**Slab boundary convention:** every `upTo` in `calc.js`'s slab tables is an
+EXCLUSIVE upper bound — a price sitting exactly AT a boundary resolves to
+the NEXT (higher) slab. Chosen because every state whose source phrases the
+boundary explicitly (Delhi: "below ₹6L" is the 4% band, "at ₹10L and
+above" is 10%; Maharashtra: "≥₹10L"; Tamil Nadu: "at/above ₹10L") puts the
+exact boundary price in the higher band; applied uniformly to every state
+below, including ones whose own source phrasing didn't resolve it
+(Telangana, Karnataka, Andhra Pradesh, Uttar Pradesh). Pinned at an exact
+boundary for both Telangana and Delhi in `tests.js`.
+
+| State | Petrol | Diesel | CNG | EV | EV exempt until | Source | Confidence |
+|---|---|---|---|---|---|---|---|
+| TG Telangana | 13/14/17/18% (slabs: <5L/<10L/<20L/≥20L) | same as petrol | same as petrol | 0% (exempt) | 2026-12-31 (registered by) | transport.telangana.gov.in "Life Time Tax"; medianama.com 2024-11 EV waiver | confirmed |
+| AP Andhra Pradesh | 12% (<10L) / 14% (≥10L) | same as petrol | same as petrol | not exempt (no distinct rate found) | — | aptransport.org "Life Time Tax" (band split only, full slab table not confirmed) | indicative |
+| KA Karnataka | (13/14/17/18% base slab, same as TG) × 1.11 Section-3 cess = 14.43/15.54/18.87/19.98% | (petrol base +2pp) × 1.11 cess | not modeled distinctly (falls back to petrol × cess; surcharge/cess-applicability to CNG both unconfirmed) | own slabs: 5% (<10L) / 8% (<25L) / 10% (≥25L) — no longer exempt; cess NOT applied here (unconfirmed whether it reaches the 2026 EV slab table) | exemption ended 2026-04-01 | Karnataka Motor Vehicles Taxation (Amendment) Act, 2026, as reported (evfy.in, deccanherald.com); 11% Section-3 cess as reported (multiple aggregator pages, consistent but not independently verified against the amendment act's own text) | **indicative-partial** — base slabs and the EV-slab replacement are well corroborated, but the diesel surcharge value and the cess's exact scope are not primary-verified |
+| MH Maharashtra | 11% (<10L) / 12% (≥10L, extrapolated) | petrol slab +2pp | 8% (<10L; -3pp vs petrol confirmed at this band, extrapolated above) | 0% (exempt) | not confirmed (policy runs in phases) | angelone.in / autocarindia.com on the 2025 Amendment Act | indicative-partial (below-10L band confirmed, above extrapolated) |
+| DL Delhi (NCT) | 4% (<6L) / 7% (<10L) / 10% (≥10L) | petrol slab × 1.25 (a confirmed flat 25% surcharge, NOT a separately-shifted slab table) — reproduces exactly 5% / 8.75% / 12.5% at the same ₹6L/₹10L boundaries as petrol | modeled same as petrol (no confirmed distinct CNG slab) | 0% up to ₹30L ex-showroom, standard slabs above | 2030-03-31 | transport.delhi.gov.in tax-rate schedule ("25% extra" for diesel) as reported (icicilombard.com, mycarhelpline.com); Delhi EV Policy 2026, corroborated by several independent 2026-07 reports of the official notification (dtnext.in, yourstory.com, goodreturns.in, evselect.in) agreeing on both the ₹30L cap and the 2030-03-31 date — not the gazette text itself | confirmed |
+| TN Tamil Nadu | 10% (<10L) / 15% (≥10L) | same as petrol (no confirmed distinct diesel rate) | same as petrol | 0% (exempt, all categories) | 2027-12-31 | mercomindia.com, business-standard.com (2025-12 extension notice) | confirmed |
+| UP Uttar Pradesh | 8% (<10L) / 10% (≥10L) — collapsed from a reported "7–11% by type/cost" range | same as petrol | same as petrol | 0% (exempt; state-manufactured EVs only since 2025-10-14) | 2027-10-13 | spinny.com, bolt.earth UP EV policy summary | indicative (band split reported, exact table not confirmed) |
+| GJ Gujarat | 6% flat | same as petrol | same as petrol | NOT exempt (1% concession expired 2026-03-31, not renewed as of research date) | lapsed 2026-03-31 | caronphone.com, eqmagpro.com, meraev.com Gujarat EV road tax status | indicative |
+| WB West Bengal | ~5.5% flat (indicative % equivalent of a cc-keyed flat-fee table — NOT the statutory formula) | same as petrol | same as petrol | 0% (exempt) | not confirmed | spinny.com WB road tax page (cc-based fee examples) | indicative |
+| OT Other | 10% flat, user-editable | same | same | not exempt | — | generic fallback, not state-specific | indicative |
+
+**Registration + other one-time charges:** modeled as one flat, editable
+₹12,000 (`CAR_REG_CHARGES_DEFAULT`) covering HSRP plate, FASTag, smart
+card, hypothecation endorsement, etc. — aggregator-reported ranges cluster
+around ₹10,000–₹15,000 for a private car, varying by state; not a
+statutory figure, deliberately not split into a per-state table.
+
+**TCS on motor vehicles:** 1% (`CAR_TCS_RATE_PCT`), Income-tax Act, 2025,
+s.394(1), Table Sl. No. 6 (in force 2026-04-01) — successor to the
+Income-tax Act 1961's s.206C(1F). Applies when the sale/invoice value
+**exceeds** ₹10,00,000 (`CAR_TCS_THRESHOLD`) — strictly greater than, not
+at-or-above; pinned both ways in `tests.js`. Collected by the seller at
+receipt/debit, whichever is earlier. **Creditable against the buyer's
+income tax** — upfront cash at the dealer, not a net cost; the UI must say
+so in words, not compute it away. Source: taxguru.in "Section 206C(1F)",
+righttoinformation.wiki "TCS on Cars Above Rs 10 Lakh: Tax Guide 2026",
+incometaxindia.gov.in "Tax Collection at Source (TCS)".
+
+**First-year insurance:** reuses `CAR_RUNNING_DEFAULTS.iceIns` (3.0%) /
+`.evIns` (3.8%) of on-road-ish price rather than a new constant — these
+already sit in the range aggregator sources quote for a new car's first-
+year comprehensive premium (roughly 3–4% of ex-showroom for ICE, somewhat
+higher for EVs given battery replacement cost), so no separate year-1
+figure was added. Not independently re-verified against a live insurer
+quote for this task — flagged here as a reuse decision, not a new
+research finding.
+
+**Unconfirmed / indicative figures to revisit before shipping CR4+:** AP's
+full slab table (only the ≤10L/>10L split was found), Maharashtra's ≥10L
+band and its EV exemption's own expiry date, Karnataka's diesel
+surcharge exact value (the base slabs and its 11% Section-3 cess are now
+modeled and reasonably corroborated, but the diesel delta itself and
+whether the cess also applies to CNG or to the 2026 EV slab table are not),
+Tamil Nadu's/UP's/Delhi's CNG-specific rate (all three modeled as petrol),
+UP's full slab table, West Bengal's %-equivalent of its actual cc-based
+fee table, and Gujarat's post-2026-03-31 EV policy (a replacement policy
+was reportedly "in the works" as of mid-2026 but not finalized as of this
+research date). Delhi's diesel figure was corrected during review from an
+incorrectly-modeled separate slab table to a confirmed flat 25%
+surcharge on the petrol slab (`dieselMultiplier`) — the two happened to
+agree at one previously-tested price point, which is why the error wasn't
+caught by the first pass of tests.

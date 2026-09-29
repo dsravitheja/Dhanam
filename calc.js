@@ -474,6 +474,338 @@ function calcOwnershipCurve(o) {
   return { years, cumulativeCost, carValue };
 }
 
+// ── DHANAM CAR — BUY A CAR / ON-ROAD COST (Wave 0, CR1, 2026-09-29) ───
+// Tier-2 statutory/indicative constants for "what will this car really
+// cost me at the dealer" — road tax (state motor vehicle tax), one-time
+// registration/other charges, and TCS on high-value vehicles. Same posture
+// as PROPERTY_STATES (index.html, R21): dated, editable, non-exhaustive,
+// re-read from here every render, never persisted (CLAUDE.md's tier-2
+// rule). Every figure not marked 'confirmed' below is a defensible
+// indicative value, not a verified statutory one — see
+// TASK-CAR-REDESIGN.md's "CR1 research notes" section for sources.
+//
+// A single % of ex-showroom price is an acknowledged simplification: most
+// states actually compute lifetime/road tax on the ex-showroom price
+// *including* GST, a few (West Bengal) use flat fee tables keyed by engine
+// cc rather than a price %, and some layer a further cess on top of the
+// base tax (Karnataka's 11% Section-3 cess — modeled below via
+// `taxCessMultiplier`, not skipped). This app models one flat, editable %
+// — the same indicative posture as the stamp-duty table, stated as a
+// caveat, not computed to false precision.
+//
+// Slab boundary convention (applies to every `slabs`/`fuelSlabs` table
+// below): each `[upToExShowroom, pct]` entry's `upToExShowroom` is an
+// EXCLUSIVE upper bound — a price standing exactly AT that boundary
+// belongs to the NEXT (higher) slab, not this one (`resolveSlabPct` tests
+// `exShowroom < upTo`). Chosen because every state whose source explicitly
+// phrases the boundary (Delhi: "below ₹6L" / "at ₹10L and above";
+// Maharashtra: ">=₹10L"; Tamil Nadu: "at/above ₹10L") puts the exact
+// boundary price in the HIGHER band — applied uniformly here even for
+// states whose own source phrasing didn't resolve the boundary explicitly
+// (Telangana, Karnataka, Andhra Pradesh, Uttar Pradesh), rather than
+// mixing conventions table to table. Pinned in tests.js at an exact
+// boundary.
+//
+// Per-state shape:
+//   slabs: [[upToExShowroom, pct], ...] ascending, last entry Infinity —
+//     used when the state taxes every fuel type alike (fuelUniform: true)
+//     or as the petrol/base figure that dieselSurchargePct / dieselMultiplier
+//     / cngAdjPct / taxCessMultiplier adjust.
+//   fuelSlabs: { petrol, diesel, cng } — for a state whose published rates
+//     are entirely separate slab tables per fuel (none currently use this;
+//     kept for a future state where `slabs` + a surcharge/multiplier isn't
+//     an honest fit).
+//   dieselSurchargePct — added (percentage points) to the base pct for
+//     diesel. dieselMultiplier — base pct MULTIPLIED for diesel (Delhi:
+//     a confirmed flat 25% extra, i.e. ×1.25 — not the same shape as an
+//     additive surcharge, so a separate field rather than overloading one).
+//   cngAdjPct — added (usually negative) to the base pct for CNG.
+//   taxCessMultiplier — a state-level cess applied on top of the tax
+//     amount itself (Karnataka's 11% Section-3 cess), multiplied in last,
+//     after any fuel-specific adjustment; applies to the ICE slab path
+//     only, never to a state's own separate EV slab table (unconfirmed
+//     whether Karnataka's cess reaches its 2026 EV slabs — modeled as "no"
+//     rather than compounding two unconfirmed assumptions).
+//   ev: { exempt, pctOverride, slabs?, reason, until } — `exempt: true`
+//     zeroes (or floors, via pctOverride) the road tax and states why in
+//     words (CR1's "TCS creditable" posture — R32 "state, don't model").
+//     `slabs` (Karnataka) means the EV isn't exempt but has its own price
+//     slabs distinct from ICE. `until` is the exemption's own end date
+//     where the state has published one — several have already lapsed or
+//     will lapse; that's exactly why this needs a comment date, not just
+//     a value.
+const CAR_STATE_CHARGES = Object.freeze({
+  // Telangana — as of 2026-09-29, source: transport.telangana.gov.in
+  // "Life Time Tax" schedule (revised 2022-05-09; unchanged since) — one
+  // slab table applies to petrol/diesel/CNG private cars alike.
+  TG: Object.freeze({
+    name: 'Telangana', fuelUniform: true,
+    slabs: [[500000, 13], [1000000, 14], [2000000, 17], [Infinity, 18]],
+    ev: Object.freeze({ exempt: true, pctOverride: 0,
+      reason: 'Telangana exempts EVs from road tax and registration fee for vehicles registered by 31 Dec 2026',
+      until: '2026-12-31' }),
+    confidence: 'confirmed',
+  }),
+  // Andhra Pradesh — as of 2026-09-29, source: aptransport.org "Life Time
+  // Tax" page. Only a two-band split (below/above ₹10L) was confirmed;
+  // marked indicative pending the full published slab table.
+  AP: Object.freeze({
+    name: 'Andhra Pradesh', fuelUniform: true,
+    slabs: [[1000000, 12], [Infinity, 14]],
+    ev: Object.freeze({ exempt: false, pctOverride: null, reason: null, until: null }),
+    confidence: 'indicative',
+  }),
+  // Karnataka — as of 2026-09-29, source: Karnataka Motor Vehicles
+  // Taxation (Amendment) Act, 2026 (in force 2026-04-01), reported slabs
+  // (₹8L petrol -> 14% band, ₹15L petrol -> 17% band). Same 4-band shape
+  // as Telangana. Two things are NOT both solid here, so the state as a
+  // whole is downgraded to 'indicative-partial' even though the base
+  // slabs are confirmed:
+  //   - dieselSurchargePct: 2 is a commonly-cited figure, not itself
+  //     independently confirmed for Karnataka specifically.
+  //   - taxCessMultiplier: 1.11 models the "11% cess on the tax paid under
+  //     Section 3" that multiple secondary sources describe consistently
+  //     (cess of the tax amount, not of the vehicle price) — modeled
+  //     rather than silently dropped, but not verified against the
+  //     amendment act's own text, and it's unconfirmed whether it also
+  //     reaches the 2026 EV slab table below (assumed not, see the field's
+  //     own comment above).
+  // The 2026-04-01 amendment also *ended* Karnataka's EV exemption and
+  // replaced it with its own price-slab lifetime tax — modeled via
+  // `ev.slabs`, not `ev.exempt`.
+  KA: Object.freeze({
+    name: 'Karnataka', fuelUniform: true, dieselSurchargePct: 2, taxCessMultiplier: 1.11,
+    slabs: [[500000, 13], [1000000, 14], [2000000, 17], [Infinity, 18]],
+    ev: Object.freeze({ exempt: false, pctOverride: null,
+      slabs: [[1000000, 5], [2500000, 8], [Infinity, 10]],
+      reason: 'Karnataka replaced its EV road-tax exemption with a price-slab lifetime tax from 1 Apr 2026',
+      until: null }),
+    confidence: 'indicative-partial',
+  }),
+  // Maharashtra — as of 2026-09-29, source: Maharashtra Motor Vehicles Tax
+  // (Amendment) Act, 2025 press coverage — petrol/diesel private cars
+  // below ₹10L confirmed at 11%/13%; the >=₹10L band is extrapolated
+  // (+1pp), not independently confirmed. CNG confirmed at 8% (<₹10L),
+  // modeled as -3pp off the petrol slab. EV exemption's own end date
+  // (Maharashtra's EV policy runs in phases) was not confirmed — `until`
+  // left null rather than guessed.
+  MH: Object.freeze({
+    name: 'Maharashtra', dieselSurchargePct: 2, cngAdjPct: -3,
+    slabs: [[1000000, 11], [Infinity, 12]],
+    ev: Object.freeze({ exempt: true, pctOverride: 0,
+      reason: 'Maharashtra exempts registered EVs from motor vehicle tax and registration fee under its EV policy',
+      until: null }),
+    confidence: 'indicative-partial',
+  }),
+  // Delhi (NCT) — as of 2026-09-29, source: transport.delhi.gov.in tax-rate
+  // schedule as reported (private, individual-owned; company-registered
+  // vehicles pay 25% more, not modeled here). Petrol slabs 4%/7%/10% at
+  // ₹6L/₹10L confirmed directly. Diesel is confirmed as a flat 25% EXTRA
+  // on the applicable (petrol-equivalent) tax — NOT a separately-shifted
+  // slab table (an earlier version of this entry wrongly modeled diesel
+  // with its own 400000/600000-boundary table, which doesn't match any
+  // primary description of Delhi's schedule); the commonly-quoted
+  // "5% / 8.75% / 12.5%" diesel figures are exactly 4/7/10 x 1.25, which
+  // is what `dieselMultiplier` reproduces at the same ₹6L/₹10L boundaries
+  // as petrol. CNG has no confirmed slab of its own and is modeled same
+  // as petrol. EV exemption (cap ₹30L ex-showroom, until 2030-03-31) is
+  // corroborated by several independent 2026-07 reports of the Delhi EV
+  // Policy 2026's official notification (effective 2026-07-01) agreeing on
+  // both figures — not the gazette text itself, so treat the exact date
+  // and cap as well-sourced-secondary rather than primary-verified.
+  DL: Object.freeze({
+    name: 'Delhi (NCT)',
+    slabs: [[600000, 4], [1000000, 7], [Infinity, 10]],
+    dieselMultiplier: 1.25,
+    ev: Object.freeze({ exempt: true, pctOverride: 0,
+      reason: 'Delhi exempts EVs priced up to ₹30L ex-showroom from road tax and registration under the Delhi EV Policy 2026',
+      evPriceCapExShowroom: 3000000, until: '2030-03-31' }),
+    confidence: 'confirmed',
+  }),
+  // Tamil Nadu — as of 2026-09-29, source: reported TN motor vehicle tax
+  // schedule (10% below ₹10L, 15% at/above — a ₹12L petrol car cited at
+  // 15%/₹1.8L). Diesel/CNG have no confirmed distinct slab and are modeled
+  // same as petrol (fuelUniform).
+  TN: Object.freeze({
+    name: 'Tamil Nadu', fuelUniform: true,
+    slabs: [[1000000, 10], [Infinity, 15]],
+    ev: Object.freeze({ exempt: true, pctOverride: 0,
+      reason: 'Tamil Nadu exempts all EVs from motor vehicle tax through 31 Dec 2027',
+      until: '2027-12-31' }),
+    confidence: 'confirmed',
+  }),
+  // Uttar Pradesh — as of 2026-09-29, source: reported UP one-time-tax
+  // range "7% to 11% based on vehicle type and cost" — collapsed here to
+  // an indicative two-band 8%/10% split at ₹10L; the real published slab
+  // table was not confirmed. EV exemption runs 2022-10-14 to 2027-10-13,
+  // but since 2025-10-14 is restricted to EVs manufactured/assembled in UP
+  // — stated in the reason string, not modeled as a further condition.
+  UP: Object.freeze({
+    name: 'Uttar Pradesh', fuelUniform: true,
+    slabs: [[1000000, 8], [Infinity, 10]],
+    ev: Object.freeze({ exempt: true, pctOverride: 0,
+      reason: 'Uttar Pradesh exempts EVs registered 14 Oct 2022 - 13 Oct 2027 from road tax (state-manufactured EVs only since 14 Oct 2025)',
+      until: '2027-10-13' }),
+    confidence: 'indicative',
+  }),
+  // Gujarat — as of 2026-09-29, source: reported Gujarat motor vehicle tax
+  // (6% standard for private vehicles). Gujarat's concessional 1% EV rate
+  // expired 2026-03-31 and had not been renewed as of this research date
+  // — modeled as NOT exempt (standard 6%), not the lapsed 1%. Revisit this
+  // entry if a new EV policy is notified.
+  GJ: Object.freeze({
+    name: 'Gujarat', fuelUniform: true,
+    slabs: [[Infinity, 6]],
+    ev: Object.freeze({ exempt: false, pctOverride: null,
+      reason: "Gujarat's 1% concessional EV tax rate expired 31 Mar 2026 and was not renewed as of this research date",
+      until: null }),
+    confidence: 'indicative',
+  }),
+  // West Bengal — as of 2026-09-29, source: reported WB one-time tax
+  // (statutorily a flat-fee table keyed by engine cc, not an ex-showroom
+  // %). Collapsed here to one indicative flat % (~5.5%, a rough
+  // fee/typical-price ratio) — explicitly NOT the statutory formula; if
+  // WB's cc-based table is ever wired in properly this entry should be
+  // replaced, not extended.
+  WB: Object.freeze({
+    name: 'West Bengal', fuelUniform: true,
+    slabs: [[Infinity, 5.5]],
+    ev: Object.freeze({ exempt: true, pctOverride: 0,
+      reason: 'West Bengal exempts private EVs from road tax and registration fee',
+      until: null }),
+    confidence: 'indicative',
+  }),
+  // "Other — enter %" (CD-8) — a generic indicative default for any state
+  // not in this table; every figure stays user-editable regardless.
+  OT: Object.freeze({
+    name: 'Other — enter %', fuelUniform: true,
+    slabs: [[Infinity, 10]],
+    ev: Object.freeze({ exempt: false, pctOverride: null, reason: null, until: null }),
+    confidence: 'indicative',
+  }),
+});
+
+// One-time registration + other charges (HSRP plate, FASTag, smart card,
+// hypothecation endorsement, etc.) as a single indicative, editable rupee
+// figure — as of 2026-09-29, source: aggregator-reported ranges (~₹10,000
+// to ₹15,000 for a private car, varying by state); not a statutory figure,
+// deliberately not split into a table (CLAUDE.md's "one indicative
+// figure" instruction).
+const CAR_REG_CHARGES_DEFAULT = 12000;
+
+// TCS on motor vehicles — as of 2026-09-29, source: Income-tax Act, 2025,
+// s.394(1) Table Sl. No. 6 (in force from 2026-04-01), successor to the
+// Income-tax Act 1961's s.206C(1F). 1% of the sale/invoice value, collected
+// by the seller, when that value EXCEEDS ₹10,00,000 — strictly greater
+// than, not at-or-above (mirrored in calcOnRoadCost's tcsApplies check and
+// pinned in tests.js). TCS is creditable against the buyer's income tax —
+// it's upfront cash at the dealer, not a net cost — a UI showing it must
+// say so in words (R32 "state, don't model").
+const CAR_TCS_THRESHOLD = 1000000;
+const CAR_TCS_RATE_PCT = 1;
+
+// Resolves a price into a % from an ascending [[upToExShowroom, pct], ...]
+// slab table (last entry's upTo is Infinity, so this always resolves).
+// `upToExShowroom` is an EXCLUSIVE upper bound (see the boundary-convention
+// comment above CAR_STATE_CHARGES) — a price sitting exactly at the
+// boundary resolves to the NEXT slab, hence `<`, not `<=`.
+function resolveSlabPct(slabs, exShowroom) {
+  for (const [upTo, pct] of slabs) {
+    if (exShowroom < upTo) return pct;
+  }
+  return slabs[slabs.length - 1][1]; // unreachable given an Infinity slab, kept as a safe fallback
+}
+
+// Resolves { pct, reason } for one state + fuel + price, before any
+// user override. `fuel` is 'petrol' | 'diesel' | 'cng' | 'ev'; anything
+// else falls back to 'petrol' (the most common case) rather than NaN.
+function resolveRoadTax(stateCode, fuel, exShowroom) {
+  const state = CAR_STATE_CHARGES[stateCode] || CAR_STATE_CHARGES.OT;
+  const f = ['petrol', 'diesel', 'cng', 'ev'].includes(fuel) ? fuel : 'petrol';
+
+  if (f === 'ev') {
+    if (state.ev.exempt) {
+      const cap = state.ev.evPriceCapExShowroom;
+      if (cap == null || exShowroom <= cap) {
+        return { pct: state.ev.pctOverride, reason: state.ev.reason };
+      }
+      // Over the exemption's own price cap (Delhi): falls back to the
+      // state's normal ICE-style slabs rather than staying exempt.
+    } else if (state.ev.slabs) {
+      return { pct: resolveSlabPct(state.ev.slabs, exShowroom), reason: state.ev.reason };
+    }
+  }
+
+  let pct;
+  if (state.fuelSlabs) {
+    pct = resolveSlabPct(state.fuelSlabs[f] || state.fuelSlabs.petrol, exShowroom);
+  } else {
+    pct = resolveSlabPct(state.slabs, exShowroom);
+    if (f === 'diesel') {
+      if (state.dieselMultiplier) pct *= state.dieselMultiplier;
+      else if (state.dieselSurchargePct) pct += state.dieselSurchargePct;
+    } else if (f === 'cng' && state.cngAdjPct) {
+      pct = Math.max(0, pct + state.cngAdjPct);
+    }
+  }
+  // A state-level cess on top of the ICE tax amount (Karnataka) —
+  // deliberately not applied to the EV-exempt/EV-slabs return paths above
+  // (see the field's own comment above CAR_STATE_CHARGES).
+  if (state.taxCessMultiplier) pct *= state.taxCessMultiplier;
+
+  return { pct, reason: null };
+}
+
+// The on-road-cost engine for "Buy a car" (CR4): one car, one state, one
+// fuel type -> every line a buyer sees at the dealer. Pure and
+// override-friendly — every resolved figure (roadTaxPct, regCharges,
+// insurance) can be overridden by the caller, same as Home's q-state
+// pattern (state sets defaults, every field stays editable).
+//
+// TCS is included in `onRoad` (it's real cash handed over at the dealer)
+// but broken out separately as `onRoadExTcs` + `tcs` + `tcsApplies` so a
+// caller can show it as its own creditable-against-income-tax line rather
+// than silently folding it into "what this car costs you" — a deliberate
+// choice, not an oversight (CR1's brief).
+//
+// Invalid/non-finite/zero/negative exShowroom, or a missing/unknown fuel,
+// degrades to an all-zero result — never NaN — so a blank "Buy a car" tile
+// on first render (or a user mid-edit) never prints garbage. Called with no
+// argument at all (`o` undefined) degrades the same way rather than
+// throwing — `o = o || {}` first.
+function calcOnRoadCost(o) {
+  o = o || {};
+  const exShowroom = Number.isFinite(o.exShowroom) && o.exShowroom > 0 ? o.exShowroom : 0;
+  if (exShowroom === 0) {
+    return {
+      exShowroom: 0, roadTax: 0, roadTaxPct: 0, roadTaxReason: null,
+      regCharges: 0, insurance: 0, tcs: 0, tcsApplies: false,
+      onRoadExTcs: 0, onRoad: 0,
+    };
+  }
+  const fuel = (o.fuel || '').toLowerCase();
+  const resolved = resolveRoadTax(o.stateCode, fuel, exShowroom);
+
+  const roadTaxPct = Number.isFinite(o.roadTaxPct) ? o.roadTaxPct : resolved.pct;
+  // An explicit override replaces the number AND the "why" — a caller who
+  // typed their own % is no longer describing the state's stated reason.
+  const roadTaxReason = Number.isFinite(o.roadTaxPct) ? null : resolved.reason;
+  const roadTax = exShowroom * roadTaxPct / 100;
+
+  const regCharges = Number.isFinite(o.regCharges) ? o.regCharges : CAR_REG_CHARGES_DEFAULT;
+
+  const insRate = fuel === 'ev' ? CAR_RUNNING_DEFAULTS.evIns : CAR_RUNNING_DEFAULTS.iceIns;
+  const insurance = Number.isFinite(o.insurance) ? o.insurance : exShowroom * insRate;
+
+  const tcsApplies = exShowroom > CAR_TCS_THRESHOLD;
+  const tcs = tcsApplies ? exShowroom * CAR_TCS_RATE_PCT / 100 : 0;
+
+  const onRoadExTcs = exShowroom + roadTax + regCharges + insurance;
+  const onRoad = onRoadExTcs + tcs;
+
+  return { exShowroom, roadTax, roadTaxPct, roadTaxReason, regCharges, insurance, tcs, tcsApplies, onRoadExTcs, onRoad };
+}
+
 // ── DHANAM WORTH ──────────────────────────────────────────────────
 // Extracted from index.html's renderWorthProjection() (Phase 16/R65) so that
 // function and the loan panel's "reverse Worth bridge" disclosure
@@ -502,5 +834,7 @@ if (typeof module !== 'undefined' && module.exports) {
     calcRunningCost, calcInsuranceTotal, calcOwnershipCost, calcBreakevenKm,
     calcOwnershipCurve, calcLumpsumGrowth, calcTaxableIncome, calcLeaseMarginalRate,
     calcNetWorthProjection, CAR_RUNNING_DEFAULTS, splitAnnualKm, evEfficiencyFromRange,
+    CAR_STATE_CHARGES, CAR_REG_CHARGES_DEFAULT, CAR_TCS_THRESHOLD, CAR_TCS_RATE_PCT,
+    calcOnRoadCost,
   };
 }

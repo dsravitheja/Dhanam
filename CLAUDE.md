@@ -24,7 +24,7 @@ Dependency-free static site. The only automated tests cover `calc.js`'s pure fun
 Most of the app is one file, `index.html` (~5,600 lines: inline `<style>` then inline `<script>`). Support files:
 
 - `calc.js` — the app's **pure** financial-calculation functions (no DOM access). Loaded by `index.html` via `<script src>` **before** the inline script, and by `tests.js`/`tests.html` in Node/browser. Any new calculation that doesn't touch the DOM belongs here; anything DOM-coupled (`render*`, `calc*` reading `v()`/`chk()`/`el()`) stays in `index.html`. **Served network-first by `sw.js`, like the HTML shell** — it's API-locked to the inline script and must never skew from it across a deploy.
-- `sw.js` — service worker. Network-first for the app shell (`index.html` **and** `calc.js`); cache-first for everything else, `cache.put`-ing misses. `ASSETS` precaches the shell, `calc.js`, `manifest.json`, the logo, both manifest icons, and all 8 font files. `CACHE` is a hand-bumped version string (`apt-cost-v30` as of the public-beta feedback link) — bump it on any change that should bust old caches.
+- `sw.js` — service worker. Network-first for the app shell (`index.html` **and** `calc.js`); cache-first for everything else, `cache.put`-ing misses. `ASSETS` precaches the shell, `calc.js`, `manifest.json`, the logo, both manifest icons, and all 8 font files. `CACHE` is a hand-bumped version string (`apt-cost-v31` as of the Car tile shell, CR2/CR3) — bump it on any change that should bust old caches.
 - `manifest.json` — PWA metadata. `fonts/` — 8 self-hosted `woff2` files (each family ships **latin + latin-ext** `@font-face` rules; latin-ext carries `₹` U+20B9 — never drop it).
 
 ### The hubs
@@ -36,12 +36,12 @@ The UI is "hubs" (top-level tabs) toggled via `switchHub(tab)`, each a `<div cla
 | `hub-worth` | Dhanam Worth | net-worth tracker: balance sheet, hero figure, change tile, trend chart, +5/+10/+20yr projection, Excel export, backup/erase. **The primary stateful hub.** |
 | `hub-sip` | Dhanam Grow | SIP planner — monthly / step-up / lumpsum sub-tabs |
 | `hub-apartment` | Dhanam Home | property cost, home loan, loan-disbursement (pre-EMI). Largest hub; a 3-panel exclusive accordion (`section-detail`/`-loan`/`-disb`). |
-| `hub-car` | Dhanam Car | Two tools: **"Car loan or company lease?"** (`lg-*`, 3 inputs, hero + 3 reconciling line items; "Reconcile against my payslip" opens the lease tax panel `car-*`) and **"Which car costs less to own?"** (`cc-*`, prefilled example cars, ranking + one chart; everything else inside one "Explore further" collapse, where a `cc-mode` select picks Loan/Company lease). **Redesign planned** — three tiles, buyer first: `TASK-CAR-REDESIGN.md` |
+| `hub-car` | Dhanam Car | A three-tile row that is the hub's own tab bar (`car-tile-*` → `car-panel-*`, `switchCarTile()`, **Buy a car** default; selection is tier-3, in memory only). Tile 1 **Buy a car** is a placeholder until Wave 2. Tile 3 **Company car lease** holds **"Car loan or company lease?"** (`lg-*`, 3 inputs, hero + 3 reconciling line items; "Reconcile against my payslip" opens the lease tax panel `car-*`). Tile 2 holds **"Which car costs less to own?"** (`cc-*`, prefilled example cars, ranking + one chart; everything else inside one "Explore further" collapse, where a `cc-mode` select picks Loan/Company lease). **Redesign in progress** (Waves 0–1 shipped; tile 1 content next): `TASK-CAR-REDESIGN.md` |
 | `hub-about` | About | what Dhanam is + dated provenance for every default. Reached via a header link, **not** a 6th nav tab. |
 
 Nav order is `⌂ Home · Dhanam Worth · Dhanam Grow · Dhanam Home · Dhanam Car`. Each hub has one `render*`/`calc*` entry point (see **Core calculation functions**); wire new fields through it.
 
-A **BETA** badge sits next to the header wordmark, and every hub carries a quiet "Beta — tell us what worked and what didn't →" link (Dhanam Car also has a second one under Tool A) to a public feedback Google Form. The on-screen controls are real `<a target="_blank" rel="noopener noreferrer">` elements with a static (plain-form) `href`; `prepFeedbackLink()` swaps in the prefilled URL from the `onclick`, building it from the frozen `FEEDBACK_PARTS` map (short key → the form's exact Q1 option string) plus `BUILD_STAMP`. If `prepFeedbackLink()` throws for any reason, the anchor's original `href` still opens the plain form — the link is never fully dead. **Q1's option strings in `FEEDBACK_PARTS` must match the live Google Form exactly** — see `ARCHITECTURE.md` and `DECISIONS.md`'s 2026-09-26 entry.
+A **BETA** badge sits next to the header wordmark, and every hub carries a quiet "Beta — tell us what worked and what didn't →" link (Dhanam Car has one per tile: `car-buy` / `car-compare` / `car-lease`) to a public feedback Google Form. The on-screen controls are real `<a target="_blank" rel="noopener noreferrer">` elements with a static (plain-form) `href`; `prepFeedbackLink()` swaps in the prefilled URL from the `onclick`, building it from the frozen `FEEDBACK_PARTS` map (short key → the form's exact Q1 option string) plus `BUILD_STAMP`. If `prepFeedbackLink()` throws for any reason, the anchor's original `href` still opens the plain form — the link is never fully dead. **Q1's option strings in `FEEDBACK_PARTS` must match the live Google Form exactly** — see `ARCHITECTURE.md` and `DECISIONS.md`'s 2026-09-26 entry.
 
 ## Cross-cutting invariants
 
@@ -54,10 +54,10 @@ These apply to almost any change. The reasoning and history for each is in `DECI
 5. **Never rebuild an input row's `innerHTML` from its own `oninput`** — focus is dropped mid-keystroke (D6). Rebuild on add/remove/hydrate and `<select>` `onchange` only.
 6. **Charts go through `renderChart(targetId, series, opts)`**, never `chartSvg()` directly; empty a host with `clearChart()`, never `innerHTML = ''`. One `ResizeObserver` is the only redraw mechanism. Chart hosts must be static DOM nodes.
 7. **Touch-width inputs: nothing to do.** A single `!important` catch-all forces 16px on every `input`/`select`/`textarea` at ≤600px (mobile Safari zoom). ⚠ never replace it with a selector list; never add a second `!important` font-size.
-8. **New collapse/expand controls set `aria-expanded`** (call `toggleCard()` or set it explicitly). Both tab bars use `role="tablist"`/`aria-selected`.
+8. **New collapse/expand controls set `aria-expanded`** (call `toggleCard()` or set it explicitly). All three tab bars (hub nav, Grow's sub-tabs, Dhanam Car's tile row) use `role="tablist"`/`aria-selected`.
 9. **Statutory constants:** date them in a comment, state the date in visible caveat copy, pin them in `tests.js`.
 10. **Advice-free.** No sentence reads as a recommendation. Comparisons state arithmetic and name their own biases.
-11. **Copy budget — every hub (S10–S12, Wave 2).** Hero: one number + one sentence. Field hint: ≤ 8 words. Term popover: ≤ 20 words. One "Assumptions & limits" collapse per hub; ≤ 10 words per line; link to About for long form. Projections disclosed once per hub and once on About, never on a hero. Section headers are questions, no " — " form.
+11. **Copy budget — every hub (S10–S12, Wave 2).** Hero: one number + one sentence. Field hint: ≤ 8 words. Term popover: ≤ 20 words. One "Assumptions & limits" collapse per tool (per hub, except Dhanam Car: one per tile — CD-6); ≤ 10 words per line; link to About for long form. Projections disclosed once per hub and once on About, never on a hero. Section headers are questions, no " — " form.
 12. **On every user-visible ship:** bump `sw.js`'s `CACHE` **and** `index.html`'s `BUILD_STAMP` (neither derives from the other).
 
 ## Read before you touch X
@@ -84,7 +84,7 @@ These apply to almost any change. The reasoning and history for each is in `DECI
 
 - **`ARCHITECTURE.md`** — how each subsystem works and the non-obvious constraints (the old per-hub "specifics" sections).
 - **`DECISIONS.md`** — append-only "we chose X over Y, don't revert" log, indexed by R / B / D number.
-- **`MANUAL-TESTS.md`** — the 81-item by-hand regression checklist.
+- **`MANUAL-TESTS.md`** — the 82-item by-hand regression checklist.
 - `UX-ANALYSIS.md` / `ARCHITECTURE-ANALYSIS.md` / `COLOR-PALETTE-ANALYSIS.md` — the D-numbered findings and full rationale.
 - `TASK-UX-REDESIGN.md` — the R-numbered work items and B-numbered owner calls.
 - `TASK-CAR-REDESIGN.md` — the CR-numbered Dhanam Car tile redesign (planned 2026-09-29) and its CD-numbered owner decisions.
@@ -99,6 +99,7 @@ DOM IDs are short prefixed codes, resolved via `v(id)` (numeric value), `chk(id)
 - `q-*` — Quick Estimate inputs (apartment)
 - `d-*` — Detail panel (apartment cost breakdown)
 - `l-*` — Loan panel (home loan) · `adv-*` — prepayment comparison · `sip-*` — SIP comparison within the loan panel
+- `car-tile-*` / `car-panel-*` — Dhanam Car's tile row and its three tab panels (`buy`/`compare`/`lease`); `car-limits-compare` / `car-limits-lease` replaced the single `car-limits-card` (CD-6).
 - `car-*` — company car lease inputs. `car-basic` is *total fixed pay*; `car-epf-amt` is the payslip EPF amount (`car-epf-pct` is retired — see `DECISIONS.md` R33).
 - `lg-*` — the "why a lease?" glance. `lg-basic`/`lg-price`/`lg-regime` are its own inputs (deliberate small duplication of `car-basic`/`car-regime`); every other `lg-*` id is output-only.
 - `cc-*` — Which-car (Compare Cars) shortlist + assumptions. `cc-city-km`/`cc-hwy-km`/`cc-cash-cagr` and `car-mode-btn-*` are **retired** ids (S6–S8). Rows have no per-field ids (inline `oninput` closures index into `ccCars` by position). `cc-marginal-rate` / `cc-has-driver` are **retired** ids (R76) — do not reuse; those values are now derived.
