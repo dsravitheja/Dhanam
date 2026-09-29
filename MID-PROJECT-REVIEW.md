@@ -24,14 +24,14 @@ There is also one genuinely better-than-planned outcome (§4) and **two live def
 
 ## 1. Method
 
-| Source of truth | What it claims | How it was checked |
-|---|---|---|
-| `UX-ANALYSIS.md` D1–D14, Strategic #1/#2 | 14 design defects + 2 structural gaps | Read each defect, then grepped/read the corresponding code region |
-| `ARCHITECTURE-ANALYSIS.md` | 4 ranked recommendations | Counted globals, functions, inline handlers, file size; checked for error handling |
-| `TASK-UX-REDESIGN.md` | 60 R-items, 13 B-decisions | Cross-checked each open item against code; verified "shipped" claims by grep |
-| `TASK-TEST-HARNESS.md` | 8 pure functions, Option A | `node tests.js`; counted functions in `calc.js` |
-| `TASK-COLOR-PALETTE.md` / `COLOR-PALETTE-ANALYSIS.md` | exactly 3 chromatic hues | Extracted every hex literal in `index.html` |
-| 14 phase reports | what each phase shipped | Spot-checked the load-bearing claims (e.g. `grep -c 'id="cb-'` → 0) |
+| Source of truth                                       | What it claims                        | How it was checked                                                                 |
+| ----------------------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------- |
+| `UX-ANALYSIS.md` D1–D14, Strategic #1/#2              | 14 design defects + 2 structural gaps | Read each defect, then grepped/read the corresponding code region                  |
+| `ARCHITECTURE-ANALYSIS.md`                            | 4 ranked recommendations              | Counted globals, functions, inline handlers, file size; checked for error handling |
+| `TASK-UX-REDESIGN.md`                                 | 60 R-items, 13 B-decisions            | Cross-checked each open item against code; verified "shipped" claims by grep       |
+| `TASK-TEST-HARNESS.md`                                | 8 pure functions, Option A            | `node tests.js`; counted functions in `calc.js`                                    |
+| `TASK-COLOR-PALETTE.md` / `COLOR-PALETTE-ANALYSIS.md` | exactly 3 chromatic hues              | Extracted every hex literal in `index.html`                                        |
+| 14 phase reports                                      | what each phase shipped               | Spot-checked the load-bearing claims (e.g. `grep -c 'id="cb-'` → 0)                |
 
 **Not checked:** anything requiring a live browser (chart geometry, focus behaviour, PWA install). Those stay on CLAUDE.md's manual checklist. Findings below marked *(code-verified)* were confirmed by reading source; *(inferred)* means I reasoned from the code but did not run it.
 
@@ -41,22 +41,22 @@ There is also one genuinely better-than-planned outcome (§4) and **two live def
 
 ### 2.1 `UX-ANALYSIS.md` design defects
 
-| # | Defect | Status | Notes |
-|---|---|---|---|
-| D1 | Off-palette gray remnants | ✅ Shipped | Only 2 stray hex literals remain in `index.html`, both duplicates of tokens (`#c9a84c`, `#0a0a0a`) in `<meta>`/manifest contexts. Palette discipline held perfectly across 12 subsequent phases. |
-| D2 | Contrast failures on small text | ✅ Shipped | `.field-hint` now `var(--text-dim)` (`#a39d8f`), not `#555`. **But see §7** — the docs disagree with each other about whether a `--text-faint` token exists. It does not. |
-| D3 | Emoji as the icon system | ✅ Shipped | `<symbol>`/`<use>` sprite, `currentColor`, `aria-hidden` |
-| D4 | Answer buried in a wall of numbers | ✅ Shipped (twice) | `hub-apartment` in Phase 3, `hub-car` in Phase 10. **`hub-sip` and `hub-worth` never had this pass** — they were less dense to begin with, but this was never argued anywhere, it just didn't come up. |
-| D5 | Nothing is a chart | ✅ Exceeded | Planned 3 charts, shipped 8 call sites on one shared helper with a `ResizeObserver` redraw contract |
-| D6 | Tranche focus-loss bug | ✅ Shipped | And the *pattern* was documented and re-applied correctly to `cc-*` rows in Phase 9 |
-| D7 | iOS zoom-on-focus | ⚠️ **Regressed** | See §6.1. The fix shipped; two later phases added input classes that were never added to its selector list. |
-| D8 | Keyboard & screen-reader access | ❌ **Not started** | *(code-verified)* `aria-expanded`: 0 occurrences. `role="tablist"`: 0. `aria-selected`: 0. `tabindex`: 0. `min-height:44px`: 0. `:focus-visible`: 3 rules. 15 `<div class="collapse-header">` still not buttons. |
-| D9 | PWA promises it doesn't keep | ✅ Shipped | 5.2 MB → 10.9 KB logo, fonts self-hosted, `cache.put` on miss, real icons |
-| D10 | Stale identity in exports | ✅ Shipped | |
-| D11 | Trust & consistency nicks | ✅ Mostly | "Assumptions as of" folded into the About provenance list rather than shipped as a standalone line — a reasonable call, recorded |
-| D12 | Pre-tax vs guaranteed comparison | 🟡 Half | Framing caveat shipped in `hub-apartment` (6d-i). **`hub-sip` still carries no pre-tax statement anywhere on screen** — see §6.2 |
-| D13 | Regional defaults presented as universal | ✅ Shipped | `PROPERTY_STATES`, 9 states, dated, persisted as a code only |
-| D14 | Car EPF base + 87A relief | ✅ Shipped | Plus D15 (stale perquisite table) found in the same sweep |
+| #   | Defect                                   | Status            | Notes                                                                                                                                                                                                            |
+| --- | ---------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Off-palette gray remnants                | ✅ Shipped         | Only 2 stray hex literals remain in `index.html`, both duplicates of tokens (`#c9a84c`, `#0a0a0a`) in `<meta>`/manifest contexts. Palette discipline held perfectly across 12 subsequent phases.                 |
+| D2  | Contrast failures on small text          | ✅ Shipped         | `.field-hint` now `var(--text-dim)` (`#a39d8f`), not `#555`. **But see §7** — the docs disagree with each other about whether a `--text-faint` token exists. It does not.                                        |
+| D3  | Emoji as the icon system                 | ✅ Shipped         | `<symbol>`/`<use>` sprite, `currentColor`, `aria-hidden`                                                                                                                                                         |
+| D4  | Answer buried in a wall of numbers       | ✅ Shipped (twice) | `hub-apartment` in Phase 3, `hub-car` in Phase 10. **`hub-sip` and `hub-worth` never had this pass** — they were less dense to begin with, but this was never argued anywhere, it just didn't come up.           |
+| D5  | Nothing is a chart                       | ✅ Exceeded        | Planned 3 charts, shipped 8 call sites on one shared helper with a `ResizeObserver` redraw contract                                                                                                              |
+| D6  | Tranche focus-loss bug                   | ✅ Shipped         | And the *pattern* was documented and re-applied correctly to `cc-*` rows in Phase 9                                                                                                                              |
+| D7  | iOS zoom-on-focus                        | ⚠️ **Regressed**  | See §6.1. The fix shipped; two later phases added input classes that were never added to its selector list.                                                                                                      |
+| D8  | Keyboard & screen-reader access          | ❌ **Not started** | *(code-verified)* `aria-expanded`: 0 occurrences. `role="tablist"`: 0. `aria-selected`: 0. `tabindex`: 0. `min-height:44px`: 0. `:focus-visible`: 3 rules. 15 `<div class="collapse-header">` still not buttons. |
+| D9  | PWA promises it doesn't keep             | ✅ Shipped         | 5.2 MB → 10.9 KB logo, fonts self-hosted, `cache.put` on miss, real icons                                                                                                                                        |
+| D10 | Stale identity in exports                | ✅ Shipped         |                                                                                                                                                                                                                  |
+| D11 | Trust & consistency nicks                | ✅ Mostly          | "Assumptions as of" folded into the About provenance list rather than shipped as a standalone line — a reasonable call, recorded                                                                                 |
+| D12 | Pre-tax vs guaranteed comparison         | 🟡 Half           | Framing caveat shipped in `hub-apartment` (6d-i). **`hub-sip` still carries no pre-tax statement anywhere on screen** — see §6.2                                                                                 |
+| D13 | Regional defaults presented as universal | ✅ Shipped         | `PROPERTY_STATES`, 9 states, dated, persisted as a code only                                                                                                                                                     |
+| D14 | Car EPF base + 87A relief                | ✅ Shipped         | Plus D15 (stale perquisite table) found in the same sweep                                                                                                                                                        |
 
 **11 of 14 fully closed, 1 half, 1 regressed, 1 untouched.**
 
@@ -73,22 +73,22 @@ The bridge runs **one way only** (Worth reads the calculators' engines; no calcu
 
 ### 2.3 `ARCHITECTURE-ANALYSIS.md` recommendations
 
-| # | Recommendation | Status |
-|---|---|---|
-| 1 | Minimal correctness test harness | ✅ **Exceeded.** Option A shipped; 8 planned functions → 14 in `calc.js`; 0 → 95 assertions, including a bisection oracle for `calcEMI` and conservation properties |
-| 2 | Basic client-side error visibility (`window.onerror`) | ❌ **Not done.** *(code-verified)* The only `onerror` in `index.html` is `reader.onerror` on the backup-file input. A stranger hitting a JS exception sees a silently dead calculator. |
-| 3 | Close the Google Fonts gap | ✅ Shipped |
-| 4 | Light modularization, one hub at a time | ❌ **Not done, and the numbers moved the wrong way** |
+| #   | Recommendation                                        | Status                                                                                                                                                                                |
+| --- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Minimal correctness test harness                      | ✅ **Exceeded.** Option A shipped; 8 planned functions → 14 in `calc.js`; 0 → 95 assertions, including a bisection oracle for `calcEMI` and conservation properties                    |
+| 2   | Basic client-side error visibility (`window.onerror`) | ❌ **Not done.** *(code-verified)* The only `onerror` in `index.html` is `reader.onerror` on the backup-file input. A stranger hitting a JS exception sees a silently dead calculator. |
+| 3   | Close the Google Fonts gap                            | ✅ Shipped                                                                                                                                                                             |
+| 4   | Light modularization, one hub at a time               | ❌ **Not done, and the numbers moved the wrong way**                                                                                                                                   |
 
 Recommendation 4 deserves its own row of evidence, because the document made a specific prediction and we blew through it:
 
-| Metric | At analysis (2026-07-20) | Now | Analysis said |
-|---|---|---|---|
-| `index.html` lines | 2,888 | **5,589** | *"easily pushing this past 4,000–5,000 lines"* |
-| Module-scope globals | ~8 | **38** | *"will not stay manageable as Dhanam Worth is added"* |
-| Inline event-handler strings | 93 | **167** | *"particularly fragile… fails silently"* |
-| Top-level functions | 63 | **118** | — |
-| Files of JS | 1 | 2 (`calc.js`) | *"splitting the inline `<script>` into a handful of `<script src=…>` files grouped by hub"* |
+| Metric                       | At analysis (2026-07-20) | Now           | Analysis said                                                                               |
+| ---------------------------- | ------------------------ | ------------- | ------------------------------------------------------------------------------------------- |
+| `index.html` lines           | 2,888                    | **5,589**     | *"easily pushing this past 4,000–5,000 lines"*                                              |
+| Module-scope globals         | ~8                       | **38**        | *"will not stay manageable as Dhanam Worth is added"*                                       |
+| Inline event-handler strings | 93                       | **167**       | *"particularly fragile… fails silently"*                                                    |
+| Top-level functions          | 63                       | **118**       | —                                                                                           |
+| Files of JS                  | 1                        | 2 (`calc.js`) | *"splitting the inline `<script>` into a handful of `<script src=…>` files grouped by hub"* |
 
 Nine of the 38 globals are Compare Cars UI state alone (`ccCars`, `ccBuilt`, `ccForceOpen`, `ccForceClosed`, `ccOwnCurveIdx`, `ccRevealOpen`, `ccOppRevealOpen`, `ccCrossRevealOpen`, plus `carMode`). The analysis named "each new hub is a good moment to split it out into its own file" as the natural entry point — we have had four such moments since (Worth, Compare Cars, financing modes, the absorbed loan detail) and took none of them.
 
@@ -139,13 +139,13 @@ Two smaller ones:
 
 *(code-verified, from `git log --numstat -- index.html`)*
 
-| Hub | Dedicated phases | `index.html` churn | Share |
-|---|---|---|---|
-| **Dhanam Car** | 8, 8b, 9, 10, 13, 14 (**6**) | ~1,908 lines | **38.8%** |
-| Dhanam Home | 0 dedicated (served by 0, 1, 3, 3b, 3c, 6a) | — | — |
-| Dhanam Worth | 2 (**1**) | ~356 lines | 7.2% |
-| **Dhanam Grow** | **0** | — | — |
-| Cross-cutting (palette, PWA, icons, charts, landing, About) | 1, 3, 3b, 3c, 4, 4b, 11, 12 | — | — |
+| Hub                                                         | Dedicated phases                            | `index.html` churn | Share     |
+| ----------------------------------------------------------- | ------------------------------------------- | ------------------ | --------- |
+| **Dhanam Car**                                              | 8, 8b, 9, 10, 13, 14 (**6**)                | ~1,908 lines       | **38.8%** |
+| Dhanam Home                                                 | 0 dedicated (served by 0, 1, 3, 3b, 3c, 6a) | —                  | —         |
+| Dhanam Worth                                                | 2 (**1**)                                   | ~356 lines         | 7.2%      |
+| **Dhanam Grow**                                             | **0**                                       | —                  | —         |
+| Cross-cutting (palette, PWA, icons, charts, landing, About) | 1, 3, 3b, 3c, 4, 4b, 11, 12                 | —                  | —         |
 
 `UX-ANALYSIS.md` opened with: *"It leads with the least universal need… instead of the most universal one (growing money / knowing where you stand)."* We fixed that in the **UI** in Phase 1 and then spent the next twelve phases reproducing it in the **roadmap**. Dhanam Grow — first tile on the landing page, the hub the analysis said was the most universal need — has never been the subject of a phase. Its only open item (R31) is unstarted, and the one piece of copy Phase 7's own assessment recommended shipping was never placed there (§6.2).
 
@@ -159,24 +159,24 @@ Two smaller ones:
 
 R21 was picked up (Wave 0). But the same pattern then repeated for Phases 13 and 14, and the items still open are:
 
-| Item | What it is | Severity in doc | Reality check |
-|---|---|---|---|
-| **R8** / Phase 5 | Keyboard & ARIA pass | Medium | *(code-verified)* Zero progress. 15 non-button collapse headers, no `aria-expanded` anywhere, no tab semantics, no 44px targets. **"Medium" was set when the audience was one person.** B4 was answered "general audience" on 2026-07-25 and this item's severity was never revisited. |
-| **R23** / 6c | Inline `ⓘ` term definitions | **High** | *(code-verified)* Zero occurrences. The doc calls it *"the highest-value comprehension work in this phase."* It is the highest-severity open item in the whole document and has been open since Phase 6 was filed. |
-| **R25** / 6e | Orientation line + feedback composer | Medium | Contact link shipped; orientation line not. Composer deliberately deferred past the beta — that deferral is sound and documented. |
-| **R31** / Phase 7 | Post-tax figures in Grow | Medium | Blocked on **B10**, unanswered since 2026-07-26 |
-| **6f** | Beta protocol (not code) | — | Never run. Five non-family testers, prioritising people outside Telangana. |
+| Item              | What it is                           | Severity in doc | Reality check                                                                                                                                                                                                                                                                          |
+| ----------------- | ------------------------------------ | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **R8** / Phase 5  | Keyboard & ARIA pass                 | Medium          | *(code-verified)* Zero progress. 15 non-button collapse headers, no `aria-expanded` anywhere, no tab semantics, no 44px targets. **"Medium" was set when the audience was one person.** B4 was answered "general audience" on 2026-07-25 and this item's severity was never revisited. |
+| **R23** / 6c      | Inline `ⓘ` term definitions          | **High**        | *(code-verified)* Zero occurrences. The doc calls it *"the highest-value comprehension work in this phase."* It is the highest-severity open item in the whole document and has been open since Phase 6 was filed.                                                                     |
+| **R25** / 6e      | Orientation line + feedback composer | Medium          | Contact link shipped; orientation line not. Composer deliberately deferred past the beta — that deferral is sound and documented.                                                                                                                                                      |
+| **R31** / Phase 7 | Post-tax figures in Grow             | Medium          | Blocked on **B10**, unanswered since 2026-07-26                                                                                                                                                                                                                                        |
+| **6f**            | Beta protocol (not code)             | —               | Never run. Five non-family testers, prioritising people outside Telangana.                                                                                                                                                                                                             |
 
 Note what 6f being un-run means: **every priority call since 2026-07-25 has been made on intuition.** `TASK-UX-REDESIGN.md` says so itself about Phase 14 — *"Phase 14's whole premise… is market intuition, not evidence. This protocol is the instrument for converting that into a finding."* We built the feature and skipped the instrument.
 
 ### 5.3 Four owner decisions are still open and two are load-bearing
 
-| # | Question | Open since | Blocks |
-|---|---|---|---|
-| **B10** | Are post-tax figures on by default? | 2026-07-26 | **R31 cannot start** |
-| **B6** | Align `calcSIP`/`calcStepupSIP`'s ~1% timing gap, or leave it documented? | Phase 1 | Any future work that plots them together; a hard prerequisite for a tax layer |
-| B7 | Should Worth ask before persisting? | Phase 2 | Nothing today |
-| B9 | Backend/Firebase — if, when, on what terms? | 2026-07-25 | Correctly parked until Phase 6 lands |
+| #       | Question                                                                  | Open since | Blocks                                                                        |
+| ------- | ------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------- |
+| **B10** | Are post-tax figures on by default?                                       | 2026-07-26 | **R31 cannot start**                                                          |
+| **B6**  | Align `calcSIP`/`calcStepupSIP`'s ~1% timing gap, or leave it documented? | Phase 1    | Any future work that plots them together; a hard prerequisite for a tax layer |
+| B7      | Should Worth ask before persisting?                                       | Phase 2    | Nothing today                                                                 |
+| B9      | Backend/Firebase — if, when, on what terms?                               | 2026-07-25 | Correctly parked until Phase 6 lands                                          |
 
 B6 has now been open for **thirteen phases**. It is disclosed on the About page, routed around in the step-up chart, and re-confirmed as a blocker by Phase 7's assessment. It is not urgent, but "open since Phase 1" is the kind of item that becomes permanent by default.
 
@@ -204,10 +204,10 @@ Covered in §2.3. The short version: we doubled the file, quintupled the globals
 
 `TASK-UX-REDESIGN.md`'s Phase 0 flagged this as a **standing obligation, not a one-off**. Two later phases added input classes and neither was added to the selector:
 
-| Class | Font size | Shipped in | Fields affected |
-|---|---|---|---|
-| `.cc-field input`, `.cc-field select` (`index.html:692`) | **14px** | Phase 9, extended Phase 14 | Every Compare Cars shortlist field — Type, Name, On-Road Price, Mileage/Efficiency, **Down Payment** — plus the `.cc-field` assumptions inputs |
-| `.qf select` (`index.html:181`) | **15px** | Phase 6a (R21) | `q-state`, the state selector — the fix for D13 |
+| Class                                                    | Font size | Shipped in                 | Fields affected                                                                                                                                |
+| -------------------------------------------------------- | --------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.cc-field input`, `.cc-field select` (`index.html:692`) | **14px**  | Phase 9, extended Phase 14 | Every Compare Cars shortlist field — Type, Name, On-Road Price, Mileage/Efficiency, **Down Payment** — plus the `.cc-field` assumptions inputs |
+| `.qf select` (`index.html:181`)                          | **15px**  | Phase 6a (R21)             | `q-state`, the state selector — the fix for D13                                                                                                |
 
 On an iPhone, tapping any of these lurches the viewport. Compare Cars is the hub the owner uses for real decisions, and the state selector is the control that makes the app correct for non-Telangana users — i.e. the two surfaces a beta tester outside Telangana would touch first.
 
@@ -235,29 +235,29 @@ The docs are unusually good — `TASK-UX-REDESIGN.md` in particular is maintaine
 
 **Would mislead — fix these:**
 
-| File | Line | Says | Actually |
-|---|---|---|---|
-| `TASK-TEST-HARNESS.md` | 3 | *"Status: NOT approved for execution"* | Shipped as Option A; `calc.js` + `tests.js` + `tests.html` exist |
-| `TASK-TEST-HARNESS.md` | 115–118 | `calcPerquisite` expects `1800/2400/2700/3300` | R37 replaced these with `5000/7000/+3000` (Income-tax Rules 2026). **A reader following this brief would write failing tests, or "fix" correct code to match.** |
-| `TASK-COLOR-PALETTE.md` | 3 | *"Status: NOT approved for execution"* | Shipped in commit `728666e` |
-| `TASK-COLOR-PALETTE.md` | 12 | *"expect 39/39, unchanged"* | 95/95 |
-| `CLAUDE.md` | 146 | ID convention: `` `cb-*` — car buying/loan inputs `` | Retired in Phase 14; zero live `cb-` ids. Listing it invites someone to use the prefix. |
+| File                    | Line    | Says                                                 | Actually                                                                                                                                                        |
+| ----------------------- | ------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TASK-TEST-HARNESS.md`  | 3       | *"Status: NOT approved for execution"*               | Shipped as Option A; `calc.js` + `tests.js` + `tests.html` exist                                                                                                |
+| `TASK-TEST-HARNESS.md`  | 115–118 | `calcPerquisite` expects `1800/2400/2700/3300`       | R37 replaced these with `5000/7000/+3000` (Income-tax Rules 2026). **A reader following this brief would write failing tests, or "fix" correct code to match.** |
+| `TASK-COLOR-PALETTE.md` | 3       | *"Status: NOT approved for execution"*               | Shipped in commit `728666e`                                                                                                                                     |
+| `TASK-COLOR-PALETTE.md` | 12      | *"expect 39/39, unchanged"*                          | 95/95                                                                                                                                                           |
+| `CLAUDE.md`             | 146     | ID convention: `` `cb-*` — car buying/loan inputs `` | Retired in Phase 14; zero live `cb-` ids. Listing it invites someone to use the prefix.                                                                         |
 
 **Merely stale — worth a sweep:**
 
-| File | Says | Actually |
-|---|---|---|
-| `CLAUDE.md:20` | `index.html` is *"~3970 lines"* | 5,589 |
-| `CLAUDE.md:23` | cache name *"`apt-cost-v14`"* | `apt-cost-v19` (five bumps behind) |
-| `CLAUDE.md:184` | *"Six call sites as of Phase 3b… plus the car-buying resale-value curve"* | 8 call sites; the car-buying one is now `cc-depr-chart` |
-| `CLAUDE.md:199` | `.table-scroll` on *"the Detail panel's… all three Grow… and the car depreciation table"* | 7 wrappers |
-| `CLAUDE.md:236` (checklist 22) | lists `cb-depr-chart` among the five year-based charts | now `cc-depr-chart` |
-| `CLAUDE.md:255` (checklist 41) | *"`renderCarLoan()`'s EMI now runs through `calcEMI`"*, present tense | `renderCarLoan()` no longer exists |
-| `CLAUDE.md:195` | *"there is no `--text-faint` token in this codebase"* | Correct — but `TASK-UX-REDESIGN.md`'s Phase 0 and 3b-b both instruct using one. The two docs contradict each other. |
-| `UX-ANALYSIS.md:9,23` | *"forest green + gold"* palette | Replaced by the true-neutral near-black "Quiet Luxury" palette |
-| `UX-ANALYSIS.md:3` | *"Source: `index.html` (~2,900 lines)"* | 5,589 |
-| `TASK-PARALLEL-EXECUTION.md:§1` | *"Phases 1–4, 4b, 8, 8b, 9, and 10 are shipped"* | 11, 12, 13, 14 also shipped |
-| `TASK-UX-REDESIGN.md:142` | *"Remaining work (as of 2026-08-07)"* | Content is current through Phase 14; only the heading date is stale |
+| File                            | Says                                                                                      | Actually                                                                                                            |
+| ------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `CLAUDE.md:20`                  | `index.html` is *"~3970 lines"*                                                           | 5,589                                                                                                               |
+| `CLAUDE.md:23`                  | cache name *"`apt-cost-v14`"*                                                             | `apt-cost-v19` (five bumps behind)                                                                                  |
+| `CLAUDE.md:184`                 | *"Six call sites as of Phase 3b… plus the car-buying resale-value curve"*                 | 8 call sites; the car-buying one is now `cc-depr-chart`                                                             |
+| `CLAUDE.md:199`                 | `.table-scroll` on *"the Detail panel's… all three Grow… and the car depreciation table"* | 7 wrappers                                                                                                          |
+| `CLAUDE.md:236` (checklist 22)  | lists `cb-depr-chart` among the five year-based charts                                    | now `cc-depr-chart`                                                                                                 |
+| `CLAUDE.md:255` (checklist 41)  | *"`renderCarLoan()`'s EMI now runs through `calcEMI`"*, present tense                     | `renderCarLoan()` no longer exists                                                                                  |
+| `CLAUDE.md:195`                 | *"there is no `--text-faint` token in this codebase"*                                     | Correct — but `TASK-UX-REDESIGN.md`'s Phase 0 and 3b-b both instruct using one. The two docs contradict each other. |
+| `UX-ANALYSIS.md:9,23`           | *"forest green + gold"* palette                                                           | Replaced by the true-neutral near-black "Quiet Luxury" palette                                                      |
+| `UX-ANALYSIS.md:3`              | *"Source: `index.html` (~2,900 lines)"*                                                   | 5,589                                                                                                               |
+| `TASK-PARALLEL-EXECUTION.md:§1` | *"Phases 1–4, 4b, 8, 8b, 9, and 10 are shipped"*                                          | 11, 12, 13, 14 also shipped                                                                                         |
+| `TASK-UX-REDESIGN.md:142`       | *"Remaining work (as of 2026-08-07)"*                                                     | Content is current through Phase 14; only the heading date is stale                                                 |
 
 **One structural nit:** `R45` is assigned to two unrelated items (the 6e build stamp and the Phase 10a lease hero). The doc notes this and deliberately declines to renumber. That was the right call — but `R36` was never assigned, so there was a free number. Not worth changing now; noted so nobody "fixes" it later.
 
@@ -295,6 +295,7 @@ Ordered by (severity × cheapness), not by phase number.
 If we don't want these — reasonable; they add cross-hub coupling that `ARCHITECTURE-ANALYSIS.md` warned about — then **write that down in `UX-ANALYSIS.md` §Strategic-2 as a decision**, so the thesis isn't left looking half-finished by accident.
 
 **R66 — Take one of the two architecture mitigations.** Not both, and not a rewrite. Either:
+
 - *(cheap)* a `window.onerror`/`unhandledrejection` handler that surfaces a "something went wrong — build `<BUILD_STAMP>`, copy diagnostics" toast. ~15 lines, pairs naturally with the R25 feedback composer, and closes `ARCHITECTURE-ANALYSIS.md` recommendation #2, which has been open since day one; **or**
 - *(structural)* split the inline `<script>` at the next hub-sized change — `car.js` is the obvious first cut at ~39% of churn and 9 of the 38 globals.
 
@@ -308,12 +309,12 @@ The cheap one is the better bet right now: it directly serves the beta, where th
 
 A concrete proposal, sized to a single session, that clears the cheap wins and unblocks the rest:
 
-| Wave | Items | Why together |
-|---|---|---|
-| **Wave A (hours)** | R62 (D7 selector), R63 (Grow tax caveat), R64 (doc sweep) | Three unrelated one-file fixes; no dependencies; closes both live defects |
-| **Wave B (decisions, no code)** | Answer B10; re-rate R8; run 6f | Costs no build time and changes what Wave C should be |
-| **Wave C (build)** | R8 + R23 together, per the doc's own coordination note | The two widest sweeps; doing R23's tooltips without R8's focus/ARIA treatment creates fresh accessibility debt |
-| **Wave D** | R66 (`window.onerror`) + R25's orientation line | Both are beta-readiness; both are small |
+| Wave                            | Items                                                     | Why together                                                                                                   |
+| ------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Wave A (hours)**              | R62 (D7 selector), R63 (Grow tax caveat), R64 (doc sweep) | Three unrelated one-file fixes; no dependencies; closes both live defects                                      |
+| **Wave B (decisions, no code)** | Answer B10; re-rate R8; run 6f                            | Costs no build time and changes what Wave C should be                                                          |
+| **Wave C (build)**              | R8 + R23 together, per the doc's own coordination note    | The two widest sweeps; doing R23's tooltips without R8's focus/ARIA treatment creates fresh accessibility debt |
+| **Wave D**                      | R66 (`window.onerror`) + R25's orientation line           | Both are beta-readiness; both are small                                                                        |
 
 Phase 7's R31 stays parked behind B10. Phase 14's own follow-on (whatever 6f surfaces about lease-vs-loan) should be filed as new R-numbers, per the protocol's rule that findings become R-items rather than ad-hoc fixes.
 

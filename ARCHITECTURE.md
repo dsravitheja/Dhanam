@@ -65,6 +65,8 @@ For under-construction property loans where the bank disburses funds in stages a
 
 ## Dhanam Car (`hub-car`)
 
+> **Redesign planned (2026-09-29):** three tiles, buyer first — see `TASK-CAR-REDESIGN.md` and `DECISIONS.md` §Dhanam Car tile redesign. This section describes the **shipped** two-tool hub until CR12 rewrites it.
+
 Two independent tools, stacked, no hub-level mode selector. `calc.js`'s
 `calcOwnershipCost`/`calcOwnershipCurve`/`calcLeaseMarginalRate`/
 `CAR_RUNNING_DEFAULTS`/`splitAnnualKm`/`evEfficiencyFromRange` are the shared

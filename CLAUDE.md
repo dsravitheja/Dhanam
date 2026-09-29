@@ -36,7 +36,7 @@ The UI is "hubs" (top-level tabs) toggled via `switchHub(tab)`, each a `<div cla
 | `hub-worth` | Dhanam Worth | net-worth tracker: balance sheet, hero figure, change tile, trend chart, +5/+10/+20yr projection, Excel export, backup/erase. **The primary stateful hub.** |
 | `hub-sip` | Dhanam Grow | SIP planner — monthly / step-up / lumpsum sub-tabs |
 | `hub-apartment` | Dhanam Home | property cost, home loan, loan-disbursement (pre-EMI). Largest hub; a 3-panel exclusive accordion (`section-detail`/`-loan`/`-disb`). |
-| `hub-car` | Dhanam Car | Two tools: **"Car loan or company lease?"** (`lg-*`, 3 inputs, hero + 3 reconciling line items; "Reconcile against my payslip" opens the lease tax panel `car-*`) and **"Which car costs less to own?"** (`cc-*`, prefilled example cars, ranking + one chart; everything else inside one "Explore further" collapse, where a `cc-mode` select picks Loan/Company lease) |
+| `hub-car` | Dhanam Car | Two tools: **"Car loan or company lease?"** (`lg-*`, 3 inputs, hero + 3 reconciling line items; "Reconcile against my payslip" opens the lease tax panel `car-*`) and **"Which car costs less to own?"** (`cc-*`, prefilled example cars, ranking + one chart; everything else inside one "Explore further" collapse, where a `cc-mode` select picks Loan/Company lease). **Redesign planned** — three tiles, buyer first: `TASK-CAR-REDESIGN.md` |
 | `hub-about` | About | what Dhanam is + dated provenance for every default. Reached via a header link, **not** a 6th nav tab. |
 
 Nav order is `⌂ Home · Dhanam Worth · Dhanam Grow · Dhanam Home · Dhanam Car`. Each hub has one `render*`/`calc*` entry point (see **Core calculation functions**); wire new fields through it.
@@ -78,6 +78,7 @@ These apply to almost any change. The reasoning and history for each is in `DECI
 | ARIA / keyboard | `ARCHITECTURE.md` §Keyboard & ARIA accessibility |
 | `sw.js` / caching / PWA | this file's Architecture section; `DECISIONS.md` §Service worker |
 | adding a feature a past phase might have cut | `DECISIONS.md` (⚠ markers) |
+| anything in `hub-car` before the tile redesign ships | `TASK-CAR-REDESIGN.md` — check the change isn't about to be moved or replaced |
 
 ## Documentation map
 
@@ -86,6 +87,7 @@ These apply to almost any change. The reasoning and history for each is in `DECI
 - **`MANUAL-TESTS.md`** — the 81-item by-hand regression checklist.
 - `UX-ANALYSIS.md` / `ARCHITECTURE-ANALYSIS.md` / `COLOR-PALETTE-ANALYSIS.md` — the D-numbered findings and full rationale.
 - `TASK-UX-REDESIGN.md` — the R-numbered work items and B-numbered owner calls.
+- `TASK-CAR-REDESIGN.md` — the CR-numbered Dhanam Car tile redesign (planned 2026-09-29) and its CD-numbered owner decisions.
 - `PHASE-*-REPORT.md` — what shipped in each phase.
 
 ---
