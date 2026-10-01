@@ -1,6 +1,6 @@
 # TASK-CAR-REDESIGN — Dhanam Car as three tiles, buyer-first
 
-Design agreed 2026-09-29. **Waves 0–1 (CR1–CR3) shipped 2026-09-29; Wave 2 (CR4–CR7) shipped 2026-10-01**, CR8–CR13 planned — `CLAUDE.md` describes the
+Design agreed 2026-09-29. **Waves 0–1 (CR1–CR3) shipped 2026-09-29; Wave 2 (CR4–CR7) 2026-10-01; Wave 3 (CR8–CR9) 2026-10-01**, CR10–CR13 planned — `CLAUDE.md` describes the
 shipped tile shell; `ARCHITECTURE.md` §Dhanam Car is rewritten in CR12. Each
 item below is sized to hand to Claude Code as one task and has a **Done when**
 line; if it can't be checked, it isn't done. IDs are `CR<n>` (Car Redesign)
@@ -173,6 +173,8 @@ Copy budget (invariant 11) applies: hero = one number + one sentence.
 ---
 
 ## Wave 3 — Tiles 2 and 3
+
+*Shipped 2026-10-01. One `carTerms` source mirrored into each tile's fields (CD-4); one shared term, 1–7 years, default 5 (tiles 2/3 were 4). Pay/regime unified into `car-basic`/`car-regime` inside tile 3's glance card; latch retired (CD-5).*
 
 ### CR8. Tile 2 ("Which car costs less to own?") — small changes
 - "Paying by" select gains **Cash** back (the engine never lost it).

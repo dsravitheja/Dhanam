@@ -24,7 +24,7 @@ Dependency-free static site. The only automated tests cover `calc.js`'s pure fun
 Most of the app is one file, `index.html` (~5,600 lines: inline `<style>` then inline `<script>`). Support files:
 
 - `calc.js` — the app's **pure** financial-calculation functions (no DOM access). Loaded by `index.html` via `<script src>` **before** the inline script, and by `tests.js`/`tests.html` in Node/browser. Any new calculation that doesn't touch the DOM belongs here; anything DOM-coupled (`render*`, `calc*` reading `v()`/`chk()`/`el()`) stays in `index.html`. **Served network-first by `sw.js`, like the HTML shell** — it's API-locked to the inline script and must never skew from it across a deploy.
-- `sw.js` — service worker. Network-first for the app shell (`index.html` **and** `calc.js`); cache-first for everything else, `cache.put`-ing misses. `ASSETS` precaches the shell, `calc.js`, `manifest.json`, the logo, both manifest icons, and all 8 font files. `CACHE` is a hand-bumped version string (`apt-cost-v32` as of Buy a car, CR4–CR7) — bump it on any change that should bust old caches.
+- `sw.js` — service worker. Network-first for the app shell (`index.html` **and** `calc.js`); cache-first for everything else, `cache.put`-ing misses. `ASSETS` precaches the shell, `calc.js`, `manifest.json`, the logo, both manifest icons, and all 8 font files. `CACHE` is a hand-bumped version string (`apt-cost-v33` as of Wave 3, CR8–CR9) — bump it on any change that should bust old caches.
 - `manifest.json` — PWA metadata. `fonts/` — 8 self-hosted `woff2` files (each family ships **latin + latin-ext** `@font-face` rules; latin-ext carries `₹` U+20B9 — never drop it).
 
 ### The hubs
@@ -36,7 +36,7 @@ The UI is "hubs" (top-level tabs) toggled via `switchHub(tab)`, each a `<div cla
 | `hub-worth` | Dhanam Worth | net-worth tracker: balance sheet, hero figure, change tile, trend chart, +5/+10/+20yr projection, Excel export, backup/erase. **The primary stateful hub.** |
 | `hub-sip` | Dhanam Grow | SIP planner — monthly / step-up / lumpsum sub-tabs |
 | `hub-apartment` | Dhanam Home | property cost, home loan, loan-disbursement (pre-EMI). Largest hub; a 3-panel exclusive accordion (`section-detail`/`-loan`/`-disb`). |
-| `hub-car` | Dhanam Car | A three-tile row that is the hub's own tab bar (`car-tile-*` → `car-panel-*`, `switchCarTile()`, **Buy a car** default; selection is tier-3, in memory only). Tile 1 **Buy a car** (`cbuy-*`, `renderCarBuy()`) — on-road cost by state/fuel, EMI + 3/5/7-yr table, loan vs pay cash, and when the loan exceeds the insured value; persists nothing (CD-7). Tile 3 **Company car lease** holds **"Car loan or company lease?"** (`lg-*`, 3 inputs, hero + 3 reconciling line items; "Reconcile against my payslip" opens the lease tax panel `car-*`). Tile 2 holds **"Which car costs less to own?"** (`cc-*`, prefilled example cars, ranking + one chart; everything else inside one "Explore further" collapse, where a `cc-mode` select picks Loan/Company lease). **Redesign in progress** (Waves 0–2 shipped; tiles 2/3 changes next): `TASK-CAR-REDESIGN.md` |
+| `hub-car` | Dhanam Car | A three-tile row that is the hub's own tab bar (`car-tile-*` → `car-panel-*`, `switchCarTile()`, **Buy a car** default; selection is tier-3, in memory only). Tile 1 **Buy a car** (`cbuy-*`, `renderCarBuy()`) — on-road cost by state/fuel, EMI + 3/5/7-yr table, loan vs pay cash, and when the loan exceeds the insured value; persists nothing (CD-7). Tile 3 **Company car lease** holds the glance (`lg-price` + `car-basic` + `car-regime`, hero + 3 reconciling lines, a closed "Change rates and term" collapse, and a side-by-side lease/loan card pair), with "Reconcile against my payslip" opening the payslip panel `car-*`. Tile 2 holds **"Which car costs less to own?"** (`cc-*`, prefilled example cars, ranking + one chart; a visible "How are you paying?" strip holds `cc-mode` (Loan / Cash / Company lease) plus the term and that mode's rates; "Explore further" keeps fuel, charging, km and EV breakeven). Loan rate, term, lease rate and residual are one shared `carTerms` source mirrored into every tile's fields (`CAR_TERM_INPUTS`, `carTermInput()`); tier-2, never persisted (CD-4). **Redesign in progress** (Waves 0–3 shipped; Wave 4 close-out next): `TASK-CAR-REDESIGN.md` |
 | `hub-about` | About | what Dhanam is + dated provenance for every default. Reached via a header link, **not** a 6th nav tab. |
 
 Nav order is `⌂ Home · Dhanam Worth · Dhanam Grow · Dhanam Home · Dhanam Car`. Each hub has one `render*`/`calc*` entry point (see **Core calculation functions**); wire new fields through it.
@@ -84,7 +84,7 @@ These apply to almost any change. The reasoning and history for each is in `DECI
 
 - **`ARCHITECTURE.md`** — how each subsystem works and the non-obvious constraints (the old per-hub "specifics" sections).
 - **`DECISIONS.md`** — append-only "we chose X over Y, don't revert" log, indexed by R / B / D number.
-- **`MANUAL-TESTS.md`** — the 87-item by-hand regression checklist.
+- **`MANUAL-TESTS.md`** — the 91-item by-hand regression checklist.
 - `UX-ANALYSIS.md` / `ARCHITECTURE-ANALYSIS.md` / `COLOR-PALETTE-ANALYSIS.md` — the D-numbered findings and full rationale.
 - `TASK-UX-REDESIGN.md` — the R-numbered work items and B-numbered owner calls.
 - `TASK-CAR-REDESIGN.md` — the CR-numbered Dhanam Car tile redesign (planned 2026-09-29) and its CD-numbered owner decisions.
@@ -101,9 +101,9 @@ DOM IDs are short prefixed codes, resolved via `v(id)` (numeric value), `chk(id)
 - `l-*` — Loan panel (home loan) · `adv-*` — prepayment comparison · `sip-*` — SIP comparison within the loan panel
 - `car-tile-*` / `car-panel-*` — Dhanam Car's tile row and its three tab panels (`buy`/`compare`/`lease`); `car-limits-compare` / `car-limits-lease` / `car-limits-buy` replaced the single `car-limits-card` (CD-6).
 - `cbuy-*` — Buy a car (tile 1) inputs/outputs.
-- `car-*` — company car lease inputs. `car-basic` is *total fixed pay*; `car-epf-amt` is the payslip EPF amount (`car-epf-pct` is retired — see `DECISIONS.md` R33).
-- `lg-*` — the "why a lease?" glance. `lg-basic`/`lg-price`/`lg-regime` are its own inputs (deliberate small duplication of `car-basic`/`car-regime`); every other `lg-*` id is output-only.
-- `cc-*` — Which-car (Compare Cars) shortlist + assumptions. `cc-city-km`/`cc-hwy-km`/`cc-cash-cagr` and `car-mode-btn-*` are **retired** ids (S6–S8). Rows have no per-field ids (inline `oninput` closures index into `ccCars` by position). `cc-marginal-rate` / `cc-has-driver` are **retired** ids (R76) — do not reuse; those values are now derived.
+- `car-*` — company car lease inputs. `car-basic` is *total fixed pay*; `car-epf-amt` is the payslip EPF amount (`car-epf-pct` is retired — see `DECISIONS.md` R33). `car-basic`/`car-regime` sit in tile 3's glance card, not the payslip panel.
+- `lg-*` — the "why a lease?" glance. `lg-price` is its own input; `lg-years`/`lg-loan-rate`/`lg-lease-rate`/`lg-residual-pct` are `carTerms` mirrors; every other `lg-*` id is output-only. `lg-basic`/`lg-regime` are **retired** (CR9) — pay and regime are `car-basic`/`car-regime`, now inside `#lg-card`.
+- `cc-*` — Which-car (Compare Cars) shortlist + assumptions. `cc-city-km`/`cc-hwy-km`/`cc-cash-cagr` and `car-mode-btn-*` are **retired** ids (S6–S8). Rows have no per-field ids (inline `oninput` closures index into `ccCars` by position). `cc-marginal-rate` / `cc-has-driver` are **retired** ids (R76) — do not reuse; those values are now derived. `cc-crossmode-*` is **retired** (CR9 — moved to tile 3 as `lg-cross-cards`).
 - `cb-*` — **retired** (Phase 14/R59); absorbed into Compare Cars as `cc-*`. `grep -n 'id="cb-' index.html` returns nothing.
 - `sp-*` / `spt-*` — SIP planner (Dhanam Grow) · `disb-*` — loan disbursement
 - `w-a-*` / `w-l-*` — Dhanam Worth asset / liability rows (generated from `W_ASSETS`/`W_LIABS`); other Worth elements are plain `w-*`
@@ -121,7 +121,8 @@ Functions marked **(calc.js)** are pure (no DOM) and covered by `node tests.js`.
 - `calcIncomeTax`, `calcPerquisite`, `calcTaxableIncome` **(calc.js)**, `renderCarCalc()` — company car lease tax analysis (old vs new regime). `calcPerquisite` holds the Income-tax Rules 2026 table; `calcIncomeTax`'s new regime applies §87A marginal relief (old-regime ₹5L rebate stays a cliff — pinned).
 - `calcCarDepreciation` **(calc.js)** — IRDAI depreciation resale estimate (20% yr 1, 15%/yr after)
 - `calcRunningCost`, `calcInsuranceTotal`, `calcOwnershipCost`, `calcBreakevenKm`, `calcOwnershipCurve`, `splitAnnualKm`, `evEfficiencyFromRange`, `CAR_RUNNING_DEFAULTS` **(calc.js)**, `renderCarCompare()` — Which car costs less to own (ICE vs EV TCO, Loan or Lease; Cash stays in `calcOwnershipCost` but has no UI). `calcOwnershipCost({mode,...})` is the shared engine.
-- `calcLeaseMarginalRate` **(calc.js)**, `renderLeaseGlance()`, `carLeaseProfile()` — the "why a lease?" glance's and Compare Cars' shared tax-shield / marginal-rate derivation
+- `calcLeaseMarginalRate` **(calc.js)**, `renderLeaseGlance()`, `carLeaseProfile()` — the "why a lease?" glance's and Compare Cars' shared tax-shield / marginal-rate derivation (one profile for the glance, tile 2's lease ranking and the payslip panel — no prefill latch, CR9)
+- `carTerms`, `carTermInput()`, `renderActiveCarTile()`, `renderLeaseTile()` — Dhanam Car's shared terms and per-tile dispatch (CR8/CR9)
 - `calcOnRoadCost`, `calcCarBuyLoan`, `calcLoanVsCash`, `isLoanVsCashEven`, `calcLoanUnderwater`, `CAR_STATE_CHARGES` **(calc.js)**, `renderCarBuy()` — Buy a car (tile 1). Note `calcLoanVsCash` compounds the return monthly (nominal), matching `calcEMI`, so equal rates give a zero gap.
 - `updateSIPPlanner`, `calcStepupSIP` **(calc.js)**, `updateStepupSIP`, `updateLumpsum` — Dhanam Grow SIP planner
 - `renderLoanDisb()` — loan disbursement / pre-EMI tranche calculator

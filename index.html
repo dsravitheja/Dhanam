@@ -1828,11 +1828,11 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
             </div>
             <div class="field">
               <label for="cbuy-rate">Loan rate (% p.a.)</label>
-              <input type="number" id="cbuy-rate" value="9" min="0" step="0.25" oninput="renderCarBuy()">
+              <input type="number" id="cbuy-rate" value="9" min="0" step="0.25" oninput="carTermInput('loanRate', this)">
             </div>
             <div class="field">
               <label for="cbuy-years">Tenure</label>
-              <select id="cbuy-years" onchange="renderCarBuy()">
+              <select id="cbuy-years" onchange="carTermInput('years', this)">
                 <option value="1">1 year</option><option value="2">2 years</option><option value="3">3 years</option>
                 <option value="4">4 years</option><option value="5" selected>5 years</option><option value="6">6 years</option>
                 <option value="7">7 years</option>
@@ -1925,39 +1925,69 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       <p style="margin-top:10px;"><a class="beta-feedback-link" href="https://docs.google.com/forms/d/e/1FAIpQLSck6y3OBoAn1YGm5FUTK_DQCN-2z9limfjtANjdUHHn4ZMwHQ/viewform" target="_blank" rel="noopener noreferrer" onclick="return prepFeedbackLink(this,'car-buy')">Beta — tell us what worked and what didn't →</a></p>
     </div><!-- /car-panel-buy -->
 
-    <!-- Tile 3: "Company car lease" — Tool A (lg-*) + the payslip panel
-         (car-lease-panel), wrapped in place (CR3, no behaviour change).
-         Reads term/rates/residual from Tool B's Assumptions (inside
-         "Explore further" in tile 2) via ccAssumptions(), and the
-         engine/driver flags from the payslip panel's own checkboxes — same
-         shared derivation as before, just fewer inputs of its own. The
-         panel's DOM position doesn't need to match tab order — only one
-         .car-tile-panel is ever visible at a time. -->
+    <!-- Tile 3: "Company car lease" — the glance (lg-*), the side-by-side
+         cards, and the payslip panel (car-lease-panel). Wave 3 (CD-5): the
+         pay (car-basic) and regime (car-regime) inputs live HERE in #lg-card
+         and are the ONE source for the glance, tile 2's lease ranking and the
+         payslip panel (carLeaseProfile()). Term/rates/residual are mirrors of
+         carTerms (carTermInput()); every tile-3 handler is renderLeaseTile().
+         Only one .car-tile-panel is ever visible at a time. -->
     <div class="car-tile-panel" id="car-panel-lease" role="tabpanel" aria-labelledby="car-tile-lease">
     <div class="panel-card" id="lg-card" style="margin-bottom:20px;">
       <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-scope"></use></svg></span><span class="pch-title">Car loan or company lease?</span><span class="pch-tag">Live</span></div>
       <div class="panel-card-body">
+        <p class="note-text" style="margin-bottom:10px;">For when your employer offers a car lease.</p>
         <div class="grid-3" style="margin-bottom:14px;">
           <div class="field">
             <label>Car On-Road Price (₹)</label>
-            <input type="number" id="lg-price" value="1500000" oninput="renderCarCompare()">
+            <input type="number" id="lg-price" value="1500000" oninput="renderLeaseTile()">
           </div>
           <div class="field">
-            <label>Monthly Fixed Pay (₹)</label>
-            <input type="number" id="lg-basic" value="200000" oninput="renderCarCompare()">
+            <label>Monthly fixed pay (₹)</label>
+            <input type="number" id="car-basic" value="200000" oninput="renderLeaseTile()">
+            <span class="field-hint">Basic + HRA + allowances, from your payslip</span>
           </div>
           <!-- Deliberately NOT class="field" — see .field's note elsewhere:
                it styles every nested input/select as a full-width text box,
                which mis-styles a radio button. -->
           <div style="display:flex;flex-direction:column;gap:5px;">
-            <label style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em;font-weight:500;">Tax Regime</label>
+            <label style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em;font-weight:500;">Tax Regime<span class="term-info"><button type="button" class="term-info-btn" id="ti-regime-btn" aria-expanded="false" aria-controls="ti-regime" aria-label="What's the difference between the two tax regimes?" onclick="toggleTermInfo('ti-regime')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-regime" role="note" hidden>Old Regime keeps deductions (80C, HRA) but higher slab rates. New Regime: lower rates, fewer deductions.</span></span></label>
             <div style="display:flex;gap:14px;align-items:center;height:38px;">
               <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text-mid);cursor:pointer;">
-                <input type="radio" name="lg-regime" value="new" checked onchange="renderCarCompare()" style="accent-color:var(--accent);"> New
+                <input type="radio" name="car-regime" value="new" checked onchange="renderLeaseTile()" style="accent-color:var(--accent);"> New
               </label>
               <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text-mid);cursor:pointer;">
-                <input type="radio" name="lg-regime" value="old" onchange="renderCarCompare()" style="accent-color:var(--accent);"> Old
+                <input type="radio" name="car-regime" value="old" onchange="renderLeaseTile()" style="accent-color:var(--accent);"> Old
               </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="collapse-card" id="lg-terms-card" style="margin-bottom:14px;">
+          <button type="button" class="collapse-header" onclick="toggleCard('lg-terms-card')" aria-expanded="false">
+            <span class="collapse-title">Change rates and term</span>
+            <span class="collapse-arrow">▼</span>
+          </button>
+          <div class="collapse-body">
+            <div class="grid-2">
+              <div class="field">
+                <label>Term</label>
+                <select id="lg-years" onchange="carTermInput('years', this)">
+                  <option value="1">1 year</option><option value="2">2 years</option><option value="3">3 years</option><option value="4">4 years</option><option value="5" selected>5 years</option><option value="6">6 years</option><option value="7">7 years</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Loan rate (% p.a.)</label>
+                <input type="number" id="lg-loan-rate" value="9" step="0.25" min="0" oninput="carTermInput('loanRate', this)">
+              </div>
+              <div class="field">
+                <label>Lease rate (% p.a.)</label>
+                <input type="number" id="lg-lease-rate" value="10" step="0.25" min="0" oninput="carTermInput('leaseRate', this)">
+              </div>
+              <div class="field">
+                <label>Residual (% of price)</label>
+                <input type="number" id="lg-residual-pct" value="10" step="1" min="0" max="90" oninput="carTermInput('residualPct', this)">
+              </div>
             </div>
           </div>
         </div>
@@ -1965,7 +1995,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <p class="note-text" id="lg-empty" style="display:none;">Enter a car price above to see the loan-vs-lease comparison.</p>
 
         <div class="total-card" id="lg-hero" style="margin-top:14px;">
-          <div class="total-label">Over <span id="lg-hero-years">4</span> Years</div>
+          <div class="total-label">Over <span id="lg-hero-years">5</span> Years</div>
           <div class="total-value" id="lg-hero-value">—</div>
           <div class="total-cr" id="lg-hero-note"></div>
         </div>
@@ -1976,6 +2006,14 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <p class="note-text" id="lg-terms-used" style="margin-top:10px;color:var(--text-dim);font-size:11px;"></p>
 
         <button type="button" class="btn btn-secondary" id="car-lease-toggle" aria-expanded="false" aria-controls="car-lease-panel" style="margin-top:10px;" onclick="toggleLeasePanel()">Reconcile against my payslip ▾</button>
+      </div>
+    </div>
+
+    <div class="panel-card" id="lg-cross-card" style="margin-bottom:20px;">
+      <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg></span><span class="pch-title">How do lease and loan compare side by side?</span><span class="pch-tag">Live</span></div>
+      <div class="panel-card-body">
+        <div id="lg-cross-cards" class="grid-2"></div>
+        <p class="note-text" id="lg-cross-note" style="margin-top:10px;">Financing only — fuel, insurance and upkeep cost the same either way.</p>
       </div>
     </div>
 
@@ -1990,18 +2028,13 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-briefcase"></use></svg></span><span class="pch-title">Salary &amp; Car Policy Inputs</span><span class="pch-tag">Live</span></div>
       <div class="panel-card-body">
         <div class="grid-3">
-          <div class="field highlight">
-            <label>Monthly Fixed Pay (₹)</label>
-            <input type="number" id="car-basic" value="200000" oninput="renderCarCalc(); renderCarCompare();">
-            <span class="field-hint">Basic + HRA + allowances, from your payslip</span>
-          </div>
           <div class="field">
             <label>Monthly Bonus / Variable (₹)</label>
-            <input type="number" id="car-bonus" value="0" oninput="renderCarCalc(); renderCarCompare();">
+            <input type="number" id="car-bonus" value="0" oninput="renderLeaseTile();">
           </div>
           <div class="field">
             <label>Monthly EPF Deduction (₹)</label>
-            <input type="number" id="car-epf-amt" value="6000" min="0" step="100" oninput="renderCarCalc(); renderCarCompare();">
+            <input type="number" id="car-epf-amt" value="6000" min="0" step="100" oninput="renderLeaseTile();">
             <span class="field-hint">From your payslip's PF line</span>
           </div>
         </div>
@@ -2021,21 +2054,12 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
         <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin-top:14px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);cursor:pointer;">
-            <input type="checkbox" id="car-big-engine" onchange="renderCarCalc(); renderCarCompare();" style="accent-color:var(--accent);width:16px;height:16px;">
+            <input type="checkbox" id="car-big-engine" onchange="renderLeaseTile();" style="accent-color:var(--accent);width:16px;height:16px;">
             Engine &gt; 1600cc <span style="color:var(--text-dim)">(leave off for electric)</span>
           </label>
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);cursor:pointer;">
-            <input type="checkbox" id="car-has-driver" onchange="renderCarCalc(); renderCarCompare();" style="accent-color:var(--accent);width:16px;height:16px;">
+            <input type="checkbox" id="car-has-driver" onchange="renderLeaseTile();" style="accent-color:var(--accent);width:16px;height:16px;">
             Company Driver Provided
-          </label>
-          <span style="margin-left:auto;font-size:11px;color:var(--text-dim);">Tax Regime:<span class="term-info"><button type="button" class="term-info-btn" id="ti-regime-btn" aria-expanded="false" aria-controls="ti-regime" aria-label="What's the difference between the two tax regimes?" onclick="toggleTermInfo('ti-regime')"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg></button><span class="term-info-pop" id="ti-regime" role="note" hidden>Old Regime keeps deductions (80C, HRA) but higher slab rates. New Regime: lower rates, fewer deductions.</span></span></span>
-          <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text-mid);cursor:pointer;">
-            <input type="radio" name="car-regime" value="new" checked onchange="renderCarCalc(); renderCarCompare();" style="accent-color:var(--accent);">
-            New Regime (FY2025-26)
-          </label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text-mid);cursor:pointer;">
-            <input type="radio" name="car-regime" value="old" onchange="renderCarCalc(); renderCarCompare();" style="accent-color:var(--accent);">
-            Old Regime
           </label>
         </div>
       </div>
@@ -2103,6 +2127,46 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       </div>
     </div>
 
+    <!-- CR8: the payment terms are visible, not buried in "Explore further".
+         Loan rate, term, lease rate and residual are mirrors of the shared
+         carTerms source (carTermInput) — never a second copy of the state. -->
+    <div class="panel-card" id="cc-paying-card">
+      <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span><span class="pch-title">How are you paying?</span></div>
+      <div class="panel-card-body">
+        <div class="grid-3">
+          <div class="field">
+            <label for="cc-mode">Paying by</label>
+            <select id="cc-mode" onchange="renderCCRows(); renderCarCompare();">
+              <option value="loan" selected>Loan</option>
+              <option value="cash">Cash</option>
+              <option value="lease">Company lease</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="cc-years" id="cc-years-label">Loan term</label>
+            <select id="cc-years" onchange="carTermInput('years', this)">
+              <option value="1">1 year</option><option value="2">2 years</option><option value="3">3 years</option>
+              <option value="4">4 years</option><option value="5" selected>5 years</option><option value="6">6 years</option>
+              <option value="7">7 years</option>
+            </select>
+          </div>
+          <div class="field" id="cc-f-loan-rate">
+            <label for="cc-loan-rate">Loan rate (% p.a.)</label>
+            <input type="number" id="cc-loan-rate" value="9" step="0.25" min="0" oninput="carTermInput('loanRate', this)">
+          </div>
+          <div class="field" id="cc-f-lease-rate" style="display:none;">
+            <label for="cc-lease-rate">Lease rate (% p.a.)</label>
+            <input type="number" id="cc-lease-rate" value="10" step="0.25" min="0" oninput="carTermInput('leaseRate', this)">
+          </div>
+          <div class="field" id="cc-f-residual" style="display:none;">
+            <label for="cc-residual-pct">Residual (%)</label>
+            <input type="number" id="cc-residual-pct" value="10" step="1" min="0" max="90" oninput="carTermInput('residualPct', this)">
+          </div>
+        </div>
+        <p class="note-text" id="cc-mode-note" style="margin-top:10px;display:none;"></p>
+      </div>
+    </div>
+
     <div class="note-text" id="cc-empty" style="padding:16px 2px;">Add at least one car above — with both price and mileage/efficiency filled in — to see a comparison.</div>
 
     <div class="sip-caveat" id="cc-caveat" style="display:none;">Ranked on cash out the door; resale value isn't credited, which favours cheaper cars.</div>
@@ -2151,52 +2215,17 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <div id="cc-assumptions-card" style="margin-bottom:20px;">
           <div class="grid-3">
             <div class="field">
-              <label>Paying by</label>
-              <select id="cc-mode" onchange="renderCCRows(); renderCarCompare();">
-                <option value="loan" selected>Loan</option>
-                <option value="lease">Company lease</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Fuel price (₹/litre)</label>
+              <label for="cc-petrol">Fuel price (₹/litre)</label>
               <input type="number" id="cc-petrol" value="117" step="1" min="0" oninput="renderCarCompare()">
             </div>
             <div class="field">
-              <label>Home charging (₹/unit)</label>
+              <label for="cc-home-rate">Home charging (₹/unit)</label>
               <input type="number" id="cc-home-rate" value="8" step="0.5" min="0" oninput="renderCarCompare()">
             </div>
             <div class="field">
-              <label>Annual driving (km)</label>
+              <label for="cc-annual-km">Annual driving (km)</label>
               <input type="number" id="cc-annual-km" value="12000" step="500" min="0" oninput="ccDirty = true; renderCarCompare();">
             </div>
-            <div class="field">
-              <label id="cc-years-label">Term</label>
-              <select id="cc-years" onchange="renderCarCompare()">
-                <option value="3">3 years</option>
-                <option value="4" selected>4 years</option>
-                <option value="5">5 years</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Loan Rate (% p.a.)</label>
-              <input type="number" id="cc-loan-rate" value="9" step="0.25" min="0" oninput="renderCarCompare()">
-            </div>
-            <div class="field">
-              <label>Lease Rate (% p.a.)</label>
-              <input type="number" id="cc-lease-rate" value="10" step="0.25" min="0" oninput="renderCarCompare()">
-            </div>
-            <div class="field">
-              <label>Residual %</label>
-              <input type="number" id="cc-residual-pct" value="10" step="1" min="0" max="90" oninput="renderCarCompare()">
-            </div>
-          </div>
-        </div>
-
-        <div class="panel-card" style="margin-bottom:20px;">
-          <div class="panel-card-header"><span class="pch-title">Which costs less for this car: lease or loan?</span></div>
-          <div class="panel-card-body">
-            <p class="note-text" id="cc-crossmode-assumptions" style="margin-bottom:10px;"></p>
-            <div id="cc-crossmode-cards" class="grid-2"></div>
           </div>
         </div>
 
@@ -2673,8 +2702,8 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <div class="provenance-date">As of: a starting point — replace with your own lender's quote</div>
       </div>
       <div class="provenance-row">
-        <div class="provenance-term">Which car costs less to own — loan/lease rate default</div>
-        <div class="provenance-value">Car loan 9% p.a. · company lease 10% p.a. · 10% residual</div>
+        <div class="provenance-term">Dhanam Car — loan, lease and term defaults (all three tiles)</div>
+        <div class="provenance-value">Car loan 9% p.a. · company lease 10% p.a. · 10% residual · 5-year term</div>
         <div class="provenance-date">As of: starting points — replace with your own quote</div>
       </div>
       <div class="provenance-row">
@@ -2871,7 +2900,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 // cached shell without knowing it). Bump this BY HAND alongside sw.js's CACHE
 // version whenever a user-visible change ships — the two are not derived from
 // one another, so both need editing.
-const BUILD_STAMP = '2026-10-01';
+const BUILD_STAMP = '2026-10-01.2';
 
 // =====================================================================
 // PUBLIC-BETA FEEDBACK LINK (2026-09-26)
@@ -3190,11 +3219,6 @@ let ccDirty = false;
 // Cost-vs-value chart: the *selected* row's stable index into ccCars, null
 // meaning "not chosen yet, default to rank 1". Tier-3, never persisted.
 let ccOwnCurveIdx = null;
-// One-way latch: once the payslip panel (#car-lease-panel) has been opened
-// once, Tool B's lease pricing reads its car-basic/car-bonus/car-epf-amt/
-// car-regime fields; until then it derives pay/regime from Tool A's own
-// lg-basic/lg-regime (S6). See carLeaseProfile() and toggleLeasePanel().
-let leasePanelOpened = false;
 
 // Modes for amenities / corpus / infra (sqft or lump)
 const MODES = { amenities: 'sqft', corpus: 'sqft', infra: 'sqft' };
@@ -4588,6 +4612,59 @@ function switchHub(tab) {
 // =====================================================================
 // DHANAM CAR — tile row / in-hub tab bar (CR2, TASK-CAR-REDESIGN.md Wave 1)
 // =====================================================================
+// Shared car financing terms (CD-4, Wave 3). ONE source every Dhanam Car tile
+// reads; each tile keeps its own visible input(s), all mirrors of this object.
+// Tier-2 market assumptions (as of 2026-10-01): never persisted — no
+// saveState, no DS key. The term default is a shared 5 years across tiles.
+const CAR_TERM_DEFAULTS = Object.freeze({ loanRate: 9, years: 5, leaseRate: 10, residualPct: 10 });
+const CAR_TERM_INPUTS = Object.freeze({
+  loanRate:    ['cbuy-rate', 'cc-loan-rate', 'lg-loan-rate'],
+  years:       ['cbuy-years', 'cc-years', 'lg-years'],
+  leaseRate:   ['cc-lease-rate', 'lg-lease-rate'],
+  residualPct: ['cc-residual-pct', 'lg-residual-pct'],
+});
+let carTerms = Object.assign({}, CAR_TERM_DEFAULTS);
+
+// The one parse rule for a term's raw field value: years = integer >= 1,
+// everything else = finite float. Returns null when invalid/blank.
+function parseCarTerm(key, raw) {
+  const n = key === 'years' ? parseInt(raw, 10) : parseFloat(raw);
+  return Number.isFinite(n) && (key !== 'years' || n >= 1) ? n : null;
+}
+
+// Every mirrored input calls this (inputs: oninput, selects: onchange). Writes
+// the raw value into every OTHER existing mirror — never touches `src` and
+// never rebuilds innerHTML, so focus survives mid-keystroke (D6) — then
+// re-renders the visible tile. Ids that don't exist are skipped.
+function carTermInput(key, src) {
+  if (!Object.prototype.hasOwnProperty.call(CAR_TERM_INPUTS, key)) return;
+  const n = parseCarTerm(key, src.value);
+  // Live typing: an emptied rate reads as 0 (like v()); a bad term falls back.
+  carTerms[key] = n !== null ? n : (key === 'years' ? CAR_TERM_DEFAULTS.years : 0);
+  CAR_TERM_INPUTS[key].forEach(id => {
+    const m = el(id);
+    if (m && m !== src) m.value = src.value;
+  });
+  renderActiveCarTile();
+}
+
+// Startup sync: browsers may restore form-field values on reload, so adopt the
+// first existing mirror's value into carTerms (blank/invalid -> default) and
+// write it into every other mirror, keeping fields and maths in step.
+function initCarTerms() {
+  Object.keys(CAR_TERM_INPUTS).forEach(key => {
+    const ids = CAR_TERM_INPUTS[key].filter(id => el(id));
+    if (!ids.length) return;
+    // Mirrors normally agree; if a partial restore left them split, the
+    // first one holding a non-default value wins (a restore/edit, not markup).
+    const parsed = ids.map(id => ({ id, n: parseCarTerm(key, el(id).value) })).filter(x => x.n !== null);
+    const pick = parsed.find(x => x.n !== CAR_TERM_DEFAULTS[key]) || parsed[0];
+    carTerms[key] = pick ? pick.n : CAR_TERM_DEFAULTS[key];
+    const raw = pick ? el(pick.id).value : String(CAR_TERM_DEFAULTS[key]);
+    ids.forEach(id => { el(id).value = raw; });
+  });
+}
+
 // Tier-3 UI state only (CLAUDE.md invariant 4) — which tile is selected is
 // never written to dhanam.v1/saveState/backup, just like which hub-apartment
 // accordion panel is open.
@@ -4613,14 +4690,15 @@ function switchCarTile(name) {
     if (tabBtn) { tabBtn.classList.toggle('active', isActive); tabBtn.setAttribute('aria-selected', String(isActive)); }
     if (panel) panel.classList.toggle('active', isActive);
   });
-  if (name === 'buy') {
-    renderCarBuy();
-  } else if (name === 'compare') {
-    renderCarCompare();
-  } else if (name === 'lease') {
-    renderLeaseGlance();
-    if (leasePanelOpened) renderCarCalc();
-  }
+  renderActiveCarTile();
+}
+
+// The ONE per-tile dispatch (CR8): every shared-term input and
+// switchCarTile() call this instead of naming a tile's entry point.
+function renderActiveCarTile() {
+  if (carActiveTile === 'buy') renderCarBuy();
+  else if (carActiveTile === 'compare') renderCarCompare();
+  else if (carActiveTile === 'lease') renderLeaseTile();
 }
 
 // =====================================================================
@@ -4745,8 +4823,8 @@ function renderCarBuy() {
   let downPayment = Number.isFinite(downRaw) ? Math.max(0, downRaw) : 0;
   if (unit === 'pct') downPayment = r.onRoad * Math.min(downPayment, 100) / 100;
   const loanOverride = cbuyOpt('cbuy-loan');
-  const years = parseInt(el('cbuy-years').value, 10) || 5;
-  const loanArgs = { onRoad: r.onRoad, downPayment, annualRate: parseFloat(el('cbuy-rate').value), years };
+  const years = carTerms.years;
+  const loanArgs = { onRoad: r.onRoad, downPayment, annualRate: carTerms.loanRate, years };
   if (Number.isFinite(loanOverride)) loanArgs.loanAmount = loanOverride;
   const loan = calcCarBuyLoan(loanArgs);
   set('cbuy-down-hint', Number.isFinite(loanOverride) ? 'Set by the loan amount below' : '');
@@ -4826,6 +4904,7 @@ function renderCarBuy() {
     el('cbuy-uw-caption').innerHTML = '';
   }
 }
+initCarTerms();
 initCarBuy();
 
 // =====================================================================
@@ -5924,13 +6003,9 @@ function renderCarCalc() {
   set('car-hero-value', fmt(heroValue) + '/mo');
   set('car-hero-note', heroNote);
   set('car-hero-perq', `${fmt(perqMonthly)}/mo`);
-  // This function does NOT also call renderLeaseGlance()/renderCarCompare()
-  // here — every field that feeds Tool A or Tool B's derived marginal rate
-  // (car-basic/-bonus/-epf-amt/-big-engine/-has-driver, the regime radios)
-  // calls renderCarCompare() alongside renderCarCalc() in its own onchange/
-  // oninput (see the markup), and renderCarCompare() renders Tool A itself.
-  // car-emi/-fuel/-driver-allow only affect THIS function's own scenario
-  // cards, so they correctly don't trigger either.
+  // This function does NOT also render the glance — every tile-3 input
+  // (pay, regime, bonus, EPF, the two checkboxes) calls renderLeaseTile(),
+  // which renders the glance, the side-by-side cards and (when open) this.
 }
 
 // =====================================================================
@@ -5939,33 +6014,33 @@ function renderCarCalc() {
 // One hero + three line items, answered with zero interaction via worked
 // defaults. Deliberately calls calcOwnershipCost() with every running/
 // maintenance/insurance input zeroed out — this is a financing-only glance
-// (EMI/tax-shield/residual), not a full TCO; running costs are Tool B's job.
+// (EMI/tax-shield/residual), not a full TCO; running costs are tile 2's job.
 // With those inputs zeroed, netCost reduces to exactly capital − taxSaved
-// (lease) or downPayment + emi*months (loan), so for the same price/term/
-// rates/residual this agrees to the rupee with the cross-mode Lease/Loan
-// cards in "Explore further" below — same function, never a second model.
+// (lease) or downPayment + emi*months (loan). The side-by-side cards below
+// the glance (renderLeaseCompareCards) receive these SAME two results, so
+// hero = three lines = card difference to the rupee — one computation.
+// Pay/regime/EPF come from carLeaseProfile(), the same profile tile 2's
+// lease ranking and the payslip panel read (R76: one cost per lease).
 function renderLeaseGlance() {
-  const basic = v('lg-basic');
   const price = v('lg-price');
-  const regime = document.querySelector('input[name="lg-regime"]:checked').value;
-  // Term/rates/residual are shared with Tool B via ccAssumptions() rather
-  // than read independently — one derivation, not two that could drift.
+  // Term/rates/residual come via ccAssumptions() (one derivation).
   const a = ccAssumptions();
   const years = a.years;
   const leaseRate = a.leaseRate;
   const loanRate = a.loanRate;
   const residualPct = a.residualPct;
   const bigEngine = chk('car-big-engine');
-  const hasDriver = a.leaseProfile.hasDriver;
+  const profile = carLeaseProfile();
+  const hasDriver = profile.hasDriver;
 
   if (!(price > 0)) {
-    hide('lg-hero'); hide('lg-lines'); hide('lg-taper-note');
+    hide('lg-hero'); hide('lg-lines'); hide('lg-taper-note'); hide('lg-cross-card');
     set('lg-terms-used', '');
     show('lg-empty');
     return;
   }
   hide('lg-empty');
-  show('lg-hero'); show('lg-lines');
+  show('lg-hero'); show('lg-lines'); show('lg-cross-card');
 
   const zeroRunning = { type: 'ICE', efficiency: 0, cityKm: 0, hwyKm: 0, petrolPrice: 0,
     iceHwyMult: 1, homeRate: 0, publicRate: 0, evHwyMult: 1, maintAnnual: 0, insRate: 0, depRate: 0 };
@@ -5974,14 +6049,15 @@ function renderLeaseGlance() {
     mode: 'loan', price, downPayment: 0, annualRate: loanRate, years,
   }, zeroRunning));
 
-  const grossAnnual = basic * 12;
-  const shield = calcLeaseMarginalRate(price, leaseRate, residualPct, years, bigEngine, hasDriver, grossAnnual, regime, 0);
+  const shield = calcLeaseMarginalRate(price, leaseRate, residualPct, years, bigEngine, hasDriver, profile.grossAnnual, profile.regime, profile.epfAnnual);
   const marginalRate = shield.marginalRate;
 
   const leaseResult = calcOwnershipCost(Object.assign({
     mode: 'lease', price, annualRate: leaseRate, residualPct, years,
     bigEngine, hasDriver, marginalRate,
   }, zeroRunning));
+
+  renderLeaseCompareCards(loanResult, leaseResult, years);
 
   set('lg-hero-years', years);
 
@@ -6022,27 +6098,48 @@ function renderLeaseGlance() {
     <div class="car-stat"><span class="car-stat-lbl">Tax saved</span><span class="car-stat-val" style="${signedColor(leaseResult.taxSaved)}">${fmtSigned(leaseResult.taxSaved)}</span></div>
     <div class="car-stat"><span class="car-stat-lbl">Residual buyout</span><span class="car-stat-val" style="${signedColor(-leaseResult.residual)}">−${fmt(leaseResult.residual)}</span></div>`;
 
-  set('lg-terms-used', `${years}-year term · ${leaseRate}% lease · ${loanRate}% loan · ${(residualPct * 100).toFixed(0)}% residual — edit under Explore further below.`);
+  set('lg-terms-used', `${years}-year term · ${leaseRate}% lease · ${loanRate}% loan · ${(residualPct * 100).toFixed(0)}% residual — edit them under "Change rates and term" above.`);
 }
 
-// One-way prefill from Tool A into the payslip panel, on the first open only
-// (S5). After that the two stay independent fields, same as before.
+// Show/hide the payslip panel. Pay and regime live in #lg-card now, so
+// there is nothing to prefill — just visibility, aria-expanded and label.
 function toggleLeasePanel() {
   const panel = el('car-lease-panel');
   const btn = el('car-lease-toggle');
   const willOpen = panel.style.display === 'none';
-  if (willOpen && !leasePanelOpened) {
-    el('car-basic').value = el('lg-basic').value;
-    const lgRegime = document.querySelector('input[name="lg-regime"]:checked').value;
-    const carRegimeInput = document.querySelector(`input[name="car-regime"][value="${lgRegime}"]`);
-    if (carRegimeInput) carRegimeInput.checked = true;
-    leasePanelOpened = true;
-  }
   panel.style.display = willOpen ? '' : 'none';
   btn.setAttribute('aria-expanded', String(willOpen));
   btn.textContent = willOpen ? 'Hide payslip reconciliation ▲' : 'Reconcile against my payslip ▾';
-  renderCarCalc();
-  renderCarCompare();
+  renderLeaseTile();
+}
+
+// Tile 3's single entry point: the glance (+ side-by-side cards), and the
+// payslip panel only while it is open.
+function renderLeaseTile() {
+  renderLeaseGlance();
+  if (el('car-lease-panel').style.display !== 'none') renderCarCalc();
+}
+
+// Lease vs loan for the glance's own car, financing only. Receives the
+// results renderLeaseGlance already computed so the two can never disagree.
+function renderLeaseCompareCards(loanResult, leaseResult, years) {
+  const months = years * 12;
+  const paidLease = leaseResult.emi * months + leaseResult.residual;
+  const paidLoan = loanResult.emi * months;
+  el('lg-cross-cards').innerHTML = `
+    <div class="car-card">
+      <div class="car-card-title">Lease</div>
+      <div class="car-stat"><span class="car-stat-lbl">EMI / month</span><span class="car-stat-val">${fmt(leaseResult.emi)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Paid over ${years} yrs (EMIs + residual)</span><span class="car-stat-val">${fmt(paidLease)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Tax saved (signed)</span><span class="car-stat-val" style="${signedColor(leaseResult.taxSaved)}">${fmtSigned(leaseResult.taxSaved)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Net cost</span><span class="car-stat-val big">${fmt(leaseResult.netCost)}</span></div>
+    </div>
+    <div class="car-card">
+      <div class="car-card-title">Loan</div>
+      <div class="car-stat"><span class="car-stat-lbl">EMI / month</span><span class="car-stat-val">${fmt(loanResult.emi)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Paid over ${years} yrs</span><span class="car-stat-val">${fmt(paidLoan)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Net cost</span><span class="car-stat-val big">${fmt(loanResult.netCost)}</span></div>
+    </div>`;
 }
 
 // =====================================================================
@@ -6054,9 +6151,9 @@ function toggleLeasePanel() {
 // half: the shortlist rows, the Assumptions inputs (7, inside "Explore
 // further"), and the hero/results/chart/cross-mode/breakeven rendering.
 
-// Mode now lives on Tool B's own <select> (S6) rather than a hub-level
-// selector — 'loan' or 'lease' only; 'cash' stays a valid calcOwnershipCost
-// mode in calc.js (with its own tests) but is no longer reachable from the UI.
+// Mode lives on Tool B's own <select> (S6) rather than a hub-level selector —
+// 'loan', 'cash' or 'lease'. Cash came back to the UI in Wave 3 (CD-3); it
+// was always a valid calcOwnershipCost mode in calc.js.
 function ccMode() { return el('cc-mode') ? el('cc-mode').value : 'loan'; }
 
 // A row that's been started (any field touched) but doesn't yet pass the
@@ -6152,24 +6249,14 @@ function ccRemoveCar(i) {
   renderCarCompare();
 }
 
-// Single reader for the Company Car Lease panel's regime radios.
+// Single reader for the tile-3 regime radios (#lg-card).
 function carRegime() { return document.querySelector('input[name="car-regime"]:checked').value; }
 
-// The pay/regime/driver figures Tool B's lease pricing uses. Until the
-// payslip panel has been opened once, these come from Tool A's own
-// lg-basic/lg-regime (with no EPF figure, epfAnnual: 0) — Tool B can't read
-// fields gated behind a panel the visitor hasn't opened. Once opened
-// (leasePanelOpened, a one-way latch — S5/S6), it reads the payslip panel's
-// own car-basic/car-bonus/car-epf-amt/car-regime, same as before.
+// The ONE pay/regime/driver/EPF profile (CD-5, R76): the glance, tile 2's
+// lease ranking and the payslip panel all read it. car-basic/car-regime live
+// in tile 3's #lg-card; bonus/EPF/driver live in the payslip panel and keep
+// their defaults while it is closed.
 function carLeaseProfile() {
-  if (!leasePanelOpened) {
-    return {
-      grossAnnual: v('lg-basic') * 12,
-      regime: document.querySelector('input[name="lg-regime"]:checked').value,
-      hasDriver: chk('car-has-driver'),
-      epfAnnual: 0,
-    };
-  }
   return {
     grossAnnual: (v('car-basic') + v('car-bonus')) * 12,
     regime: carRegime(),
@@ -6178,17 +6265,18 @@ function carLeaseProfile() {
   };
 }
 
-// The 7 editable inputs plus mode; every other running-cost figure reloads
-// from CAR_RUNNING_DEFAULTS/splitAnnualKm (calc.js) rather than a field here
-// (S8) — tier-2, never persisted.
+// Mode + the shared carTerms + fuel/charging/km inputs; every other running-
+// cost figure reloads from CAR_RUNNING_DEFAULTS/splitAnnualKm (calc.js)
+// rather than a field here (S8) — tier-2, never persisted.
 function ccAssumptions() {
   const split = splitAnnualKm(v('cc-annual-km'));
   return {
     mode: ccMode(),
-    leaseRate: v('cc-lease-rate'),
-    loanRate: v('cc-loan-rate'),
-    residualPct: v('cc-residual-pct') / 100,
-    years: v('cc-years') || 4,
+    // Financing terms come from the shared carTerms source (CD-4), not the DOM.
+    leaseRate: carTerms.leaseRate,
+    loanRate: carTerms.loanRate,
+    residualPct: carTerms.residualPct / 100,
+    years: carTerms.years,
     petrolPrice: v('cc-petrol'),
     homeRate: v('cc-home-rate'),
     publicRate: CAR_RUNNING_DEFAULTS.publicRate,
@@ -6206,10 +6294,9 @@ function ccAssumptions() {
 }
 
 // The per-car input object calcOwnershipCost/calcOwnershipCurve share. `mode`
-// is an explicit parameter (not read from `a`) so renderCCCrossMode() can
-// call this twice, once per mode, for the SAME car — the shortlist's own
-// ranking always uses `a.mode`. marginalRate is only computed for mode
-// 'lease' (calcOwnershipCost never reads it otherwise).
+// is an explicit parameter (not read from `a`) — the shortlist's own ranking
+// always passes `a.mode`. marginalRate is only computed for mode 'lease'
+// (calcOwnershipCost never reads it otherwise).
 function ccOwnershipInput(c, a, mode) {
   const isEV = c.type === 'EV';
   const bigEngine = !isEV && c.bigEngine;
@@ -6318,9 +6405,27 @@ function ccVerdict(km) {
   return { text: `Needs ${Math.ceil(km).toLocaleString('en-IN')} more km/yr`, cls: '' };
 }
 
+// Show/hide the mode-specific payment fields and set their labels/note.
+// Fields are only toggled, never rebuilt (D6).
+const CC_MODE_NOTES = {
+  loan: '',
+  cash: 'Cash: full price upfront; lost investment returns not counted.',
+  lease: 'Tax saving uses pay and regime from Company car lease.',
+};
+function renderCCPaying() {
+  const mode = ccMode();
+  set('cc-years-label', mode === 'cash' ? 'Years owned' : mode === 'lease' ? 'Lease term' : 'Loan term');
+  el('cc-f-loan-rate').style.display = mode === 'loan' ? '' : 'none';
+  el('cc-f-lease-rate').style.display = mode === 'lease' ? '' : 'none';
+  el('cc-f-residual').style.display = mode === 'lease' ? '' : 'none';
+  const note = el('cc-mode-note');
+  note.textContent = CC_MODE_NOTES[mode] || '';
+  note.style.display = CC_MODE_NOTES[mode] ? '' : 'none';
+}
+
 function renderCarCompare() {
   buildCC();
-  renderLeaseGlance(); // Tool A shares cc-years/cc-lease-rate/cc-loan-rate/cc-residual-pct
+  renderCCPaying();
 
   ccCars.forEach((c, i) => set('cc-row-hint-' + i, ccRowHintText(c)));
 
@@ -6346,7 +6451,8 @@ function renderCarCompare() {
   show('cc-hero');
   set('cc-hero-name', cheapest.car.name || (cheapest.car.type === 'EV' ? 'Unnamed EV' : 'Unnamed ICE car'));
   set('cc-hero-cost', `${fmt(cheapest.result.netCost)} over ${cheapest.years} years`);
-  set('cc-hero-paidby', `Paid by ${mode === 'loan' ? 'car loan' : 'company lease'} over ${cheapest.years} years`);
+  set('cc-hero-paidby', mode === 'cash' ? `Paid in cash, owned for ${cheapest.years} years`
+    : `Paid by ${mode === 'loan' ? 'car loan' : 'company lease'} over ${cheapest.years} years`);
   if (rows.length > 1) {
     const gap = rows[1].result.netCost - cheapest.result.netCost;
     set('cc-hero-gap', `${fmt(gap)} cheaper than the next option`);
@@ -6367,7 +6473,9 @@ function renderCarCompare() {
       <div class="cc-rank-title">${xesc(r.car.name) || (r.car.type === 'EV' ? 'Unnamed EV' : 'Unnamed ICE car')}</div>
       <div class="cc-rank-type">${r.car.type === 'EV' ? 'Electric' : 'Petrol / Diesel'}${r.car.type === 'ICE' && r.car.bigEngine ? ' · >1600cc' : ''} · ${fmt(r.car.price)} on-road</div>
       <div class="car-stat"><span class="car-stat-lbl">Net Cost over ${r.years} yrs</span><span class="car-stat-val big">${fmt(r.result.netCost)}</span></div>
-      <div class="car-stat"><span class="car-stat-lbl">EMI / month</span><span class="car-stat-val">${fmt(r.result.emi)}</span></div>
+      ${mode === 'cash'
+        ? `<div class="car-stat"><span class="car-stat-lbl">Paid upfront</span><span class="car-stat-val">${fmt(r.result.capital)}</span></div>`
+        : `<div class="car-stat"><span class="car-stat-lbl">EMI / month</span><span class="car-stat-val">${fmt(r.result.emi)}</span></div>`}
       ${mode === 'lease' ? `<div class="car-stat"><span class="car-stat-lbl">Tax Saved (signed)</span><span class="car-stat-val" style="${signedColor(r.result.taxSaved)}">${fmtSigned(r.result.taxSaved)}</span></div>` : ''}
       <div class="car-stat"><span class="car-stat-lbl">Cost / km</span><span class="car-stat-val">₹${r.result.costPerKm.toFixed(2)}</span></div>
       ${!isRank1 ? `<div class="car-stat"><span class="car-stat-lbl">vs. cheapest</span><span class="car-stat-val red">+${fmt(vsCheapest)}</span></div>` : ''}
@@ -6459,37 +6567,6 @@ function renderCCOwnCurve(rows) {
 
   set('cc-owncurve-resale-lbl', `Est. resale value at year ${N} (IRDAI schedule) — not part of the ranking`);
   set('cc-owncurve-resale', fmt(row.result.resaleValue));
-
-  renderCCCrossMode(row.car, a);
-}
-
-// Lease vs. loan for the SAME car, side by side (inside "Explore further").
-// Uses the car's own down payment (loan column) and the shared assumptions
-// above for both columns, regardless of which mode currently drives the
-// ranking — the active one is marked "(current)".
-function renderCCCrossMode(car, a) {
-  const modes = ['lease', 'loan'];
-  const labels = { lease: 'Lease', loan: 'Loan' };
-  const inputs = modes.map(m => ccOwnershipInput(car, a, m));
-  const results = inputs.map(inp => calcOwnershipCost(inp));
-
-  const profile = a.leaseProfile;
-  const marginalRate = inputs[0].marginalRate; // modes[0] === 'lease'
-  const payFrom = leasePanelOpened ? 'the payslip panel above' : '"Car loan or company lease?" above';
-  set('cc-crossmode-assumptions',
-    `Lease: ${a.leaseRate}% rate, ${(a.residualPct * 100).toFixed(0)}% residual, a derived ${(marginalRate * 100).toFixed(1)}% marginal tax rate` +
-    `${profile.hasDriver ? ', with a company driver' : ''} — pay comes from ${payFrom}. Loan: ${a.loanRate}% rate.`);
-
-  el('cc-crossmode-cards').innerHTML = modes.map((m, idx) => {
-    const r = results[idx];
-    const isActive = m === a.mode;
-    return `<div class="car-card${isActive ? ' highlight' : ''}">
-      <div class="car-card-title">${labels[m]}${isActive ? ' (current)' : ''}</div>
-      <div class="car-stat"><span class="car-stat-lbl">Net Cost</span><span class="car-stat-val big">${fmt(r.netCost)}</span></div>
-      <div class="car-stat"><span class="car-stat-lbl">EMI / month</span><span class="car-stat-val">${fmt(r.emi)}</span></div>
-      ${m === 'lease' ? `<div class="car-stat"><span class="car-stat-lbl">Tax Saved (signed)</span><span class="car-stat-val" style="${signedColor(r.taxSaved)}">${fmtSigned(r.taxSaved)}</span></div>` : ''}
-    </div>`;
-  }).join('');
 }
 </script>
 </body>

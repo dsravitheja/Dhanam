@@ -98,7 +98,7 @@ if you touch this copy). Persists nothing.
 Company Car Lease panel below it. On the panel's first open only, it copies
 `lg-basic`→`car-basic` and `lg-regime`→`car-regime` (one-way) and sets
 `leasePanelOpened = true`; after that the two stay independent fields. This
-flag also decides what `carLeaseProfile()` (below) feeds Tool B.
+flag also decides what `carLeaseProfile()` (below) feeds Tool B. *Superseded by CR9 (2026-10-01) — see DECISIONS.md §Dhanam Car tile redesign; full rewrite in CR12.*
 
 ### What's taxed on my payslip? (`car-*`, inside `#car-lease-panel`; renamed from "Company Car Lease — Tax Analysis," S11)
 
@@ -152,7 +152,7 @@ look-only visit.
   (`leasePanelOpened`); after that it reads the payslip panel's own
   `car-basic`/`car-bonus`/`car-epf-amt`/`car-regime`/`car-has-driver`, same
   as before. `calcLeaseMarginalRate()` is the one derivation both this and
-  Tool A call — never a second, hand-typed marginal rate.
+  Tool A call — never a second, hand-typed marginal rate. *Superseded by CR9 (2026-10-01) — see DECISIONS.md §Dhanam Car tile redesign; full rewrite in CR12.*
 - **Result cards**: flat, no nested collapse — badge, name, type · price,
   net cost, EMI/mo (+ signed Tax Saved in lease mode), ₹/km, and the gap to
   cheapest for rank 2+. `taxSaved = 0` for Loan is correct Indian law (no
@@ -167,7 +167,7 @@ look-only visit.
   selected car (`renderCCCrossMode()`, states its rates/residual/derived
   marginal rate in words, marks the active mode "(current)"), the breakeven
   card (needs ≥1 ICE and ≥1 EV row), and an 8-bullet "Assumptions & limits"
-  list. No nested collapse inside it.
+  list. No nested collapse inside it. *Superseded by CR9 (2026-10-01) — see DECISIONS.md §Dhanam Car tile redesign; full rewrite in CR12.*
 - **Persistence**: tier-1 only — `DS.carCompare = { cars, annualKm }`, cars
   carrying `type/name/price/eff/range/battery/bigEngine/downPayment`. Gated
   on `ccDirty` (above). `hydrateCC()` migrates an old blob: `annualKm =
