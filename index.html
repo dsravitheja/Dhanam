@@ -354,6 +354,18 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 .collapse-card.open .collapse-arrow { transform:rotate(180deg); }
 .collapse-body { display:none; border-top:1px solid var(--border); padding:14px 16px; }
 .collapse-card.open .collapse-body { display:block; }
+/* Progressive-disclosure headers (Dhanam Car follow-up): a short answer preview
+   sits beside the title. Above 600px it stays on one row but never shrinks;
+   at <=600px it wraps to its own full-width line under the title (indented to
+   the title text), arrow staying top-right. Modifier only: other cards unchanged. */
+.collapse-header.has-preview .collapse-title { min-width:0; }
+.collapse-header.has-preview .collapse-amount { flex-shrink:0; white-space:nowrap; }
+@media (max-width:600px) {
+  .collapse-header.has-preview { flex-wrap:wrap; row-gap:4px; }
+  .collapse-header.has-preview .collapse-arrow { order:2; }
+  .collapse-header.has-preview .collapse-amount { order:3; flex-basis:100%; white-space:normal; padding-left:18px; }
+  .collapse-header.has-preview .collapse-amount:empty { display:none; }
+}
 .limits-about-link { background:none; border:none; padding:0; font:inherit; color:var(--accent); text-decoration:underline; cursor:pointer; }
 
 /* ── BETA FEEDBACK LINK (public-beta) ──────
@@ -1755,9 +1767,15 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 
     <!-- Tile 1: Buy a car (Wave 2, CR4–CR7). One entry point, renderCarBuy(),
          reads every cbuy-* input and writes every output (invariant 3).
-         Persists nothing (CD-7). Four question-headed cards + one limits
-         collapse (CD-6). -->
+         Persists nothing (CD-7). Progressive disclosure: the on-road and EMI
+         cards stay open; the cash and underwater follow-ups are closed
+         .collapse-cards (cbuy-cash-card / cbuy-uw-card) whose header previews
+         are written by renderCarBuy() even while closed; then one limits
+         collapse (CD-6). #cbuy-example-note labels the prefilled example and
+         hides on the first edit. -->
     <div class="car-tile-panel active" id="car-panel-buy" role="tabpanel" aria-labelledby="car-tile-buy">
+
+      <p class="note-text" id="cbuy-example-note" style="margin:0 0 10px;">Example: ₹10L petrol car in Telangana. Change any field.</p>
 
       <div class="panel-card" style="margin-bottom:14px;">
         <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg></span><span class="pch-title">What will this car really cost me?</span><span class="pch-tag">Live</span></div>
@@ -1865,9 +1883,13 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
 
-      <div class="panel-card" style="margin-bottom:14px;">
-        <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg></span><span class="pch-title">What if I paid cash instead?</span><span class="pch-tag">Live</span></div>
-        <div class="panel-card-body">
+      <div class="collapse-card" id="cbuy-cash-card">
+        <button type="button" class="collapse-header has-preview" onclick="toggleCard('cbuy-cash-card')" aria-expanded="false">
+          <span class="collapse-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg> What if I paid cash instead?</span>
+          <span class="collapse-amount" id="cbuy-cash-preview"></span>
+          <span class="collapse-arrow">▼</span>
+        </button>
+        <div class="collapse-body">
           <div class="field" style="max-width:320px;">
             <label for="cbuy-return">Expected return (% p.a.)</label>
             <input type="number" id="cbuy-return" value="12" min="0" step="0.5" oninput="renderCarBuy()">
@@ -1886,9 +1908,13 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         </div>
       </div>
 
-      <div class="panel-card" style="margin-bottom:14px;">
-        <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg></span><span class="pch-title">When would I owe more than the car is worth?</span></div>
-        <div class="panel-card-body">
+      <div class="collapse-card" id="cbuy-uw-card">
+        <button type="button" class="collapse-header has-preview" onclick="toggleCard('cbuy-uw-card')" aria-expanded="false">
+          <span class="collapse-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg> When would I owe more than the car is worth?</span>
+          <span class="collapse-amount" id="cbuy-uw-preview"></span>
+          <span class="collapse-arrow">▼</span>
+        </button>
+        <div class="collapse-body">
           <p class="note-text" id="cbuy-uw-empty" style="display:none;"></p>
           <p id="cbuy-uw-sentence" style="display:none;font-size:13px;color:var(--text);margin-bottom:10px;"></p>
           <div id="cbuy-uw-out">
@@ -2009,9 +2035,13 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       </div>
     </div>
 
-    <div class="panel-card" id="lg-cross-card" style="margin-bottom:20px;">
-      <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg></span><span class="pch-title">How do lease and loan compare side by side?</span><span class="pch-tag">Live</span></div>
-      <div class="panel-card-body">
+    <div class="collapse-card" id="lg-cross-card" style="margin-bottom:20px;">
+      <button type="button" class="collapse-header has-preview" onclick="toggleCard('lg-cross-card')" aria-expanded="false">
+        <span class="collapse-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg> How do lease and loan compare side by side?</span>
+        <span class="collapse-amount" id="lg-cross-preview"></span>
+        <span class="collapse-arrow">▼</span>
+      </button>
+      <div class="collapse-body">
         <div id="lg-cross-cards" class="grid-2"></div>
         <p class="note-text" id="lg-cross-note" style="margin-top:10px;">Financing only — fuel, insurance and upkeep cost the same either way.</p>
       </div>
@@ -2900,7 +2930,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 // cached shell without knowing it). Bump this BY HAND alongside sw.js's CACHE
 // version whenever a user-visible change ships — the two are not derived from
 // one another, so both need editing.
-const BUILD_STAMP = '2026-10-01.2';
+const BUILD_STAMP = '2026-10-01.3';
 
 // =====================================================================
 // PUBLIC-BETA FEEDBACK LINK (2026-09-26)
@@ -4860,6 +4890,7 @@ function renderCarBuy() {
   const lvc = calcLoanVsCash({ loanAmount: loan.loanAmount, annualRate: loan.annualRate, years, expectedReturn: Number.isFinite(ret) ? ret : 0 });
   const cashOk = hasLoan && lvc.applies;
   cbuyGate('cbuy-cash-out', 'cbuy-cash-empty', cashOk, hasPrice ? 'No loan at this down payment — nothing to compare.' : 'Enter an ex-showroom price to compare.');
+  if (!cashOk) set('cbuy-cash-preview', '');
   if (cashOk) {
     const retShown = cbuyPct(Math.max(0, Number.isFinite(ret) ? ret : 0));
     set('cbuy-cash-label', `After ${years} ${years === 1 ? 'year' : 'years'}`);
@@ -4872,6 +4903,8 @@ function renderCarBuy() {
         ? 'more with the loan and the cash invested'
         : 'more by paying cash and investing the EMIs');
     }
+    set('cbuy-cash-preview', isLoanVsCashEven(lvc.gap, loan.loanAmount) ? 'About even'
+      : (lvc.gap > 0 ? `${inCr(Math.abs(lvc.gap))} more with loan` : `${inCr(Math.abs(lvc.gap))} more paying cash`));
     el('cbuy-cash-lines').innerHTML = `
       <div class="car-stat"><span class="car-stat-lbl">Pay cash, invest ${fmt(lvc.emi)}/mo</span><span class="car-stat-val">${fmt(lvc.cashPathValue)}</span></div>
       <div class="car-stat"><span class="car-stat-lbl">Take the loan, invest ${inCr(loan.loanAmount)} kept</span><span class="car-stat-val">${fmt(lvc.loanPathValue)}</span></div>`;
@@ -4891,6 +4924,9 @@ function renderCarBuy() {
     sent.textContent = '';
     sent.style.display = 'none';
   }
+  // Header preview (CR7: never says "never" — empty when there is no crossover).
+  set('cbuy-uw-preview', uwOk && uw.ranges.length
+    ? uw.ranges.map(g => g.from === g.to ? `In year ${g.from}` : `Years ${g.from}–${g.to}`).join(', ') : '');
   if (uwOk) {
     renderChart('cbuy-uw-chart', [
       { values: uw.balance, color: 'var(--accent)', area: false },
@@ -4904,8 +4940,22 @@ function renderCarBuy() {
     el('cbuy-uw-caption').innerHTML = '';
   }
 }
+// Example label: hides on the first edit of any field in tile 1. In-memory
+// only — never persisted; a reload restores the example and the note.
+function initCarBuyExampleNote() {
+  const panel = el('car-panel-buy'), note = el('cbuy-example-note');
+  if (!panel || !note) return;
+  const hideNote = () => {
+    note.style.display = 'none';
+    panel.removeEventListener('input', hideNote);
+    panel.removeEventListener('change', hideNote);
+  };
+  panel.addEventListener('input', hideNote);
+  panel.addEventListener('change', hideNote);
+}
 initCarTerms();
 initCarBuy();
+initCarBuyExampleNote();
 
 // =====================================================================
 // DHANAM WORTH — net worth tracker
@@ -6120,12 +6170,14 @@ function renderLeaseTile() {
   if (el('car-lease-panel').style.display !== 'none') renderCarCalc();
 }
 
-// Lease vs loan for the glance's own car, financing only. Receives the
+// Lease vs loan for the glance's own car, financing only. Also writes the
+// closed-by-default #lg-cross-card header preview (lg-cross-preview). Receives the
 // results renderLeaseGlance already computed so the two can never disagree.
 function renderLeaseCompareCards(loanResult, leaseResult, years) {
   const months = years * 12;
   const paidLease = leaseResult.emi * months + leaseResult.residual;
   const paidLoan = loanResult.emi * months;
+  set('lg-cross-preview', `Lease ${inCr(leaseResult.netCost)} · Loan ${inCr(loanResult.netCost)}`);
   el('lg-cross-cards').innerHTML = `
     <div class="car-card">
       <div class="car-card-title">Lease</div>
