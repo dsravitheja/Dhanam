@@ -102,7 +102,7 @@ stated principle.
 - **Tool B derives lease pay from Tool A** (`lg-basic`/`lg-regime`) **until the payslip panel is opened once** — a one-way prefill copies both fields at that first open; afterwards they're independent, same shape as the pre-existing `lg-*`/`car-*` duplication.
 - **Tool B's two example cars never persist until the user actually edits something** (`ccDirty` gate) — a fresh, look-only visit writes nothing to `dhanam.v1`.
 
-### Dhanam Car tile redesign (CR1–CR13, decided 2026-09-29; **Waves 0–1 (CR1–CR3) shipped 2026-09-29**, CR4–CR13 planned)
+### Dhanam Car tile redesign (CR1–CR13, decided 2026-09-29; **Waves 0–1 (CR1–CR3) shipped 2026-09-29; Wave 2 (CR4–CR7) shipped 2026-10-01**, CR8–CR13 planned)
 
 Full plan and task breakdown: `TASK-CAR-REDESIGN.md`. Flip these entries to "shipped" when CR12 lands.
 
@@ -115,6 +115,8 @@ Full plan and task breakdown: `TASK-CAR-REDESIGN.md`. Flip these entries to "shi
 - **CD-6 applied: `#car-limits-card` split into `#car-limits-compare` (tile 2) and `#car-limits-lease` (tile 3)**, bullet text unchanged; bullets true of both (Tax Saved ₹0, employer tie, estimates) sit in both. Invariant 11 now reads "one per tool".
 - **Feedback: one link per tile; new `car-buy` key** (`'Dhanam Car: buying a car (on-road cost, EMI)'`) — the matching Q1 choice must exist on the live form (see §Public-beta feedback link).
 - **Business-owner / self-employed business-use car tax (depreciation, interest as expense, GST credit) — parked (CD-1).** Owner call: complex tax logic, not the target now; a good-to-have once the app has traction. ⚠ don't build it in as a "missing feature" before the owner reopens it; at most one caveat line.
+- **2026-10-01 (CR6): loan vs cash compares end-of-term investment values, both compounded monthly.** The loan path invests the amount borrowed as a lump sum; the cash path invests each month the EMI you'd otherwise pay (end of month). Both compound at the nominal return, same convention as `calcEMI`, so a return equal to the loan rate gives a zero gap by the annuity identity. Chose this over `calcLumpsumGrowth` (annual compounding), which leaves a ~1% gap at equal rates and contradicts the "about even" copy. ⚠ Don't swap in annual compounding.
+- **2026-10-01 (CR7): underwater check uses insured value on ex-showroom.** It compares loan balance with `calcCarDepreciation(ex-showroom)` — IRDAI IDV is ex-showroom based, not on-road — so financing road tax/insurance can make year 1 underwater. Sentence disappears with no crossover rather than saying "never".
 
 ## Charts
 
