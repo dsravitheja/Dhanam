@@ -806,6 +806,122 @@ function calcOnRoadCost(o) {
   return { exShowroom, roadTax, roadTaxPct, roadTaxReason, regCharges, insurance, tcs, tcsApplies, onRoadExTcs, onRoad };
 }
 
+// ── DHANAM CAR — BUY A CAR (Wave 2, CR5–CR7, 2026-10-01) ───────────
+// Pure engines behind tile 1's EMI, loan-vs-cash and underwater cards. All
+// three reuse the existing loan engine (calcEMI / loanAtYear) and the IRDAI
+// depreciation schedule (calcCarDepreciation) — no second amortisation
+// formula exists, so tile 1 can never disagree with the Home or Compare
+// tiles about what an EMI is. Every function degrades to zeros/empty arrays
+// on blank, negative or non-finite input (a user mid-edit) and never throws.
+
+// calcCarBuyLoan — what financing the on-road price costs. By default the
+// loan is on-road minus the down payment (CD-9); `loanAmount` is an optional
+// override for lenders that finance only part of the price, and wins over
+// `downPayment` when given (down payment then becomes the remainder). Both
+// are clamped into [0, onRoad] so a down payment larger than the car, or a
+// loan larger than the car, can never produce a negative figure. A term
+// under one year means "no loan term": emi is 0 and totalPaid is just the
+// on-road price, rather than dividing by zero months. totalInterest is
+// floored at 0 so float noise at a 0% rate can never print "-₹0".
+function calcCarBuyLoan(o) {
+  o = o || {};
+  const onRoad = Number.isFinite(o.onRoad) && o.onRoad > 0 ? o.onRoad : 0;
+  const annualRate = Number.isFinite(o.annualRate) && o.annualRate > 0 ? o.annualRate : 0;
+  const years = Number.isFinite(o.years) && o.years >= 1 ? o.years : 0;
+  let downPayment, loanAmount;
+  if (Number.isFinite(o.loanAmount) && o.loanAmount >= 0) {
+    loanAmount = Math.min(o.loanAmount, onRoad);
+    downPayment = onRoad - loanAmount;
+  } else {
+    const dp = Number.isFinite(o.downPayment) ? o.downPayment : 0;
+    downPayment = Math.min(Math.max(dp, 0), onRoad);
+    loanAmount = onRoad - downPayment;
+  }
+  const months = years * 12;
+  const emi = (loanAmount > 0 && years > 0) ? calcEMI(loanAmount, annualRate, years) : 0;
+  const totalEmis = emi * months;
+  const totalInterest = Math.max(0, totalEmis - loanAmount);
+  const totalPaid = years === 0 ? onRoad : downPayment + totalEmis;
+  return { onRoad, downPayment, loanAmount, annualRate, years, months, emi, totalEmis, totalInterest, totalPaid };
+}
+
+// calcLoanVsCash — the same car bought two ways, compared at month n:
+//   Loan path: take the loan and leave the cash invested as a lump sum
+//              → L × (1 + rm)^n.
+//   Cash path: pay cash now and invest, each month-end, the EMI you would
+//              otherwise have paid → the future value of that annuity.
+// gap = loanPathValue − cashPathValue; positive means loan-and-invest ends
+// ahead. rm is the NOMINAL monthly rate (expectedReturn / 12 / 100) — the
+// same convention calcEMI uses for the loan. That is deliberate and is why
+// this does NOT call calcLumpsumGrowth: that function compounds annually, so
+// at an expectedReturn equal to the loan rate the two paths would differ
+// (~1% of L at 9%) purely from the compounding convention. With matching
+// conventions, expectedReturn === annualRate makes the two values identical
+// by the annuity identity, so gap is 0 up to float error and any non-zero
+// gap reflects only the return/rate difference. Negative or non-finite
+// expectedReturn is treated as 0 (no loss modelled). No loan or no term →
+// applies:false with all zeros so the UI can say so in words.
+function calcLoanVsCash(o) {
+  o = o || {};
+  const L = Number.isFinite(o.loanAmount) && o.loanAmount > 0 ? o.loanAmount : 0;
+  const years = Number.isFinite(o.years) && o.years >= 1 ? o.years : 0;
+  if (L === 0 || years === 0) {
+    return { applies: false, emi: 0, months: 0, loanPathValue: 0, cashPathValue: 0, gap: 0, totalInterest: 0 };
+  }
+  const annualRate = Number.isFinite(o.annualRate) && o.annualRate > 0 ? o.annualRate : 0;
+  const ret = Number.isFinite(o.expectedReturn) && o.expectedReturn > 0 ? o.expectedReturn : 0;
+  const months = years * 12;
+  const emi = calcEMI(L, annualRate, years);
+  const rm = ret / 12 / 100;
+  const loanPathValue = L * Math.pow(1 + rm, months);
+  const cashPathValue = rm === 0 ? emi * months : emi * (Math.pow(1 + rm, months) - 1) / rm;
+  return {
+    applies: true, emi, months, loanPathValue, cashPathValue,
+    gap: loanPathValue - cashPathValue,
+    totalInterest: Math.max(0, emi * months - L),
+  };
+}
+
+// isLoanVsCashEven — the UI's "about even" threshold, pinned in tests.js: a
+// gap smaller than ₹1,000 or 0.5% of the loan (whichever is larger) is
+// within the noise of a pre-tax, non-guaranteed return assumption, so the
+// tile says "About even" rather than naming a winner on a rounding-sized gap.
+function isLoanVsCashEven(gap, loanAmount) {
+  const L = Number.isFinite(loanAmount) ? loanAmount : 0;
+  const g = Number.isFinite(gap) ? gap : 0;
+  return Math.abs(g) < Math.max(1000, 0.005 * L);
+}
+
+// calcLoanUnderwater — in which years the outstanding loan balance exceeds
+// the car's insured value (a total-loss payout would not clear the loan).
+// carValueBase must be the EX-SHOWROOM price, not on-road: IRDAI's IDV
+// schedule is defined on the ex-showroom price, and on-road taxes/insurance
+// are not recoverable in a claim. `value` is therefore the IRDAI schedule,
+// not a resale forecast. `ranges` collapses the per-year flags into maximal
+// contiguous {from, to} runs (from === to for a single year). The balance at
+// the final year is 0, so a range can never reach the last year while value
+// is positive. Invalid input returns empty arrays.
+function calcLoanUnderwater(o) {
+  o = o || {};
+  const empty = { years: [], balance: [], value: [], underwater: [], ranges: [] };
+  const L = o.loanAmount, base = o.carValueBase, years = o.years;
+  if (!Number.isFinite(L) || L <= 0 || !Number.isFinite(base) || base <= 0 ||
+      !Number.isFinite(years) || years < 1) return empty;
+  const rate = Number.isFinite(o.annualRate) && o.annualRate > 0 ? o.annualRate : 0;
+  const out = { years: [], balance: [], value: [], underwater: [], ranges: [] };
+  let open = null;
+  for (let y = 1; y <= years; y++) {
+    const balance = loanAtYear(L, rate, years, y).balance;
+    const value = calcCarDepreciation(base, y);
+    const under = balance > value;
+    out.years.push(y); out.balance.push(balance); out.value.push(value); out.underwater.push(under);
+    if (under) {
+      if (open) open.to = y; else { open = { from: y, to: y }; out.ranges.push(open); }
+    } else open = null;
+  }
+  return out;
+}
+
 // ── DHANAM WORTH ──────────────────────────────────────────────────
 // Extracted from index.html's renderWorthProjection() (Phase 16/R65) so that
 // function and the loan panel's "reverse Worth bridge" disclosure
@@ -836,5 +952,6 @@ if (typeof module !== 'undefined' && module.exports) {
     calcNetWorthProjection, CAR_RUNNING_DEFAULTS, splitAnnualKm, evEfficiencyFromRange,
     CAR_STATE_CHARGES, CAR_REG_CHARGES_DEFAULT, CAR_TCS_THRESHOLD, CAR_TCS_RATE_PCT,
     calcOnRoadCost,
+    calcCarBuyLoan, calcLoanVsCash, isLoanVsCashEven, calcLoanUnderwater,
   };
 }

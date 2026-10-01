@@ -1,6 +1,6 @@
 # TASK-CAR-REDESIGN — Dhanam Car as three tiles, buyer-first
 
-Design agreed 2026-09-29. **Waves 0–1 (CR1–CR3) shipped 2026-09-29; Waves 2–4 planned** — `CLAUDE.md` describes the
+Design agreed 2026-09-29. **Waves 0–1 (CR1–CR3) shipped 2026-09-29; Wave 2 (CR4–CR7) shipped 2026-10-01**, CR8–CR13 planned — `CLAUDE.md` describes the
 shipped tile shell; `ARCHITECTURE.md` §Dhanam Car is rewritten in CR12. Each
 item below is sized to hand to Claude Code as one task and has a **Done when**
 line; if it can't be checked, it isn't done. IDs are `CR<n>` (Car Redesign)
@@ -121,6 +121,8 @@ a non-lease visitor can dismiss it at a glance.
 ---
 
 ## Wave 2 — Tile 1, "Buy a car" (new)
+
+*Shipped 2026-10-01. Tile 1 has its own rate/tenure until CR8 (CD-4) shares them with tile 2; CD-9's editable loan amount is an optional override field (`cbuy-loan`).*
 
 Inputs are prefilled with a worked example (e.g. a ₹10L ex-showroom petrol
 car in Telangana, 20% down, 5 years, 9%) so the tile answers on first paint.

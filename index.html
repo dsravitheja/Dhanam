@@ -742,6 +742,9 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 }
 .car-tile-panel { display:none; }
 .car-tile-panel.active { display:block; }
+/* Buy a car: the tenure-comparison row matching the selected tenure — gold
+   treatment plus a "(selected)" text marker, so colour is never the only signal. */
+.milestone-table tr.cbuy-tenure-active td { color:var(--accent); background:var(--accent-dim); font-weight:600; }
 
 /* R22/6b + R25/6e: the landing footer — one place that satisfies both the
    About page's "reachable from the landing page" requirement and 6e's
@@ -1750,14 +1753,172 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
       </button>
     </div>
 
-    <!-- Tile 1: Buy a car — placeholder until Wave 2 (CR4–CR7) builds the
-         on-road-cost/EMI tool. Honest, not a dead end: says what's coming
-         and offers a real path into a tool that exists today. -->
+    <!-- Tile 1: Buy a car (Wave 2, CR4–CR7). One entry point, renderCarBuy(),
+         reads every cbuy-* input and writes every output (invariant 3).
+         Persists nothing (CD-7). Four question-headed cards + one limits
+         collapse (CD-6). -->
     <div class="car-tile-panel active" id="car-panel-buy" role="tabpanel" aria-labelledby="car-tile-buy">
-      <div class="panel-card">
+
+      <div class="panel-card" style="margin-bottom:14px;">
+        <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg></span><span class="pch-title">What will this car really cost me?</span><span class="pch-tag">Live</span></div>
         <div class="panel-card-body">
-          <p class="note-text" style="margin-bottom:14px;">On-road cost and EMI for buying a car are coming here next.</p>
-          <button type="button" class="btn btn-secondary" onclick="switchCarTile('compare')">Compare running costs of cars you're considering</button>
+          <div class="grid-3" style="margin-bottom:12px;">
+            <div class="field highlight">
+              <label for="cbuy-price">Ex-showroom price (₹)</label>
+              <input type="number" id="cbuy-price" value="1000000" min="0" oninput="renderCarBuy()">
+            </div>
+            <div class="field">
+              <label for="cbuy-state">State</label>
+              <select id="cbuy-state" onchange="cbuyResetOverrides()"></select>
+            </div>
+            <div class="field">
+              <label for="cbuy-fuel">Fuel</label>
+              <select id="cbuy-fuel" onchange="cbuyResetOverrides()">
+                <option value="petrol" selected>Petrol</option>
+                <option value="diesel">Diesel</option>
+                <option value="cng">CNG</option>
+                <option value="ev">Electric (EV)</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid-3">
+            <div class="field">
+              <label for="cbuy-roadtax-pct">Road tax (%)</label>
+              <input type="number" id="cbuy-roadtax-pct" min="0" step="0.5" oninput="renderCarBuy()">
+              <span class="field-hint" id="cbuy-roadtax-hint"></span>
+            </div>
+            <div class="field">
+              <label for="cbuy-reg">Registration &amp; other (₹)</label>
+              <input type="number" id="cbuy-reg" min="0" step="500" oninput="renderCarBuy()">
+              <span class="field-hint" id="cbuy-reg-hint"></span>
+            </div>
+            <div class="field">
+              <label for="cbuy-ins">Insurance, year 1 (₹)</label>
+              <input type="number" id="cbuy-ins" min="0" step="500" oninput="renderCarBuy()">
+              <span class="field-hint" id="cbuy-ins-hint"></span>
+            </div>
+          </div>
+
+          <p class="note-text" id="cbuy-onroad-empty" style="display:none;margin-top:14px;">Enter an ex-showroom price to see the on-road cost.</p>
+          <div id="cbuy-onroad-out">
+            <div class="total-card" style="margin-top:14px;">
+              <div class="total-label">On-road total</div>
+              <div class="total-value" id="cbuy-onroad-value">—</div>
+              <div class="total-cr" id="cbuy-onroad-note"></div>
+            </div>
+            <div id="cbuy-onroad-lines" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-card" style="margin-bottom:14px;">
+        <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg></span><span class="pch-title">What will the EMI be?</span><span class="pch-tag">Live</span></div>
+        <div class="panel-card-body">
+          <div class="grid-3" style="margin-bottom:12px;">
+            <div class="field">
+              <label for="cbuy-down">Down payment</label>
+              <div style="display:flex;gap:6px;">
+                <input type="number" id="cbuy-down" value="20" min="0" step="any" oninput="renderCarBuy()" style="flex:1;min-width:0;">
+                <select id="cbuy-down-unit" onchange="cbuyDownUnitChange()" aria-label="Down payment unit" style="width:64px;flex:none;">
+                  <option value="pct" selected>%</option>
+                  <option value="rs">₹</option>
+                </select>
+              </div>
+              <span class="field-hint" id="cbuy-down-hint"></span>
+            </div>
+            <div class="field">
+              <label for="cbuy-rate">Loan rate (% p.a.)</label>
+              <input type="number" id="cbuy-rate" value="9" min="0" step="0.25" oninput="renderCarBuy()">
+            </div>
+            <div class="field">
+              <label for="cbuy-years">Tenure</label>
+              <select id="cbuy-years" onchange="renderCarBuy()">
+                <option value="1">1 year</option><option value="2">2 years</option><option value="3">3 years</option>
+                <option value="4">4 years</option><option value="5" selected>5 years</option><option value="6">6 years</option>
+                <option value="7">7 years</option>
+              </select>
+            </div>
+          </div>
+          <div class="field" style="max-width:320px;">
+            <label for="cbuy-loan">Loan amount (₹, optional)</label>
+            <input type="number" id="cbuy-loan" min="0" step="10000" oninput="renderCarBuy()">
+            <span class="field-hint">Blank uses on-road minus down payment</span>
+          </div>
+
+          <p class="note-text" id="cbuy-emi-empty" style="display:none;margin-top:14px;">Enter an ex-showroom price to see the EMI.</p>
+          <div id="cbuy-emi-out">
+            <div class="total-card" style="margin-top:14px;">
+              <div class="total-label">Monthly EMI</div>
+              <div class="total-value" id="cbuy-emi-value">—</div>
+              <div class="total-cr" id="cbuy-emi-note"></div>
+            </div>
+            <div id="cbuy-emi-detail">
+              <div id="cbuy-emi-lines" style="margin-top:12px;"></div>
+              <div class="table-scroll" style="margin-top:12px;">
+                <table class="milestone-table">
+                  <thead><tr><th>Tenure</th><th>EMI (₹/mo)</th><th>Total interest (₹)</th></tr></thead>
+                  <tbody id="cbuy-tenure-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-card" style="margin-bottom:14px;">
+        <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trend-up"></use></svg></span><span class="pch-title">What if I paid cash instead?</span><span class="pch-tag">Live</span></div>
+        <div class="panel-card-body">
+          <div class="field" style="max-width:320px;">
+            <label for="cbuy-return">Expected return (% p.a.)</label>
+            <input type="number" id="cbuy-return" value="12" min="0" step="0.5" oninput="renderCarBuy()">
+            <span class="field-hint">Same default as Dhanam Grow</span>
+          </div>
+          <p class="note-text" id="cbuy-cash-empty" style="display:none;margin-top:14px;"></p>
+          <div id="cbuy-cash-out">
+            <div class="total-card" style="margin-top:14px;">
+              <div class="total-label" id="cbuy-cash-label">Gap</div>
+              <div class="total-value" id="cbuy-cash-value">—</div>
+              <div class="total-cr" id="cbuy-cash-note"></div>
+            </div>
+            <div id="cbuy-cash-lines" style="margin-top:12px;"></div>
+            <p class="note-text" style="margin-top:8px;">Investment returns are pre-tax and not guaranteed; loan interest is certain.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-card" style="margin-bottom:14px;">
+        <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bar-chart"></use></svg></span><span class="pch-title">When would I owe more than the car is worth?</span></div>
+        <div class="panel-card-body">
+          <p class="note-text" id="cbuy-uw-empty" style="display:none;"></p>
+          <p id="cbuy-uw-sentence" style="display:none;font-size:13px;color:var(--text);margin-bottom:10px;"></p>
+          <div id="cbuy-uw-out">
+            <div class="chart-legend">
+              <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Loan still owed</span>
+              <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--text-dim)"></span>Insured value (IRDAI schedule)</span>
+            </div>
+            <div id="cbuy-uw-chart"></div>
+            <div class="chart-caption" id="cbuy-uw-caption"></div>
+            <p class="note-text" style="margin-top:6px;">Insured value follows the IRDAI schedule — not a resale forecast.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="collapse-card" id="car-limits-buy">
+        <button type="button" class="collapse-header" onclick="toggleCard('car-limits-buy')" aria-expanded="false">
+          <span class="collapse-title"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"></use></svg> Assumptions &amp; limits</span>
+          <span class="collapse-arrow">▼</span>
+        </button>
+        <div class="collapse-body">
+          <ul style="font-size:12px;color:var(--text-dim);line-height:2;padding-left:16px;">
+            <li>Road tax: indicative state rates, as of Sep 2026.</li>
+            <li>TCS: 1% above ₹10L; claim it in your return.</li>
+            <li>Registration &amp; other charges: one indicative ₹12,000 figure.</li>
+            <li>Year-1 insurance: 3% of price (3.8% for EVs).</li>
+            <li>Some lenders finance only ex-showroom; adjust the loan.</li>
+            <li>Investment returns are pre-tax and not guaranteed.</li>
+            <li>Insured value follows IRDAI's schedule, not resale prices.</li>
+            <li>Full sources and dates: <button type="button" class="limits-about-link" onclick="switchHub('about')">About</button></li>
+          </ul>
         </div>
       </div>
 
@@ -2517,7 +2678,22 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
         <div class="provenance-date">As of: starting points — replace with your own quote</div>
       </div>
       <div class="provenance-row">
-        <div class="provenance-term">SIP CAGR default (all three Dhanam Grow tabs)</div>
+        <div class="provenance-term">Road tax by state (Dhanam Car)</div>
+        <div class="provenance-value">Indicative life-time tax slabs for 10 states, by price and fuel; EV exemptions noted where a state publishes one — every figure editable</div>
+        <div class="provenance-date">As of: 2026-09-29 — indicative, not authoritative; confirm with your RTO</div>
+      </div>
+      <div class="provenance-row">
+        <div class="provenance-term">Registration &amp; other one-time charges (Dhanam Car)</div>
+        <div class="provenance-value">₹12,000 — one indicative figure (HSRP plate, FASTag, smart card)</div>
+        <div class="provenance-date">As of: 2026-09-29 — aggregator-reported range, not a statutory figure</div>
+      </div>
+      <div class="provenance-row">
+        <div class="provenance-term">TCS on cars above ₹10 lakh</div>
+        <div class="provenance-value">1% of the sale value when it exceeds ₹10,00,000; creditable against your income tax</div>
+        <div class="provenance-date">As of: 2026-09-29 — Income-tax Act, 2025, s.394(1), in force 2026-04-01</div>
+      </div>
+      <div class="provenance-row">
+        <div class="provenance-term">SIP CAGR default (all three Dhanam Grow tabs, and Buy a car's expected return)</div>
         <div class="provenance-value">12% p.a.</div>
         <div class="provenance-date">As of: a starting point — markets don't guarantee any return; use your own assumption</div>
       </div>
@@ -2695,7 +2871,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 // cached shell without knowing it). Bump this BY HAND alongside sw.js's CACHE
 // version whenever a user-visible change ships — the two are not derived from
 // one another, so both need editing.
-const BUILD_STAMP = '2026-09-29';
+const BUILD_STAMP = '2026-10-01';
 
 // =====================================================================
 // PUBLIC-BETA FEEDBACK LINK (2026-09-26)
@@ -4419,8 +4595,8 @@ let carActiveTile = 'buy';
 
 // Single switch for the hub's tile row: toggles panel visibility +
 // aria-selected, then re-renders only the now-visible tile's own entry
-// point. Tile 1 ("Buy a car") is a static placeholder in Wave 1 — nothing to
-// render. Tile 2 ("Which car costs less to own?") is Tool B, unchanged.
+// point. Tile 1 ("Buy a car") is renderCarBuy() (Wave 2). Tile 2 ("Which
+// car costs less to own?") is Tool B, unchanged.
 // Tile 3 ("Company car lease") is Tool A (renderLeaseGlance) plus, if the
 // payslip panel has been opened, the payslip analysis (renderCarCalc) —
 // preserving today's behaviour for whichever of that tile's content is on
@@ -4437,13 +4613,220 @@ function switchCarTile(name) {
     if (tabBtn) { tabBtn.classList.toggle('active', isActive); tabBtn.setAttribute('aria-selected', String(isActive)); }
     if (panel) panel.classList.toggle('active', isActive);
   });
-  if (name === 'compare') {
+  if (name === 'buy') {
+    renderCarBuy();
+  } else if (name === 'compare') {
     renderCarCompare();
   } else if (name === 'lease') {
     renderLeaseGlance();
     if (leasePanelOpened) renderCarCalc();
   }
 }
+
+// =====================================================================
+// DHANAM CAR — tile 1, "Buy a car" (Wave 2, CR4–CR7)
+// =====================================================================
+// One entry point: renderCarBuy() reads every cbuy-* input and writes every
+// output. Persists nothing (CD-7). Every figure comes from calc.js
+// (calcOnRoadCost / calcCarBuyLoan / calcLoanVsCash / calcLoanUnderwater);
+// this block only formats. Output containers are rebuilt freely; input
+// containers never are (D6).
+const CBUY_STATE_ORDER = ['TG', 'AP', 'KA', 'MH', 'DL', 'TN', 'UP', 'GJ', 'WB', 'OT'];
+const CBUY_FUEL_NAMES = { petrol: 'petrol', diesel: 'diesel', cng: 'CNG', ev: 'electric' };
+let cbuyDownUnit = 'pct';
+
+// State options are generated once from the calc.js table — never retyped.
+function initCarBuy() {
+  const sel = el('cbuy-state');
+  if (!sel || sel.options.length) return;
+  CBUY_STATE_ORDER.forEach(code => {
+    if (!CAR_STATE_CHARGES[code]) return;
+    const o = document.createElement('option');
+    o.value = code;
+    o.textContent = CAR_STATE_CHARGES[code].name;
+    sel.appendChild(o);
+  });
+  sel.value = 'TG';
+}
+
+// Blank (or non-numeric) -> NaN, which calcOnRoadCost/calcCarBuyLoan read as
+// "no override". A typed negative is floored at 0.
+function cbuyOpt(id) {
+  const raw = el(id).value;
+  if (raw === '' || raw == null) return NaN;
+  const n = parseFloat(raw);
+  return Number.isFinite(n) ? Math.max(0, n) : NaN;
+}
+function cbuyPct(n) { return String(+(+n).toFixed(2)); }
+
+// State/fuel set defaults only (like Home's q-state): clear the road-tax and
+// insurance overrides so the new state's/fuel's figures show through.
+function cbuyResetOverrides() {
+  el('cbuy-roadtax-pct').value = '';
+  el('cbuy-ins').value = '';
+  renderCarBuy();
+}
+
+// Switching % <-> ₹ converts the typed value using the current on-road.
+function cbuyDownUnitChange() {
+  const next = el('cbuy-down-unit').value;
+  const raw = el('cbuy-down').value;
+  if (next !== cbuyDownUnit && raw !== '') {
+    const onRoad = cbuyOnRoad().onRoad;
+    const n = parseFloat(raw);
+    if (Number.isFinite(n) && onRoad > 0) {
+      el('cbuy-down').value = next === 'rs'
+        ? Math.round(n * onRoad / 100)
+        : +(n / onRoad * 100).toFixed(2);
+    }
+  }
+  cbuyDownUnit = next;
+  renderCarBuy();
+}
+
+function cbuyOnRoad(auto) {
+  const o = {
+    exShowroom: parseFloat(el('cbuy-price').value),
+    stateCode: el('cbuy-state').value,
+    fuel: el('cbuy-fuel').value,
+  };
+  if (!auto) {
+    o.roadTaxPct = cbuyOpt('cbuy-roadtax-pct');
+    o.regCharges = cbuyOpt('cbuy-reg');
+    o.insurance = cbuyOpt('cbuy-ins');
+  }
+  return calcOnRoadCost(o);
+}
+
+// Shows a section's outputs, or hides them and shows a words-only note.
+function cbuyGate(outId, emptyId, ok, msg) {
+  el(outId).style.display = ok ? '' : 'none';
+  const n = el(emptyId);
+  if (n) { n.style.display = ok ? 'none' : ''; if (!ok) n.textContent = msg; }
+}
+
+function renderCarBuy() {
+  const code = el('cbuy-state').value;
+  const st = CAR_STATE_CHARGES[code] || CAR_STATE_CHARGES.OT;
+  const fuel = el('cbuy-fuel').value;
+  const isEV = fuel === 'ev';
+
+  // ── CR4: on-road cost ──
+  const auto = cbuyOnRoad(true);
+  const r = cbuyOnRoad(false);
+  el('cbuy-roadtax-pct').placeholder = auto.exShowroom > 0 ? cbuyPct(auto.roadTaxPct) : 'Auto';
+  el('cbuy-reg').placeholder = String(CAR_REG_CHARGES_DEFAULT);
+  el('cbuy-ins').placeholder = auto.exShowroom > 0 ? String(Math.round(auto.insurance)) : 'Auto';
+  set('cbuy-roadtax-hint', code === 'OT' ? "Enter your state's rate"
+    : (auto.exShowroom > 0 ? `${st.name} ${isEV ? 'EV ' : ''}default: ${cbuyPct(auto.roadTaxPct)}%` : `${st.name} default applies`));
+  set('cbuy-reg-hint', isEV && auto.roadTaxReason ? 'Plate, FASTag etc.; EV fee may be waived'
+    : `Indicative default: ${fmt(CAR_REG_CHARGES_DEFAULT)}`);
+  set('cbuy-ins-hint', auto.exShowroom > 0 ? `Default: ${fmt(auto.insurance)}` : 'Default: % of price');
+
+  const hasPrice = r.onRoad > 0;
+  cbuyGate('cbuy-onroad-out', 'cbuy-onroad-empty', hasPrice, 'Enter an ex-showroom price to see the on-road cost.');
+  if (hasPrice) {
+    set('cbuy-onroad-value', fmt(r.onRoad));
+    set('cbuy-onroad-note', `On-road in ${st.name === CAR_STATE_CHARGES.OT.name ? 'your state' : st.name} for ${isEV ? 'an' : 'a'} ${CBUY_FUEL_NAMES[fuel] || 'petrol'} car.`);
+    const rtNote = r.roadTaxReason ? `<div class="note-text" style="padding:0 0 6px;">${xesc(r.roadTaxReason)}.</div>` : '';
+    el('cbuy-onroad-lines').innerHTML = `
+      <div class="car-stat"><span class="car-stat-lbl">Ex-showroom</span><span class="car-stat-val">${fmt(r.exShowroom)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Road tax (${cbuyPct(r.roadTaxPct)}%)</span><span class="car-stat-val">${fmt(r.roadTax)}</span></div>
+      ${rtNote}
+      <div class="car-stat"><span class="car-stat-lbl">Registration &amp; other charges</span><span class="car-stat-val">${fmt(r.regCharges)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Insurance (year 1)</span><span class="car-stat-val">${fmt(r.insurance)}</span></div>
+      ${r.tcsApplies ? `<div class="car-stat"><span class="car-stat-lbl">TCS (1%)</span><span class="car-stat-val">${fmt(r.tcs)}</span></div>
+      <div class="note-text" style="padding:0 0 6px;">Collected at the dealer; creditable against your income tax.</div>` : ''}`;
+  }
+
+  // ── CR5: loan ──
+  const unit = el('cbuy-down-unit').value;
+  const downRaw = parseFloat(el('cbuy-down').value);
+  let downPayment = Number.isFinite(downRaw) ? Math.max(0, downRaw) : 0;
+  if (unit === 'pct') downPayment = r.onRoad * Math.min(downPayment, 100) / 100;
+  const loanOverride = cbuyOpt('cbuy-loan');
+  const years = parseInt(el('cbuy-years').value, 10) || 5;
+  const loanArgs = { onRoad: r.onRoad, downPayment, annualRate: parseFloat(el('cbuy-rate').value), years };
+  if (Number.isFinite(loanOverride)) loanArgs.loanAmount = loanOverride;
+  const loan = calcCarBuyLoan(loanArgs);
+  set('cbuy-down-hint', Number.isFinite(loanOverride) ? 'Set by the loan amount below' : '');
+  el('cbuy-loan').placeholder = hasPrice ? String(Math.round(calcCarBuyLoan(Object.assign({}, loanArgs, { loanAmount: undefined })).loanAmount)) : 'Auto';
+
+  cbuyGate('cbuy-emi-out', 'cbuy-emi-empty', hasPrice, 'Enter an ex-showroom price to see the EMI.');
+  const hasLoan = hasPrice && loan.loanAmount > 0;
+  if (hasPrice) {
+    set('cbuy-emi-value', fmt(loan.emi) + '/mo');
+    if (!hasLoan) {
+      set('cbuy-emi-note', 'No loan — your down payment covers the on-road price.');
+    } else {
+      const ratePart = loan.annualRate > 0 ? `at ${cbuyPct(loan.annualRate)}%` : 'at 0% — no interest charged';
+      set('cbuy-emi-note', `for ${years} ${years === 1 ? 'year' : 'years'} on a ${inCr(loan.loanAmount)} loan ${ratePart}`);
+    }
+    el('cbuy-emi-detail').style.display = hasLoan ? '' : 'none';
+  }
+  if (hasLoan) {
+    el('cbuy-emi-lines').innerHTML = `
+      <div class="car-stat"><span class="car-stat-lbl">Down payment</span><span class="car-stat-val">${fmt(loan.downPayment)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Loan amount</span><span class="car-stat-val">${fmt(loan.loanAmount)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Total interest</span><span class="car-stat-val">${fmt(loan.totalInterest)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Total paid (down payment + all EMIs)</span><span class="car-stat-val">${fmt(loan.totalPaid)}</span></div>`;
+    el('cbuy-tenure-body').innerHTML = [3, 5, 7].map(y => {
+      const t = calcCarBuyLoan(Object.assign({}, loanArgs, { years: y }));
+      const on = y === years;
+      return `<tr class="${on ? 'cbuy-tenure-active' : ''}"><td>${y} years${on ? ' (selected)' : ''}</td><td>${fmt(t.emi)}</td><td>${fmt(t.totalInterest)}</td></tr>`;
+    }).join('');
+  }
+
+  // ── CR6: loan vs cash ──
+  const ret = parseFloat(el('cbuy-return').value);
+  const lvc = calcLoanVsCash({ loanAmount: loan.loanAmount, annualRate: loan.annualRate, years, expectedReturn: Number.isFinite(ret) ? ret : 0 });
+  const cashOk = hasLoan && lvc.applies;
+  cbuyGate('cbuy-cash-out', 'cbuy-cash-empty', cashOk, hasPrice ? 'No loan at this down payment — nothing to compare.' : 'Enter an ex-showroom price to compare.');
+  if (cashOk) {
+    const retShown = cbuyPct(Math.max(0, Number.isFinite(ret) ? ret : 0));
+    set('cbuy-cash-label', `After ${years} ${years === 1 ? 'year' : 'years'}`);
+    if (isLoanVsCashEven(lvc.gap, loan.loanAmount)) {
+      set('cbuy-cash-value', 'About even');
+      set('cbuy-cash-note', `At a ${retShown}% return the investment roughly matches the loan's interest.`);
+    } else {
+      set('cbuy-cash-value', fmt(Math.abs(lvc.gap)));
+      set('cbuy-cash-note', lvc.gap > 0
+        ? 'more with the loan and the cash invested'
+        : 'more by paying cash and investing the EMIs');
+    }
+    el('cbuy-cash-lines').innerHTML = `
+      <div class="car-stat"><span class="car-stat-lbl">Pay cash, invest ${fmt(lvc.emi)}/mo</span><span class="car-stat-val">${fmt(lvc.cashPathValue)}</span></div>
+      <div class="car-stat"><span class="car-stat-lbl">Take the loan, invest ${inCr(loan.loanAmount)} kept</span><span class="car-stat-val">${fmt(lvc.loanPathValue)}</span></div>`;
+  }
+
+  // ── CR7: loan vs insured value ──
+  const uw = calcLoanUnderwater({ loanAmount: loan.loanAmount, annualRate: loan.annualRate, years, carValueBase: r.exShowroom });
+  const uwOk = hasLoan && uw.years.length > 0;
+  cbuyGate('cbuy-uw-out', 'cbuy-uw-empty', uwOk, hasPrice ? 'No loan at this down payment — nothing to compare.' : 'Enter an ex-showroom price to see this.');
+  const sent = el('cbuy-uw-sentence');
+  if (uwOk && uw.ranges.length) {
+    const clauses = uw.ranges.map(g => g.from === g.to ? `in year ${g.from}` : `from year ${g.from} to year ${g.to}`);
+    const text = clauses.join(' and ') + " you'd owe more than the car's insured value.";
+    sent.textContent = text.charAt(0).toUpperCase() + text.slice(1);
+    sent.style.display = '';
+  } else {
+    sent.textContent = '';
+    sent.style.display = 'none';
+  }
+  if (uwOk) {
+    renderChart('cbuy-uw-chart', [
+      { values: uw.balance, color: 'var(--accent)', area: false },
+      { values: uw.value, color: 'var(--text-dim)', area: false },
+    ], { ariaLabel: 'Loan still owed versus the car\'s insured value, year by year' });
+    const N = uw.years.length;
+    const all = uw.balance.concat(uw.value);
+    el('cbuy-uw-caption').innerHTML = `<span>Year 1</span><span>${inCr(Math.min(...all))} – ${inCr(Math.max(...all))}</span><span>Year ${N}</span>`;
+  } else {
+    clearChart('cbuy-uw-chart');
+    el('cbuy-uw-caption').innerHTML = '';
+  }
+}
+initCarBuy();
 
 // =====================================================================
 // DHANAM WORTH — net worth tracker

@@ -412,6 +412,140 @@ ok('calcCarDepreciation: zero price -> zero resale', calcCarDepreciation(0, 5) =
   ok('CAR_TCS_THRESHOLD is pinned at ₹10,00,000', CAR_TCS_THRESHOLD === 1000000);
 }
 
+// =====================================================================
+// calcCarBuyLoan / calcLoanVsCash / isLoanVsCashEven / calcLoanUnderwater
+// (Wave 2, CR5–CR7, 2026-10-01) — "Buy a car" tile's EMI, loan-vs-cash and
+// underwater cards. All reuse calcEMI / loanAtYear / calcCarDepreciation.
+// =====================================================================
+{
+  const ex = 1000000;
+  const onRoad = calcOnRoadCost({ exShowroom: ex, stateCode: 'TG', fuel: 'petrol' }).onRoad;
+  const down = onRoad * 0.2;
+  const L = onRoad - down;
+
+  // ── calcCarBuyLoan ──
+  const b = calcCarBuyLoan({ onRoad, downPayment: down, annualRate: 9, years: 5 });
+  ok('calcCarBuyLoan (default example): loanAmount = onRoad - 20% down', approxEqual(b.loanAmount, L, 1e-6), JSON.stringify(b));
+  ok('calcCarBuyLoan: emi equals calcEMI exactly', b.emi === calcEMI(b.loanAmount, 9, 5));
+  ok('calcCarBuyLoan: totalInterest matches loanAtYear interestPaid',
+    approxEqual(b.totalInterest, loanAtYear(b.loanAmount, 9, 5, 5).interestPaid, 1e-6));
+  ok('calcCarBuyLoan: totalPaid = down + emi*60', approxEqual(b.totalPaid, down + b.emi * 60, 1e-6));
+  ok('calcCarBuyLoan: months = 60', b.months === 60);
+
+  const z = calcCarBuyLoan({ onRoad, downPayment: down, annualRate: 0, years: 5 });
+  ok('calcCarBuyLoan (0% rate): emi = L/60', approxEqual(z.emi, L / 60, 1e-9), JSON.stringify(z));
+  ok('calcCarBuyLoan (0% rate): totalInterest is 0', z.totalInterest === 0);
+
+  const full = calcCarBuyLoan({ onRoad, downPayment: onRoad, annualRate: 9, years: 5 });
+  ok('calcCarBuyLoan (100% down): loanAmount 0, emi 0, totalPaid = onRoad',
+    full.loanAmount === 0 && full.emi === 0 && full.totalPaid === onRoad, JSON.stringify(full));
+  const over = calcCarBuyLoan({ onRoad, downPayment: onRoad * 2, annualRate: 9, years: 5 });
+  ok('calcCarBuyLoan: down payment above onRoad clamps to onRoad', over.downPayment === onRoad && over.loanAmount === 0);
+  const negDown = calcCarBuyLoan({ onRoad, downPayment: -5000, annualRate: 9, years: 5 });
+  ok('calcCarBuyLoan: negative down payment clamps to 0', negDown.downPayment === 0 && negDown.loanAmount === onRoad);
+
+  const ov = calcCarBuyLoan({ onRoad, downPayment: 1, loanAmount: 500000, annualRate: 9, years: 5 });
+  ok('calcCarBuyLoan: loanAmount override wins; down payment becomes the remainder',
+    ov.loanAmount === 500000 && approxEqual(ov.downPayment, onRoad - 500000, 1e-6));
+  const ovBig = calcCarBuyLoan({ onRoad, loanAmount: onRoad * 3, annualRate: 9, years: 5 });
+  ok('calcCarBuyLoan: loanAmount override above onRoad clamps to onRoad', ovBig.loanAmount === onRoad && ovBig.downPayment === 0);
+  const ovZero = calcCarBuyLoan({ onRoad, downPayment: 100000, loanAmount: 0, annualRate: 9, years: 5 });
+  ok('calcCarBuyLoan: loanAmount override of 0 means no loan (not "blank")',
+    ovZero.loanAmount === 0 && ovZero.downPayment === onRoad && ovZero.emi === 0);
+
+  const y0 = calcCarBuyLoan({ onRoad, downPayment: down, annualRate: 9, years: 0 });
+  ok('calcCarBuyLoan (years 0): emi 0, totalPaid = onRoad, no interest',
+    y0.emi === 0 && y0.totalPaid === onRoad && y0.totalInterest === 0, JSON.stringify(y0));
+
+  const junk = [undefined, null, NaN, Infinity, -1, 'x'];
+  for (const j of junk) {
+    const r = calcCarBuyLoan({ onRoad: j, downPayment: j, annualRate: j, years: j, loanAmount: j });
+    ok(`calcCarBuyLoan: junk inputs (${String(j)}) give finite numbers`,
+      Object.values(r).every(Number.isFinite), JSON.stringify(r));
+  }
+  ok('calcCarBuyLoan(): no argument does not throw and is all finite', Object.values(calcCarBuyLoan()).every(Number.isFinite));
+  ok('calcCarBuyLoan: negative rate treated as 0%', calcCarBuyLoan({ onRoad, downPayment: down, annualRate: -3, years: 5 }).totalInterest === 0);
+
+  // ── calcLoanVsCash ──
+  for (const rate of [9, 12]) {
+    for (const yrs of [1, 3, 5, 7]) {
+      const r = calcLoanVsCash({ loanAmount: L, annualRate: rate, years: yrs, expectedReturn: rate });
+      ok(`calcLoanVsCash: return === loan rate (${rate}%, ${yrs}y) -> gap ~ 0 (annuity identity)`,
+        r.applies && Math.abs(r.gap) < 1e-6 * L, `gap=${r.gap}`);
+    }
+  }
+  ok('calcLoanVsCash: higher return than the loan rate -> gap > 0',
+    calcLoanVsCash({ loanAmount: L, annualRate: 9, years: 5, expectedReturn: 12 }).gap > 0);
+  ok('calcLoanVsCash: lower return than the loan rate -> gap < 0',
+    calcLoanVsCash({ loanAmount: L, annualRate: 9, years: 5, expectedReturn: 6 }).gap < 0);
+  const zz = calcLoanVsCash({ loanAmount: L, annualRate: 0, years: 5, expectedReturn: 0 });
+  ok('calcLoanVsCash: 0% loan and 0% return -> gap 0', zz.applies && Math.abs(zz.gap) < 1e-6, JSON.stringify(zz));
+  const r0 = calcLoanVsCash({ loanAmount: L, annualRate: 9, years: 5, expectedReturn: 0 });
+  ok('calcLoanVsCash: cashPathValue at 0% return is emi*n', approxEqual(r0.cashPathValue, r0.emi * 60, 1e-6));
+  ok('calcLoanVsCash: loanPathValue at 0% return is L', approxEqual(r0.loanPathValue, L, 1e-6));
+  const neg = calcLoanVsCash({ loanAmount: L, annualRate: 9, years: 5, expectedReturn: -5 });
+  ok('calcLoanVsCash: negative return is treated as 0%', neg.gap === r0.gap);
+  const def = calcLoanVsCash({ loanAmount: L, annualRate: 9, years: 5, expectedReturn: 12 });
+  ok('calcLoanVsCash: emi equals calcEMI; totalInterest matches calcCarBuyLoan',
+    def.emi === calcEMI(L, 9, 5) && approxEqual(def.totalInterest, b.totalInterest, 1e-6));
+  ok('calcLoanVsCash: loanPathValue = L*(1+0.12/12)^60', approxEqual(def.loanPathValue, L * Math.pow(1.01, 60), 1e-6));
+  const zeroApply = { applies: false, emi: 0, months: 0, loanPathValue: 0, cashPathValue: 0, gap: 0, totalInterest: 0 };
+  for (const bad of [{ loanAmount: 0, years: 5 }, { loanAmount: -1, years: 5 }, { loanAmount: NaN, years: 5 },
+                     { loanAmount: L, years: 0 }, { loanAmount: L, years: NaN }, { loanAmount: L, years: 0.5 }, undefined]) {
+    const r = calcLoanVsCash(bad && Object.assign({ annualRate: 9, expectedReturn: 12 }, bad));
+    ok(`calcLoanVsCash: non-applicable input ${JSON.stringify(bad)} -> applies:false, all zeros`,
+      JSON.stringify(r) === JSON.stringify(zeroApply), JSON.stringify(r));
+  }
+  ok('calcLoanVsCash: non-finite expectedReturn treated as 0, result finite',
+    Object.values(calcLoanVsCash({ loanAmount: L, annualRate: 9, years: 5, expectedReturn: NaN })).every(v => typeof v === 'boolean' || Number.isFinite(v)));
+
+  // ── isLoanVsCashEven: max(1000, 0.5% of L) pinned ──
+  ok('isLoanVsCashEven: small loan -> ₹1,000 floor, just inside', isLoanVsCashEven(999, 100000) === true);
+  ok('isLoanVsCashEven: small loan -> ₹1,000 floor, at the boundary is NOT even', isLoanVsCashEven(1000, 100000) === false);
+  ok('isLoanVsCashEven: negative gap uses the absolute value', isLoanVsCashEven(-999, 100000) === true && isLoanVsCashEven(-1000, 100000) === false);
+  ok('isLoanVsCashEven: large loan -> 0.5% of L (₹5,000 on ₹10L), just inside', isLoanVsCashEven(4999, 1000000) === true);
+  ok('isLoanVsCashEven: large loan -> 0.5% of L, at the boundary is NOT even', isLoanVsCashEven(5000, 1000000) === false);
+  ok('isLoanVsCashEven: the larger of the two applies (₹2L loan: floor 1000 beats 0.5% = 1000 tie)', isLoanVsCashEven(999.99, 200000) === true && isLoanVsCashEven(1000, 200000) === false);
+  ok('isLoanVsCashEven: junk gap/loan does not throw', typeof isLoanVsCashEven(NaN, undefined) === 'boolean');
+
+  // ── calcLoanUnderwater ──
+  const u = calcLoanUnderwater({ loanAmount: L, annualRate: 9, years: 5, carValueBase: ex });
+  ok('calcLoanUnderwater: all arrays have length = years',
+    [u.years, u.balance, u.value, u.underwater].every(a => a.length === 5) && u.years.join() === '1,2,3,4,5');
+  ok('calcLoanUnderwater: balance matches loanAtYear, value matches calcCarDepreciation (every year)',
+    u.years.every((y, i) => u.balance[i] === loanAtYear(L, 9, 5, y).balance && u.value[i] === calcCarDepreciation(ex, y)));
+  ok('calcLoanUnderwater: final-year balance is 0 and never underwater', u.balance[4] === 0 && u.underwater[4] === false);
+  ok('calcLoanUnderwater (default example, ₹9.70 L loan on a ₹10 L car): underwater in year 1 only',
+    JSON.stringify(u.ranges) === '[{"from":1,"to":1}]', JSON.stringify(u.ranges));
+  const hi = calcLoanUnderwater({ loanAmount: 1.2 * ex, annualRate: 9, years: 5, carValueBase: ex });
+  ok('calcLoanUnderwater (loan = 1.2x ex-showroom): range starts year 1 and ends before the final year',
+    hi.ranges.length === 1 && hi.ranges[0].from === 1 && hi.ranges[0].to < 5, JSON.stringify(hi.ranges));
+  ok('calcLoanUnderwater: ranges agree with the per-year flags',
+    hi.underwater.every((f, i) => f === (hi.balance[i] > hi.value[i])) &&
+    hi.underwater.slice(0, hi.ranges[0].to).every(Boolean) && !hi.underwater[hi.ranges[0].to]);
+  const small = calcLoanUnderwater({ loanAmount: 0.5 * ex, annualRate: 9, years: 5, carValueBase: ex });
+  ok('calcLoanUnderwater: a big down payment (loan 0.5x price) -> ranges []', small.ranges.length === 0 && small.underwater.every(f => !f));
+  // Constructed: 0% rate, L = 1.2x, 5y. balance_y = 1.2*ex*(1 - y/5); value = ex*0.8*0.85^(y-1).
+  const c0 = calcLoanUnderwater({ loanAmount: 1.2 * ex, annualRate: 0, years: 5, carValueBase: ex });
+  ok('calcLoanUnderwater (0% rate, L=1.2x): constructed range is exactly years 1-2',
+    JSON.stringify(c0.ranges) === '[{"from":1,"to":2}]', JSON.stringify(c0.ranges));
+  // Constructed: single-year 1y loan -> balance 0 at year 1, never underwater
+  const one = calcLoanUnderwater({ loanAmount: ex, annualRate: 9, years: 1, carValueBase: ex });
+  ok('calcLoanUnderwater (1-year loan): one entry, balance 0, ranges []', one.years.length === 1 && one.balance[0] === 0 && one.ranges.length === 0);
+  // Constructed multi-run: a stub-free check that two separate runs are reported separately is
+  // not reachable with a monotone balance vs. a monotone value, so assert maximal-run grouping instead.
+  const long = calcLoanUnderwater({ loanAmount: 1.5 * ex, annualRate: 9, years: 7, carValueBase: ex });
+  ok('calcLoanUnderwater: ranges are maximal contiguous runs (each flagged year is in exactly one range)',
+    long.underwater.every((f, i) => f === long.ranges.some(r => i + 1 >= r.from && i + 1 <= r.to)) &&
+    long.ranges.every((r, i) => i === 0 || r.from > long.ranges[i - 1].to + 1));
+  const emptyU = { years: [], balance: [], value: [], underwater: [], ranges: [] };
+  for (const bad of [{ loanAmount: 0 }, { loanAmount: -5 }, { loanAmount: NaN }, { years: 0 }, { years: NaN }, { carValueBase: 0 }, { carValueBase: NaN }, { carValueBase: -1 }]) {
+    const r = calcLoanUnderwater(Object.assign({ loanAmount: L, annualRate: 9, years: 5, carValueBase: ex }, bad));
+    ok(`calcLoanUnderwater: invalid input ${JSON.stringify(bad)} -> empty arrays`, JSON.stringify(r) === JSON.stringify(emptyU));
+  }
+  ok('calcLoanUnderwater(): no argument does not throw, returns empty arrays', JSON.stringify(calcLoanUnderwater()) === JSON.stringify(emptyU));
+}
+
 // Render
 const summaryEl = document.getElementById('summary');
 const resultsEl = document.getElementById('results');
