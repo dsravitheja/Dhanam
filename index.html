@@ -2131,7 +2131,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
          Loan rate, term, lease rate and residual are mirrors of the shared
          carTerms source (carTermInput) — never a second copy of the state. -->
     <div class="panel-card" id="cc-paying-card">
-      <div class="panel-card-header"><span class="pch-title">How are you paying?</span></div>
+      <div class="panel-card-header"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-coin"></use></svg></span><span class="pch-title">How are you paying?</span></div>
       <div class="panel-card-body">
         <div class="grid-3">
           <div class="field">
@@ -2900,7 +2900,7 @@ input:checked + .ts-slider::before { background:var(--accent); transform:transla
 // cached shell without knowing it). Bump this BY HAND alongside sw.js's CACHE
 // version whenever a user-visible change ships — the two are not derived from
 // one another, so both need editing.
-const BUILD_STAMP = '2026-10-01';
+const BUILD_STAMP = '2026-10-01.2';
 
 // =====================================================================
 // PUBLIC-BETA FEEDBACK LINK (2026-09-26)
@@ -4625,24 +4625,44 @@ const CAR_TERM_INPUTS = Object.freeze({
 });
 let carTerms = Object.assign({}, CAR_TERM_DEFAULTS);
 
+// The one parse rule for a term's raw field value: years = integer >= 1,
+// everything else = finite float. Returns null when invalid/blank.
+function parseCarTerm(key, raw) {
+  const n = key === 'years' ? parseInt(raw, 10) : parseFloat(raw);
+  return Number.isFinite(n) && (key !== 'years' || n >= 1) ? n : null;
+}
+
 // Every mirrored input calls this (inputs: oninput, selects: onchange). Writes
 // the raw value into every OTHER existing mirror — never touches `src` and
 // never rebuilds innerHTML, so focus survives mid-keystroke (D6) — then
 // re-renders the visible tile. Ids that don't exist are skipped.
 function carTermInput(key, src) {
   if (!Object.prototype.hasOwnProperty.call(CAR_TERM_INPUTS, key)) return;
-  if (key === 'years') {
-    const n = parseInt(src.value, 10);
-    carTerms.years = Number.isFinite(n) && n >= 1 ? n : CAR_TERM_DEFAULTS.years;
-  } else {
-    const n = parseFloat(src.value);
-    carTerms[key] = Number.isFinite(n) ? n : 0;
-  }
+  const n = parseCarTerm(key, src.value);
+  // Live typing: an emptied rate reads as 0 (like v()); a bad term falls back.
+  carTerms[key] = n !== null ? n : (key === 'years' ? CAR_TERM_DEFAULTS.years : 0);
   CAR_TERM_INPUTS[key].forEach(id => {
     const m = el(id);
     if (m && m !== src) m.value = src.value;
   });
   renderActiveCarTile();
+}
+
+// Startup sync: browsers may restore form-field values on reload, so adopt the
+// first existing mirror's value into carTerms (blank/invalid -> default) and
+// write it into every other mirror, keeping fields and maths in step.
+function initCarTerms() {
+  Object.keys(CAR_TERM_INPUTS).forEach(key => {
+    const ids = CAR_TERM_INPUTS[key].filter(id => el(id));
+    if (!ids.length) return;
+    // Mirrors normally agree; if a partial restore left them split, the
+    // first one holding a non-default value wins (a restore/edit, not markup).
+    const parsed = ids.map(id => ({ id, n: parseCarTerm(key, el(id).value) })).filter(x => x.n !== null);
+    const pick = parsed.find(x => x.n !== CAR_TERM_DEFAULTS[key]) || parsed[0];
+    carTerms[key] = pick ? pick.n : CAR_TERM_DEFAULTS[key];
+    const raw = pick ? el(pick.id).value : String(CAR_TERM_DEFAULTS[key]);
+    ids.forEach(id => { el(id).value = raw; });
+  });
 }
 
 // Tier-3 UI state only (CLAUDE.md invariant 4) — which tile is selected is
@@ -4678,10 +4698,7 @@ function switchCarTile(name) {
 function renderActiveCarTile() {
   if (carActiveTile === 'buy') renderCarBuy();
   else if (carActiveTile === 'compare') renderCarCompare();
-  else if (carActiveTile === 'lease') {
-    // B defines renderLeaseTile (Wave 3 CR9)
-    if (typeof renderLeaseTile === 'function') renderLeaseTile(); else renderLeaseGlance();
-  }
+  else if (carActiveTile === 'lease') renderLeaseTile();
 }
 
 // =====================================================================
@@ -4887,6 +4904,7 @@ function renderCarBuy() {
     el('cbuy-uw-caption').innerHTML = '';
   }
 }
+initCarTerms();
 initCarBuy();
 
 // =====================================================================
@@ -6080,7 +6098,7 @@ function renderLeaseGlance() {
     <div class="car-stat"><span class="car-stat-lbl">Tax saved</span><span class="car-stat-val" style="${signedColor(leaseResult.taxSaved)}">${fmtSigned(leaseResult.taxSaved)}</span></div>
     <div class="car-stat"><span class="car-stat-lbl">Residual buyout</span><span class="car-stat-val" style="${signedColor(-leaseResult.residual)}">−${fmt(leaseResult.residual)}</span></div>`;
 
-  set('lg-terms-used', `${years}-year term · ${leaseRate}% lease · ${loanRate}% loan · ${(residualPct * 100).toFixed(0)}% residual — change under Rates and term above.`);
+  set('lg-terms-used', `${years}-year term · ${leaseRate}% lease · ${loanRate}% loan · ${(residualPct * 100).toFixed(0)}% residual — edit them under "Change rates and term" above.`);
 }
 
 // Show/hide the payslip panel. Pay and regime live in #lg-card now, so
@@ -6549,11 +6567,7 @@ function renderCCOwnCurve(rows) {
 
   set('cc-owncurve-resale-lbl', `Est. resale value at year ${N} (IRDAI schedule) — not part of the ranking`);
   set('cc-owncurve-resale', fmt(row.result.resaleValue));
-
 }
-
-// TEMP Wave-3 stub, replaced by Agent A's carTerms at merge.
-if (typeof carTermInput !== 'function') window.carTermInput = function (key, src) { /* TEMP Wave-3 stub, replaced by Agent A's carTerms at merge */ renderLeaseTile(); };
 </script>
 </body>
 </html>
