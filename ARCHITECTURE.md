@@ -9,7 +9,7 @@ index points here.
 **Cross-references** to *Testing*, *Naming / ID conventions*, *Core calculation
 functions*, and the numbered *Color rules* point to sections that live in
 `CLAUDE.md`. The append-only log of "we chose X over Y, don't revert" lives in
-`DECISIONS.md` (indexed by R / B / D number). The 68-item by-hand regression
+`DECISIONS.md` (indexed by R / B / D number). The 92-item by-hand regression
 list lives in `MANUAL-TESTS.md`.
 
 ---
@@ -23,7 +23,7 @@ The hubs:
 - `hub-worth` → **Dhanam Worth** — net worth tracker: editable balance sheet, hero net-worth figure, change-since-last-update tile, a collapsed net-worth trend chart, a +5/+10/+20-year projection reusing `calcSIP`/`loanAtYear`, Excel export, and the backup/erase controls. The only hub that persists data — see **Persistence layer** below.
 - `hub-sip` → **Dhanam Grow** — SIP planner (monthly / step-up / lumpsum sub-tabs via `switchSIPPlannerTab`)
 - `hub-apartment` → **Dhanam Home** — property cost, home loan, and loan-disbursement (pre-EMI) calculators; the largest and most developed hub
-- `hub-car` → **Dhanam Car** — a Loan/Lease/Cash financing-mode selector (Loan default) gating a company-car lease tax perquisite panel, plus Compare Cars (ICE vs EV cost-of-ownership across all three modes, absorbing the car-buying loan/depreciation detail as a per-car drill-down since Phase 14)
+- `hub-car` → **Dhanam Car** — three tiles that are the hub's own tab bar: **Buy a car** (default; on-road cost, EMI, loan vs cash, loan vs insured value), **Which car costs less to own?** (ICE vs EV shortlist, paying by Loan/Cash/Company lease), and **Company car lease** (loan-vs-lease glance + payslip tax analysis). See **Dhanam Car** below.
 - `hub-about` → the About page (see below — deliberately **not** a sixth nav tab)
 
 **First-run orientation line (R25/6e, Phase 17).** `#landing-orientation`, one dismissible line above `.tile-grid` — not a modal, not a tour. Dismissal is tier-3 UI state: a dedicated `ORIENTATION_SEEN_KEY` (`dhanam.orientationSeen`) localStorage key, deliberately separate from `STORE_KEY`/`SEEN_KEY` so `eraseState()` (which only ever touches those two) can't accidentally resurrect or accidentally clear it, and so it never rides along in a JSON backup export/import. `dismissOrientationLine()` hides the element and sets the key; an init-time check right after the existing `rememberingInputs()` hydration hides it again on any later load where the key is already set.
@@ -65,125 +65,190 @@ For under-construction property loans where the bank disburses funds in stages a
 
 ## Dhanam Car (`hub-car`)
 
-> **Redesign planned (2026-09-29):** three tiles, buyer first — see `TASK-CAR-REDESIGN.md` and `DECISIONS.md` §Dhanam Car tile redesign. This section describes the **shipped** two-tool hub until CR12 rewrites it.
+> Rewritten 2026-10-03 for the shipped three-tile hub (`TASK-CAR-REDESIGN.md`
+> CR1–CR9 + the progressive-disclosure follow-up). Decisions and their
+> history: `DECISIONS.md` §Dhanam Car and §Dhanam Car tile redesign.
 
-Two independent tools, stacked, no hub-level mode selector. `calc.js`'s
-`calcOwnershipCost`/`calcOwnershipCurve`/`calcLeaseMarginalRate`/
-`CAR_RUNNING_DEFAULTS`/`splitAnnualKm`/`evEfficiencyFromRange` are the shared
-engine both tools call — never two independently-maintained cost models.
+Three tools behind one in-hub tab row, buyer first. `calc.js` is the one
+engine every tile calls — `calcOnRoadCost`/`calcCarBuyLoan`/`calcLoanVsCash`/
+`calcLoanUnderwater` (tile 1), `calcOwnershipCost`/`calcOwnershipCurve`/
+`CAR_RUNNING_DEFAULTS`/`splitAnnualKm`/`evEfficiencyFromRange` (tile 2), and
+`calcLeaseMarginalRate`/`calcPerquisite`/`calcIncomeTax` (tile 3, and tile 2
+in lease mode). Never two independently maintained cost models.
 
-### Tool A — "Car loan or company lease?" (`lg-*`)
+### Tile row (`car-tile-*` → `car-panel-*`)
 
-Three inputs (`lg-price`, `lg-basic`, `lg-regime`) answer with zero
-interaction from worked defaults (₹15L car, ₹2,00,000/mo, new regime).
-`renderLeaseGlance()` calls `calcOwnershipCost()` twice — `mode:'loan'` and
-`mode:'lease'` — with every running/maintenance/insurance input zeroed
-(financing-only: EMI, tax shield, residual; running costs are Tool B's job).
-Term/rates/residual come from Tool B's own `ccAssumptions()`
-(`cc-years`/`cc-lease-rate`/`cc-loan-rate`/`cc-residual-pct`, inside "Explore
-further"), so both tools price the same lease identically.
+Three `<button class="tile car-hub-tile" role="tab">`s inside a
+`role="tablist"` row: **Buy a car** (`buy`, default) · **Which car costs
+less to own?** (`compare`) · **Company car lease** (`lease`, subtitle "If
+your employer offers a car lease"). `switchCarTile(name)` is the one switch:
+it sets `carActiveTile`, toggles `.active` + `aria-selected` on the tiles and
+`.active` on the `car-tile-panel`s, then calls `renderActiveCarTile()` — the
+one per-tile dispatch (`renderCarBuy` / `renderCarCompare` /
+`renderLeaseTile`). `switchHub('car')` calls `switchCarTile(carActiveTile)`,
+so only the visible tile re-renders.
 
-The hero's `lg-hero-note` states one sentence: the zero-tax case, the
-EMI-equals-perquisite coincidence, a negative-shield case, or the normal
-saved-X-over-N-years case (`calc.js`'s `calcLeaseMarginalRate()` returns
-`zeroTax`/`shieldAnnual`/`marginalRate`, all read here). `#lg-lines` shows
-exactly three signed line items — EMI difference, Tax saved, Residual
-buyout — that sum exactly to the hero's own signed figure. `#lg-taper-note`
-appears only when `calcLeaseMarginalRate()`'s `rebateBoost` is true: the
-lease's shield pulls taxable income into the new regime's §87A relief band,
-which **boosts** the saving there (not shrinks it — get the direction right
-if you touch this copy). Persists nothing.
+- `carActiveTile` is tier-3: in memory only, never in `dhanam.v1`; a reload
+  returns to **Buy a car**.
+- Hidden-tile charts rely on `renderChart`'s `ResizeObserver` to redraw when
+  the panel is shown. ⚠ Don't add a redraw call to `switchCarTile()`.
+- The active tile carries a gold border plus an inset bottom bar (shape, not
+  colour alone). `.car-hub-tile` drops `.tile`'s hover lift so an unselected
+  tile never looks selected, and sets `min-height:44px` for touch.
 
-"Reconcile against my payslip ▾" (`toggleLeasePanel()`) opens the unchanged
-Company Car Lease panel below it. On the panel's first open only, it copies
-`lg-basic`→`car-basic` and `lg-regime`→`car-regime` (one-way) and sets
-`leasePanelOpened = true`; after that the two stay independent fields. This
-flag also decides what `carLeaseProfile()` (below) feeds Tool B. *Superseded by CR9 (2026-10-01) — see DECISIONS.md §Dhanam Car tile redesign; full rewrite in CR12.*
+### Shared financing terms (`carTerms`, CD-4)
 
-### What's taxed on my payslip? (`car-*`, inside `#car-lease-panel`; renamed from "Company Car Lease — Tax Analysis," S11)
+Loan rate, term, lease rate and residual % are one object, `carTerms`
+(defaults `CAR_TERM_DEFAULTS`: 9% / 5 yrs / 10% / 10%). Each tile keeps its
+own visible field next to the number it drives, and `CAR_TERM_INPUTS` lists
+the mirrors:
 
-Unchanged from before this phase except `car-basic`'s label/hint/default
-(now "Monthly Fixed Pay (₹)" / "Basic + HRA + allowances, from your
-payslip" / ₹2,00,000). `renderCarCalc()` compares two scenarios — Baseline
-(own car) and Carve-out (CTC reduced by the car package, perquisite added to
-taxable) — reading every input and writing `#car-hero` + the closed-by-default
-"Compare both scenarios ▾" grid in one pass. `car-basic` is *total fixed
-pay*, never statutory Basic; `car-epf-amt` is a directly-entered payslip
-figure, never derived from `car-basic` (real EPF applies to Basic + DA
-only). `calcPerquisite()` holds the Income-tax Rules, 2026 table (₹5,000 /
-₹7,000 / +₹3,000, in force 2026-04-01). S10 removed the panel's own
-"Important Notes & Caveats" list; its disclosures (old-regime scope, EPF
-as-entered, carve-out vs. on-top CTC) now live in `#car-limits-lease`, the "Company car lease" tile's one
-collapsed "Assumptions & limits" panel (split from the old shared
-`#car-limits-card` per CD-6; Tool B's half is `#car-limits-compare`).
+| Key | Mirrors |
+|---|---|
+| `loanRate` | `cbuy-rate`, `cc-loan-rate`, `lg-loan-rate` |
+| `years` | `cbuy-years`, `cc-years`, `lg-years` (1–7) |
+| `leaseRate` | `cc-lease-rate`, `lg-lease-rate` |
+| `residualPct` | `cc-residual-pct`, `lg-residual-pct` |
 
-### Tool B — "Which car costs less to own?" (`cc-*`)
+Every mirror calls `carTermInput(key, this)`. It parses the value, writes
+`carTerms[key]`, copies the raw value into every *other* mirror (never the
+source, never via `innerHTML` — D6), then calls `renderActiveCarTile()`.
+`initCarTerms()` adopts a browser-restored field value at startup so fields
+and maths agree. Tier-2: never persisted. ⚠ Don't add a per-tile copy of
+any of these.
+
+### Tile 1 — Buy a car (`cbuy-*`, `renderCarBuy()`)
+
+One entry point reads every `cbuy-*` input and writes every output; the
+`calc.js` functions do all the arithmetic, this only formats. Persists
+nothing (CD-7). Prefilled with a worked example (₹10L ex-showroom petrol,
+Telangana, 20% down, 12% expected return) so it answers on first paint.
+`#cbuy-example-note` ("Example: …") hides on the first edit.
+
+- **On-road cost (CR4)** — ex-showroom, state (`cbuy-state`, options built
+  once from `CAR_STATE_CHARGES`), fuel. Road tax %, registration and
+  year-1 insurance are editable overrides; changing state or fuel clears the
+  road-tax and insurance overrides (`cbuyResetOverrides()`), same "sets
+  defaults only" posture as Home's `q-state`. TCS (1% above ₹10L, strictly
+  greater) is shown as a line with "creditable against your income tax"
+  wording, never netted off. An EV in an exempt state shows ₹0 road tax
+  with the reason in words.
+- **Loan (CR5)** — down payment in ₹ or % (`cbuy-down-unit`; switching
+  converts the typed value), the shared rate/term, and an optional loan
+  amount override (`cbuy-loan`, CD-9 — placeholder shows the auto figure).
+  EMI is the hero; a flat 3/5/7-year table (`cbuy-tenure-body`, a
+  `.table-scroll`) marks the selected term.
+- **"What if I paid cash instead?" (CR6, `#cbuy-cash-card`)** — closed
+  collapse whose header preview (`cbuy-cash-preview`) is written even while
+  closed. `calcLoanVsCash` compounds both paths monthly at the nominal
+  return, so a return equal to the loan rate gives a zero gap and the copy
+  says "about even" (`isLoanVsCashEven`). States its biases in words.
+- **"When would I owe more than the car is worth?" (CR7, `#cbuy-uw-card`)**
+  — closed collapse with a preview. `calcLoanUnderwater` compares the loan
+  balance with `calcCarDepreciation(ex-showroom)` (IRDAI IDV is ex-showroom
+  based). The sentence names a real year range and disappears with no
+  crossover. `cbuy-uw-chart` is a static host drawn via `renderChart` and
+  emptied via `clearChart` when there's no loan; labelled an insured-value
+  schedule, not a resale forecast.
+- `#car-limits-buy` — the tile's one "Assumptions & limits" (CD-6).
+
+### Tile 2 — Which car costs less to own? (`cc-*`, `renderCarCompare()`)
 
 A shortlist (`ccCars`) ranked by `calcOwnershipCost().netCost` — money out
 the door, full stop; resale is a plain always-shown line, never part of the
 ranking. Two worked example cars ("Petrol hatchback", "Electric hatchback")
-ship so the ranking renders on first paint; `ccDirty` (a tier-3 flag, set
-only by a genuine user edit — a field, add/remove, or the annual-km input)
-gates `persistCC()`, so those two cars are never written to `dhanam.v1` on a
-look-only visit.
+render on first paint; `ccDirty` (tier-3, set only by a real edit) gates
+`persistCC()`, so a look-only visit writes nothing.
 
-- **Row shape**: Type (`Petrol / Diesel` / `Electric`, internal values stay
-  `ICE`/`EV` so `calc.js` is untouched), Name, On-Road Price, and one
-  efficiency input per type — ICE gets Mileage (kmpl) directly; EV gets
-  Claimed Range (km) + Battery (kWh), and `c.eff` (kWh/100km, what
-  `calcRunningCost` actually reads) is derived on input via
+- **Row shape**: Type (`Petrol / Diesel` / `Electric`; internal values stay
+  `ICE`/`EV`), Name, On-Road Price, and one efficiency input per type — ICE
+  gets kmpl; EV gets Claimed Range (km) + Battery (kWh), and `c.eff`
+  (kWh/100km, what `calcRunningCost` reads) is derived via
   `evEfficiencyFromRange()`. The `>1600cc` checkbox renders only for an ICE
-  row in Lease mode (it only affects the lease perquisite); Down Payment
-  renders only in Loan mode. `ccRowHtml()` never rebuilds from a text/number
-  field's own `oninput` — only on add/remove/hydrate and the Type `<select>`.
-- **Mode**: one `<select id="cc-mode">` ("Paying by": Loan / Company lease,
-  Loan default), read via `ccMode()`/`a.mode` inside `ccAssumptions()`. Cash
-  mode is gone from the UI — `calcOwnershipCost({mode:'cash'})` and its own
-  `tests.js` cases stay in `calc.js`, just unreachable here.
-- **Assumptions (7 inputs, inside "Explore further ▾")**: fuel price, home
-  charging rate, annual km, term, loan rate, lease rate, residual %. Every
-  other running-cost figure (highway multipliers, maintenance, insurance,
-  IDV depreciation, public charging rate) reloads from `CAR_RUNNING_DEFAULTS`
-  (`calc.js`, dated 2026-09-25) — tier-2, never a field, never persisted.
-  `splitAnnualKm(annualKm)` replaces the old separate city/highway-km pair at
-  a fixed 2:1 ratio.
-- **Lease pricing**: `carLeaseProfile()` reads Tool A's `lg-basic`/`lg-regime`
-  (with `epfAnnual: 0`) until the payslip panel has been opened once
-  (`leasePanelOpened`); after that it reads the payslip panel's own
-  `car-basic`/`car-bonus`/`car-epf-amt`/`car-regime`/`car-has-driver`, same
-  as before. `calcLeaseMarginalRate()` is the one derivation both this and
-  Tool A call — never a second, hand-typed marginal rate. *Superseded by CR9 (2026-10-01) — see DECISIONS.md §Dhanam Car tile redesign; full rewrite in CR12.*
-- **Result cards**: flat, no nested collapse — badge, name, type · price,
-  net cost, EMI/mo (+ signed Tax Saved in lease mode), ₹/km, and the gap to
-  cheapest for rank 2+. `taxSaved = 0` for Loan is correct Indian law (no
-  deduction on a personal car loan), stated on the card, not a blank.
-- **Chart** (`cc-owncurve-chart`, a static DOM sibling — never regenerated
-  inside `#cc-results`' innerHTML, per the chart-host rule): cumulative cost
-  vs. car value for one selected car, `calcOwnershipCurve()`'s endpoint
-  always equal to that car's `netCost`. A plain line below it states the
-  resale value at the final year — no reveal button.
-- **"Explore further ▾"** (`#cc-explore-card`) is Tool B's *only* collapse
-  control: the Assumptions inputs, a two-column Lease-vs-Loan card for the
-  selected car (`renderCCCrossMode()`, states its rates/residual/derived
-  marginal rate in words, marks the active mode "(current)"), the breakeven
-  card (needs ≥1 ICE and ≥1 EV row), and an 8-bullet "Assumptions & limits"
-  list. No nested collapse inside it. *Superseded by CR9 (2026-10-01) — see DECISIONS.md §Dhanam Car tile redesign; full rewrite in CR12.*
+  row in lease mode; Down Payment only in loan mode. `ccRowHtml()` never
+  rebuilds from a text/number field's own `oninput` — only on add/remove/
+  hydrate and `<select>` changes (D6).
+- **"How are you paying?" strip (`#cc-paying-card`, visible)**:
+  `cc-mode` = Loan / Cash / Company lease (Loan default; Cash restored by
+  CD-3), the shared term, and the selected mode's rates (`cc-loan-rate`, or
+  `cc-lease-rate` + `cc-residual-pct`). Cash ranks with EMI ₹0 and a note
+  that lost investment returns aren't counted. Lease mode shows no salary
+  field — it reads tile 3's profile and says so in `#cc-mode-note`.
+- **Results**: `#cc-hero` (cheapest by net cash cost) + flat rank cards —
+  badge, name, type · price, net cost, EMI/mo (+ signed Tax Saved in lease
+  mode), ₹/km, gap to cheapest. `taxSaved = 0` for loan/cash is correct
+  Indian law, stated on the card.
+- **Chart** (`cc-owncurve-chart`, a static sibling of the templates that
+  rewrite per keystroke): cumulative cost vs. car value for one selected
+  car; `calcOwnershipCurve()`'s endpoint always equals that car's `netCost`.
+  A plain line below it states the IRDAI value at the final year.
+- **"Explore further ▾" (`#cc-explore-card`)** holds the 3 remaining
+  assumptions (fuel price, home charging ₹/unit, annual km) and the EV
+  breakeven card (needs ≥1 ICE and ≥1 EV row). Every other running-cost
+  figure reloads from `CAR_RUNNING_DEFAULTS` (dated 2026-09-25); annual km
+  is split 2:1 city/highway by `splitAnnualKm()`. No nested collapse.
+- `#car-limits-compare` — the tile's one "Assumptions & limits".
 - **Persistence**: tier-1 only — `DS.carCompare = { cars, annualKm }`, cars
-  carrying `type/name/price/eff/range/battery/bigEngine/downPayment`. Gated
-  on `ccDirty` (above). `hydrateCC()` migrates an old blob: `annualKm =
-  saved.annualKm ?? (cityKm + hwyKm)`; an EV row saved before `range`/
-  `battery` existed keeps its old `eff` (its row hint says so and asks for
-  range/battery to update it); a row with both recomputes `eff` from them.
+  carrying `type/name/price/eff/range/battery/bigEngine/downPayment`.
+  `hydrateCC()` migrates an old blob (`annualKm = saved.annualKm ??
+  cityKm + hwyKm`; an EV row saved before range/battery keeps its `eff`).
+  No rate, term or residual is ever stored.
 
-Deleted outright (not demoted): the opportunity-cost reveal and its
-`cc-cash-cagr` field, the "three ways" cross-mode reveal, the 3/5/7-year
-loan-tenure grid, the IRDAI depreciation table + loan-balance-overlay chart,
-the net-cost-vs-km crossover chart, and every per-card nested collapse. All
-were tier-3/drill-down features that made the hub's first screen too
-expensive relative to what they added; nothing about the underlying math
-changed — `calcOwnershipCost`/`calcOwnershipCurve`/`calcCarDepreciation`
-still compute the same figures, just not all shown by default.
+### Tile 3 — Company car lease (`lg-*` + `car-*`, `renderLeaseTile()`)
 
+`renderLeaseTile()` renders the glance and, only while it's open, the
+payslip panel. No salary, regime, EPF or perquisite field exists outside
+this tile.
+
+**The glance (`#lg-card`, `renderLeaseGlance()`).** Inputs: `lg-price`,
+`car-basic` (monthly fixed pay, default ₹2,00,000) and `car-regime` — the
+latter two moved here from the payslip panel by CR9; `lg-basic`/`lg-regime`
+are retired. "Change rates and term" (`#lg-terms-card`, closed) holds the
+`lg-*` `carTerms` mirrors. It calls `calcOwnershipCost()` twice — `loan` and
+`lease` — with running costs zeroed (financing only). The hero's
+`lg-hero-note` is one sentence: zero-tax, EMI-equals-perquisite, negative
+shield, or the normal saved-X-over-N-years case. `#lg-lines` shows exactly
+three signed lines — EMI difference, Tax saved, Residual buyout — summing to
+the hero. `#lg-taper-note` appears only when `calcLeaseMarginalRate()`'s
+`rebateBoost` is true: the lease pulls taxable income into the new regime's
+§87A relief band, which **boosts** the saving there (get the direction
+right if you touch this copy). Persists nothing.
+
+**Side-by-side cards (`#lg-cross-card`, closed, CR9).** "How do lease and
+loan compare side by side?" — `renderLeaseCompareCards()` receives the
+glance's own two results, so the cards reconcile to the rupee with its
+hero; the header preview (`lg-cross-preview`) shows both net costs.
+Financing only (running costs are identical either way, and the note says
+so).
+
+**Payslip panel (`#car-lease-panel`, "What's taxed on my payslip?").**
+"Reconcile against my payslip ▾" (`toggleLeasePanel()`) only shows/hides it
+and sets `aria-expanded` — there's nothing to prefill. `renderCarCalc()`
+compares Baseline (own car) and Carve-out (CTC reduced by the car package,
+perquisite added to taxable), writing `#car-hero` + the closed "Compare
+both scenarios ▾" grid in one pass. `car-basic` is *total fixed pay*, never
+statutory Basic; `car-epf-amt` is an entered payslip figure, never derived
+(R33). `calcPerquisite()` holds the Income-tax Rules, 2026 table (₹5,000 /
+₹7,000 / +₹3,000, in force 2026-04-01). Additive B stays retired (R74).
+
+**One lease profile (`carLeaseProfile()`, CD-5).** Returns gross annual pay
+(`car-basic` + `car-bonus`), regime, driver flag and annual EPF. The glance,
+the payslip panel and tile 2's lease ranking all read it, and
+`calcLeaseMarginalRate()` is the single derivation of the tax shield from
+it — never a hand-typed marginal rate (R76). Bonus/EPF/driver keep their
+defaults while the payslip panel is closed.
+
+`#car-limits-lease` — the tile's one "Assumptions & limits" (old-regime
+scope, EPF as entered, carve-out vs. on-top CTC, employer tie/foreclosure).
+
+### What's deliberately gone
+
+From Compare Cars, by S7 (2026-09-25): the opportunity-cost reveal and
+`cc-cash-cagr`, the "three ways" reveal, the per-car tenure grid and
+depreciation table/overlay, the net-cost-vs-km chart, and per-card nested
+collapses. The plain-buyer pieces came back **in tile 1**, built fresh
+(CR5–CR7); the lease/loan comparison came back **in tile 3** (CR9). Don't
+re-add the deleted Compare Cars versions.
 
 ---
 
@@ -198,7 +263,7 @@ Since Phase 2a there *is* a small `localStorage` layer, and the rules around it 
 - **Reads and writes never throw.** A corrupt, foreign, or wrong-version blob is treated as *absent* (`storageUnreadable`), a failed write sets `storageFailed` so the UI never claims data is safe when it isn't, and hydration runs **after** first render so a bad blob can't block paint. This matters more than usual: it's the only bug class in the app that a reload can't rescue the user from.
 - **The schema is flat and additive** — unknown keys ignored, missing keys defaulted. Only bump `STORE_VER` for genuinely breaking shape changes, and write a real migration when you do; never silently discard a user's balance sheet.
 - **`history` is append-only**, one `{date, netWorth}` entry per save-day (same-day saves overwrite), capped at 120. It exists so the change tile and the trend chart have something to compare against — history cannot be reconstructed retroactively, so don't drop it.
-- Calculator hubs persist nothing unless the user opts in via the loan panel's "Remember my inputs on this device" toggle (default off; switching it off deletes the stored inputs). `hub-worth` persists by design — a balance sheet you retype every visit is worthless. **Compare Cars (`hub-car`'s `cc-*` section) persists by design too (B11, Phase 9)** — the first *calculator* hub to do so — on the same reasoning: a shortlist of dealer-quoted cars is closer to a balance sheet than to a scratch calculation. Only `ccCars` and the two driving-pattern fields are stored; every other Compare Cars input is tier-2.
+- Calculator hubs persist nothing unless the user opts in via the loan panel's "Remember my inputs on this device" toggle (default off; switching it off deletes the stored inputs). `hub-worth` persists by design — a balance sheet you retype every visit is worthless. **Compare Cars (`hub-car`'s `cc-*` section) persists by design too (B11, Phase 9)** — the first *calculator* hub to do so — on the same reasoning: a shortlist of dealer-quoted cars is closer to a balance sheet than to a scratch calculation. Only `ccCars` and `annualKm` are stored (`DS.carCompare`); every other Compare Cars input — including the shared `carTerms` — is tier-2. Dhanam Car's other two tiles persist nothing.
 - Users can **download a JSON backup, restore one, and erase everything**. Imports are validated exactly as `loadState()` validates. This is the only way to move data between devices; there is no sync and adding one would require a backend (`UX-ANALYSIS.md` §2.5).
 - **`worthSnapshot()` (R65, Phase 16) is the one and only place outside `hub-worth`'s own code that reads `DS.worth`.** `ARCHITECTURE-ANALYSIS.md` §2 warned specifically about a calculator reaching into another hub's state via shared globals with nothing enforcing the boundary — this function *is* that boundary. It reads the persisted blob, not the DOM (`buildWorth()` only creates the `w-a-*`/`w-l-*` inputs the first time `hub-worth` is opened this session, so a user with a saved balance sheet who hasn't visited Worth yet this session has no `w-a-*`/`w-l-*` elements to read `v()` from at all — reading `DS.worth` sidesteps that entirely). Returns `null` — never a fabricated ₹0 — when there's nothing real saved (no `DS`, no `DS.worth`, or every stored figure is zero); otherwise returns `{ assets, liabs, net, aVals, lVals, investable, propertyVal, cagr, debtRate, debtYears, monthlySip }`, falling back to the app's maintained projection defaults (`PROJ_DEFAULT_CAGR`/`PROJ_DEFAULT_DEBT_RATE`/10 years) for any tier-2 assumption the user never touched, exactly as `renderWorthProjection()` itself would. Read-only — never writes `DS`. Its consumers today are `renderAdvWorthBridge()` and `renderLandingWorth()`; any future feature wanting the user's real balance sheet must call `worthSnapshot()` too, not read `DS.worth` a second way.
 
@@ -221,9 +286,9 @@ Since Phase 2a there *is* a small `localStorage` layer, and the rules around it 
 
 ## Public-beta feedback link (2026-09-26)
 
-A **BETA** pill sits next to the header wordmark (inside `.header-text`, a sibling of the `<h1>`, so it wraps under the brand name rather than colliding with the absolutely-positioned `.header-about-link` at narrow widths), and a quiet "Beta — tell us what worked and what didn't →" line sits right after each hub's "Assumptions & limits" collapse-card (`hub-worth`, `hub-sip`, `hub-apartment`, `hub-car`) plus a second, shorter "Feedback on this tool (beta) →" directly under Dhanam Car's Tool A card (`#lg-card`). The landing footer and the About page's "Build & contact" panel carry one too. All of them point at the same public Google Form.
+A **BETA** pill sits next to the header wordmark (inside `.header-text`, a sibling of the `<h1>`, so it wraps under the brand name rather than colliding with the absolutely-positioned `.header-about-link` at narrow widths), and a quiet "Beta — tell us what worked and what didn't →" line sits right after each hub's "Assumptions & limits" collapse-card (`hub-worth`, `hub-sip`, `hub-apartment`); Dhanam Car has one per tile (`car-buy` / `car-compare` / `car-lease`), each at the bottom of its tile panel. The landing footer and the About page's "Build & contact" panel carry one too. All of them point at the same public Google Form.
 
-- **`FEEDBACK_PARTS`** (frozen, in the inline `<script>` next to `BUILD_STAMP`) maps a short key (`worth`, `grow`, `home-cost`, `home-loan`, `home-disb`, `car-lease`, `car-compare`, `overall`) to the form's Q1 option text, exactly as the form spells it — Google Forms preselects a prefilled radio by matching that text, so the two must never drift apart.
+- **`FEEDBACK_PARTS`** (frozen, in the inline `<script>` next to `BUILD_STAMP`) maps a short key (`worth`, `grow`, `home-cost`, `home-loan`, `home-disb`, `car-buy`, `car-lease`, `car-compare`, `overall`) to the form's Q1 option text, exactly as the form spells it — Google Forms preselects a prefilled radio by matching that text, so the two must never drift apart.
 - **`buildFeedbackUrl(key)`** appends `?usp=pp_url&<part-entry>=<Q1 text>&<version-entry>=BETA <BUILD_STAMP>` to `FEEDBACK_FORM_URL`. `resolveFeedbackKey(key)` handles the one dynamic case: `hub-apartment` has a single feedback link (not one per accordion panel), and its key `'home'` resolves at click time to `home-disb`/`home-loan`/`home-cost` by checking which `#section-*` panel currently has the `open` class — the same check `toggleSection()` itself uses.
 - **The on-screen controls are real `<a target="_blank" rel="noopener noreferrer">` elements whose `href` starts as the plain, un-prefilled viewform URL.** `onclick="return prepFeedbackLink(this, key)"` swaps in the prefilled URL immediately before the browser follows the link; if that throws for any reason, the anchor's original `href` still opens the plain form, so a link is never fully dead.
 - **Never fires on load or in the background** — invariant 1 (`CLAUDE.md`) covers this link specifically now: no `fetch`/`XHR`/`sendBeacon`, no `<link rel="preconnect">`, no iframe/embed of the form. The only network activity Google ever sees is the tab the browser opens after a real click.
@@ -238,9 +303,9 @@ D8/`ARCHITECTURE-ANALYSIS.md`'s accessibility gap, re-rated Medium → High once
 
 - **Every `.collapse-header`/`.adv-header`/`.sip-header` is now a real `<button type="button">`, not a `<div onclick>`.** `grep -n '<div class="collapse-header"\|<div class="adv-header"\|<div class="sip-header"' index.html` returns nothing — treat a nonzero result as a regression. New CSS resets on those three classes neutralize native `<button>` chrome (background/border/font/width/text-align) so none of them visibly changed shape.
 - **`toggleCard(id)` sets `aria-expanded` on the card's own `:scope > .collapse-header` button in one place** — this is what keeps every `toggleCard()`/`toggleChartCard()` caller correct for free. `toggleSection()`, `toggleAdv()`, `toggleSIP()`, and `toggleLeasePanel()` each set `aria-expanded` explicitly, since none of them route through `toggleCard()`. **Any new collapse/expand control must do the same** — either call `toggleCard()` or set `aria-expanded` itself; a `<button>` with no `aria-expanded` update is a silent regression of this pass, not a wash.
-- **Tab semantics on both tab bars.** `role="tablist"` on `.hub-nav-inner` and `.sip-planner-tabs`; `role="tab"` + live `aria-selected` on every `.hub-tab` and `.sip-planner-tab`, kept current by `switchHub()`/`switchSIPPlannerTab()`.
-- *(Historical — the car financing mode toggle-button group this bullet described, `car-mode-btn-loan/-lease/-cash` with `aria-pressed`, was removed in the 2026-09-25 Dhanam Car simplification; mode is now a plain `<select id="cc-mode">` inside Tool B. `toggleLeasePanel()`/`"Reconcile against my payslip ▾"` and `#cc-explore-card`/`"Explore further ▾"` are ordinary `aria-expanded` collapse controls — see the `toggleCard()` bullet above.)*
-- **44px touch targets** via one `@media(max-width:600px)` rule covering `.hub-tab, .sip-planner-tab, .action-btn, .btn, .collapse-header, .adv-header, .sip-header` — deliberately excludes `.tile` (already sized generously) and `.mode-btn` (the small ₹/sft-vs-lump inline widget, not a tab/mode selector).
+- **Tab semantics on all three tab bars.** `role="tablist"` on `.hub-nav-inner`, `.sip-planner-tabs` and Dhanam Car's tile row; `role="tab"` + live `aria-selected` (+ `aria-controls` on the car tiles) on every `.hub-tab`, `.sip-planner-tab` and `.car-hub-tile`, kept current by `switchHub()`/`switchSIPPlannerTab()`/`switchCarTile()`. Tab/Enter reachability only; no arrow-key roving on any of them.
+- *(Historical — the car financing mode toggle-button group this bullet described, `car-mode-btn-loan/-lease/-cash` with `aria-pressed`, was removed in the 2026-09-25 Dhanam Car simplification; mode is now a plain `<select id="cc-mode">` in tile 2's "How are you paying?" strip. `toggleLeasePanel()`/`"Reconcile against my payslip ▾"`, `#cc-explore-card`, and every Car follow-up collapse (`#cbuy-cash-card`, `#cbuy-uw-card`, `#lg-terms-card`, `#lg-cross-card`) are ordinary `aria-expanded` collapse controls — see the `toggleCard()` bullet above.)*
+- **44px touch targets** via one `@media(max-width:600px)` rule covering `.hub-tab, .sip-planner-tab, .action-btn, .btn, .collapse-header, .adv-header, .sip-header` — deliberately excludes `.tile` (already sized generously; Dhanam Car's denser `.car-hub-tile` sets its own `min-height:44px`) and `.mode-btn` (the small ₹/sft-vs-lump inline widget, not a tab/mode selector).
 - **One global `:focus-visible` ring** (`a, button, input, select, textarea, [tabindex]`), reusing the existing gold `--accent` ring the file's three pre-existing rules already established — no new color introduced.
 - **Accessible-name gaps filled on already-existing controls**: `#l-remember`'s checkbox (its visible label text lives in a sibling `<div>`, outside the wrapping `<label>`, so it previously had no accessible name at all) got an explicit `aria-label`; `#w-hide-btn` got a live `aria-pressed` from `toggleHideAmounts()`; `#w-import-file` (the restore-backup file input) got `aria-label="Restore backup file"`; the icon-only "✕" remove buttons in `disbRemoveTranche()`/`ccRemoveCar()` got `aria-label` alongside their existing `title`.
 - **Known remaining gap, out of this pass's scope on purpose:** the header logo's `.header-inner.clickable` div (the "tap the logo to go home" affordance) is still not keyboard-reachable. Left as-is because it's redundant with the already-accessible `⌂ Home` nav tab — not a silent omission, a scoping call, recorded here so a future full-coverage pass knows it's the one open item.
@@ -297,7 +362,7 @@ Exports are hand-built with no library: `buildZip`/`_u16`/`_u32` construct a raw
 
 ## Charts
 
-One dependency-free inline-SVG line/area chart helper is shared by every chart in the app rather than each hub rolling its own. **Six call sites as of 2026-09-25**: the Worth trend chart (`w-trend-chart`), the principal-vs-interest chart in the loan panel (`l-pvi-chart`), the SIP corpus-growth curve on all three Dhanam Grow tabs (`sp-growth-chart`, `su-growth-chart`, `ls-growth-chart`), and Dhanam Car's Tool B cost-vs-value curve (`cc-owncurve-chart`) — the only chart Tool B keeps; the standalone depreciation/loan-balance chart and the net-cost-vs-km crossover chart were both deleted in the Dhanam Car simplification.
+One dependency-free inline-SVG line/area chart helper is shared by every chart in the app rather than each hub rolling its own. **Seven call sites as of 2026-10-03**: the Worth trend chart (`w-trend-chart`), the principal-vs-interest chart in the loan panel (`l-pvi-chart`), the SIP corpus-growth curve on all three Dhanam Grow tabs (`sp-growth-chart`, `su-growth-chart`, `ls-growth-chart`), Dhanam Car tile 2's cost-vs-value curve (`cc-owncurve-chart`), and tile 1's loan-balance-vs-insured-value chart (`cbuy-uw-chart`, inside a closed collapse). The old Compare Cars depreciation/loan-balance chart and net-cost-vs-km chart were deleted in the S7 simplification.
 
 - **`renderChart(targetId, series, opts)` is the entry point — always call this, not `chartSvg()` directly.** It measures the host element and draws at a 1:1 scale. This matters: the SVG uses `preserveAspectRatio="none"` so it always fills its container (never causing horizontal scroll at 375px), which means a viewBox that *doesn't* match the container's real pixel width gets non-uniformly stretched — dots render as visible ellipses and stroke width varies by line direction. Measuring is what keeps that from happening.
 - `chartSvg(series, opts)` takes one or more `{ values, color, area }` series on a shared scale and returns the `<svg>` string. It degenerates gracefully: a single point renders as one dot (no path), and series longer than 24 points draw only the final point's dot to stay legible.
@@ -312,7 +377,7 @@ One dependency-free inline-SVG line/area chart helper is shared by every chart i
 - **A chart host must be a stable DOM node, not markup regenerated inside a parent's `innerHTML` template (R20, Phase 3c).** `renderChart()`'s node-identity check (above) papers over a host that gets recreated on every render, but it still tears down and rebuilds a `ResizeObserver` every time — `cc-owncurve-chart` is a static sibling of the row/results templates that rewrite on nearly every keystroke elsewhere in Dhanam Car, for exactly this reason. Prefer that shape for any new chart whose surrounding content re-renders often. Keep the node-identity check regardless — it's still what protects the cases where a stable host isn't practical.
 - **`calcStepupSIP` and `calcSIP` disagree by ~1% even at 0% step-up (B6, still open — see Testing in `CLAUDE.md`) — do not plot them against each other as two lines on one chart.** The step-up tab's growth chart and its `su-vs-flat` figure both compare `calcStepupSIP(monthly, stepup, cagr, y)` against `calcStepupSIP(monthly, 0, cagr, y)` — the *same* function at 0% step-up — specifically so the two lines are exactly equal at year 1 (a step-up SIP is definitionally identical to a flat one until its first step, at the start of year 2) and never invert. Comparing across the two functions instead reintroduces the R16 bug: at this tab's own default settings it drew the step-up line **starting below** the flat line.
 
-**Wide tables use the same overflow discipline as charts (`.table-scroll`, R10).** A `.table-scroll { overflow-x: auto; }` wrapper `<div>` sits around every `<table>` that could plausibly overflow a 375px viewport — the Detail panel's Payment Schedule, the Loan Disbursement schedule, and all three Dhanam Grow milestone tables. There are **5** such wrappers as of 2026-09-25 (down from 6 — the car depreciation table this used to also wrap was deleted in the Dhanam Car simplification). Count `grep -c 'class="table-scroll"'`, not a bare `grep -c table-scroll` (which also counts the `.table-scroll` class definition itself). Reuse this class for any new table rather than adding a one-off wrapper.
+**Wide tables use the same overflow discipline as charts (`.table-scroll`, R10).** A `.table-scroll { overflow-x: auto; }` wrapper `<div>` sits around every `<table>` that could plausibly overflow a 375px viewport — the Detail panel's Payment Schedule, the Loan Disbursement schedule, and all three Dhanam Grow milestone tables. There are **6** such wrappers as of 2026-10-03 (the car depreciation table's was deleted in S7; Buy a car's 3/5/7-year EMI table added one in CR5). Count `grep -c 'class="table-scroll"'`, not a bare `grep -c table-scroll` (which also counts the `.table-scroll` class definition itself). Reuse this class for any new table rather than adding a one-off wrapper.
 
 ---
 

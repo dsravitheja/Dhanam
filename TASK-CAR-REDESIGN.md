@@ -1,10 +1,40 @@
 # TASK-CAR-REDESIGN — Dhanam Car as three tiles, buyer-first
 
-Design agreed 2026-09-29. **Waves 0–1 (CR1–CR3) shipped 2026-09-29; Wave 2 (CR4–CR7) 2026-10-01; Wave 3 (CR8–CR9) 2026-10-01**, CR10–CR13 planned — `CLAUDE.md` describes the
-shipped tile shell; `ARCHITECTURE.md` §Dhanam Car is rewritten in CR12. Each
+Design agreed 2026-09-29. **CR1–CR12 shipped; CR13 (real-buyer test) open — see Status below.**
+`CLAUDE.md` and `ARCHITECTURE.md` §Dhanam Car describe the shipped hub. Each
 item below is sized to hand to Claude Code as one task and has a **Done when**
 line; if it can't be checked, it isn't done. IDs are `CR<n>` (Car Redesign)
 so they don't collide with R / B / D / S.
+
+## Status (2026-10-03)
+
+| Item | State |
+|---|---|
+| CR1–CR3 (Waves 0–1) | Shipped 2026-09-29 (PR #28) |
+| CR4–CR7 (Wave 2) | Shipped 2026-10-01 (PR #29) |
+| CR8–CR9 (Wave 3) | Shipped 2026-10-01 (PR #30) |
+| Progressive-disclosure follow-up | Shipped 2026-10-01 (PR #31): follow-ups are closed collapses with a header preview; tile 1 labels its example |
+| CR10 | Done 2026-10-03. Landing subline is "On-road cost, EMI, and which car costs less to own."; About's intro leads with car buying. About's road-tax / registration / TCS provenance rows had already shipped with CR4 (the road-tax row now says 9 states + an editable fallback, not 10) |
+| CR11 | Done 2026-10-03 (code inspection). `loadState`/`saveState`/`hydrateCC`/`persistCC`/`ccMigrateCar`/`importWorthBackup`/`exportWorthBackup` are byte-identical to `96dabc4` (the commit before CR1); `STORE_VER` is still 1; no new `DS` key. A pre-redesign backup restores the same cars. Their **figures** can differ, because the shared default term is now 5 years (was 4) — a tier-2 default, not stored. Item 74 in `MANUAL-TESTS.md` is the by-hand check |
+| CR12 | Done 2026-10-03. `tests.js` pins the CR1 table (251/251); `MANUAL-TESTS.md` items 82–92; `CLAUDE.md`; `ARCHITECTURE.md` §Dhanam Car rewritten; `DECISIONS.md` section marked shipped. Car's static copy is 755 words (buy 229 · compare 227 · lease 279), under S10's 800. `CACHE` v35 / `BUILD_STAMP` 2026-10-03.1 |
+| CR13 | **Open.** Owner-run buyer test |
+
+## This plan overrides `TASK-SIMPLIFY.md` for Dhanam Car
+
+Where the two disagree about Dhanam Car, this document wins. `TASK-SIMPLIFY.md` marks each affected S-item as superseded:
+
+| TASK-SIMPLIFY said | This plan does instead |
+|---|---|
+| S5: two tools; "Car loan or company lease?" is the whole first screen | Three tiles, **Buy a car** default; the lease answer lives in tile 3 (CR2/CR3) |
+| S5: payslip panel prefills from Tool A once (one-way latch) | One pay/regime field each, inside tile 3; latch retired (CD-5/CR9) |
+| S6 / D-A: delete Cash mode | Cash is back: tile 1's loan vs cash and tile 2's "Paying by" (CD-3) |
+| S7: delete the tenure grid, loan-balance overlay and cross-mode card | Tile 1 has a flat 3/5/7-yr EMI table (CR5) and the underwater check (CR7); lease/loan cards live in tile 3 (CR9) |
+| S7: Compare Cars has exactly one collapse control | Each tile keeps its first answer open. Follow-ups are closed collapses, plus one limits collapse per tile. Max two nesting levels still holds |
+| S8: term / loan rate / lease rate / residual inside the 7-field Assumptions card | One shared `carTerms`, mirrored into each tile's own fields (CD-4/CR8) |
+| S10: one "Assumptions & limits" per hub | One per tile (CD-6) |
+| Not in scope: "no new calculator until Car passes the 20-second test" | Tile 1 is that fix; CR13 is the test |
+
+Not overridden: the copy budget (except CD-6), the two-level nesting cap, derived marginal rate (R76), `CAR_RUNNING_DEFAULTS`, Tool B's tier-1 persistence (`cars` + `annualKm`). TASK-SIMPLIFY's Wave 4 restructure (S14–S17) waits until this plan closes out.
 
 ---
 
@@ -122,7 +152,7 @@ a non-lease visitor can dismiss it at a glance.
 
 ## Wave 2 — Tile 1, "Buy a car" (new)
 
-*Shipped 2026-10-01. Tile 1 has its own rate/tenure until CR8 (CD-4) shares them with tile 2; CD-9's editable loan amount is an optional override field (`cbuy-loan`).*
+*Shipped 2026-10-01. Rate and tenure have been shared through `carTerms` since CR8 (CD-4). CD-9's editable loan amount is an optional override field (`cbuy-loan`). The cash comparison (CR6) and underwater check (CR7) are closed collapses with a header preview (PR #31).*
 
 Inputs are prefilled with a worked example (e.g. a ₹10L ex-showroom petrol
 car in Telangana, 20% down, 5 years, 9%) so the tile answers on first paint.
@@ -247,14 +277,14 @@ Copy budget (invariant 11) applies: hero = one number + one sentence.
 | # | Decision | Status / default |
 |---|---|---|
 | CD-1 | Business-owner / self-employed business-use car tax (depreciation, interest deduction, GST credit) | **Decided 2026-09-29: parked.** Good-to-have once the app has traction. v1 carries at most one caveat line; nothing computed. |
-| CD-2 | Tiles that open a sub-page, or a tile row that acts as the tab bar? | Default: **tile row as tab bar** (one-tap switching, no back-button/deep-link state) |
-| CD-3 | Bring Cash back into the UI? | Default: **yes** — tile 1 (CR6) and tile 2's "Paying by" (CR8). Reverses S6/D-A. |
-| CD-4 | One shared loan rate + tenure for tiles 1 and 2, or separate? | Default: **one shared set** (a single source both read) |
-| CD-5 | Unify `lg-*`/`car-*` salary + regime inside tile 3? | Default: **yes**, retire the prefill latch |
-| CD-6 | Caveats: one list per hub (invariant 11) or one per tile? | Default: **one per tile**; amend invariant 11 to "one per tool" |
-| CD-7 | Does tile 1 remember inputs? | Default: **no** in v1 |
-| CD-8 | State coverage for road tax | Default: same states as `PROPERTY_STATES` + "Other — enter %" |
-| CD-9 | Loan principal on on-road or ex-showroom price? | Default: **on-road minus down payment**, editable loan amount |
+| CD-2 | Tiles that open a sub-page, or a tile row that acts as the tab bar? | Default: **tile row as tab bar** (one-tap switching, no back-button/deep-link state) **Applied (CR2).** |
+| CD-3 | Bring Cash back into the UI? | Default: **yes** — tile 1 (CR6) and tile 2's "Paying by" (CR8). Reverses S6/D-A. **Applied (CR6, CR8).** |
+| CD-4 | One shared loan rate + tenure for tiles 1 and 2, or separate? | Default: **one shared set** (a single source both read) **Applied as mirrored fields over one `carTerms` (CR8).** |
+| CD-5 | Unify `lg-*`/`car-*` salary + regime inside tile 3? | Default: **yes**, retire the prefill latch **Applied (CR9).** |
+| CD-6 | Caveats: one list per hub (invariant 11) or one per tile? | Default: **one per tile**; amend invariant 11 to "one per tool" **Applied (CR3); invariant 11 amended.** |
+| CD-7 | Does tile 1 remember inputs? | Default: **no** in v1 **Applied — tile 1 persists nothing.** |
+| CD-8 | State coverage for road tax | Default: same states as `PROPERTY_STATES` + "Other — enter %" **Applied (CR1).** |
+| CD-9 | Loan principal on on-road or ex-showroom price? | Default: **on-road minus down payment**, editable loan amount **Applied — `cbuy-loan` override (CR5).** |
 
 ## Parked
 
