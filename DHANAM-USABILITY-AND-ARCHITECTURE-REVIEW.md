@@ -1,5 +1,7 @@
 # Dhanam — Usability & Architecture Review
 
+> **Historical snapshot (2026-09-18).** Its action plan became `TASK-SIMPLIFY.md`. For Dhanam Car, its recommendations (lease-first Tool A, deleting Cash, the tenure grid, the loan-balance view) were superseded by `TASK-CAR-REDESIGN.md` (2026-09-29), which is the current plan. Figures below describe the app as it was then.
+
 *Reviewed 2026-09-18 against `main` (build stamp 2026-09-09). Covers `index.html` (6,566 lines), `calc.js`, `sw.js`, `tests.js`, and the project docs. Numbers below were measured from the source, and the Car hub's default outputs were reproduced by running `calc.js` directly.*
 
 ---
